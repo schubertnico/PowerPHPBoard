@@ -1,0 +1,28 @@
+BODY, TABLE, TR, TD {
+  font-family: Tahoma;
+  font-size: 12px;
+  color: #000000;
+}
+
+A, A:LINK, A:ACTIVE, A:VISITED {
+  font-family: Tahoma;
+  color: #000080;
+  text-decoration: none;
+}
+
+A:HOVER {
+  font-family: Tahoma;
+  color: #000000;
+  text-decoration: underline;
+}
+
+.big {
+  font-family: Tahoma;
+  font-size: 16px;
+}
+
+.mark {
+  font-family: Tahoma;
+  font-weight: normal;
+  color: #FF0000;
+}

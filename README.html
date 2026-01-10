@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PowerPHPBoard - Dokumentation</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            line-height: 1.6;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+            color: #333;
+        }
+        h1, h2, h3 { color: #2c3e50; }
+        h1 { border-bottom: 3px solid #3498db; padding-bottom: 10px; }
+        h2 { border-bottom: 1px solid #bdc3c7; padding-bottom: 5px; margin-top: 30px; }
+        code {
+            background: #ecf0f1;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+        pre {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        pre code { background: none; color: inherit; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        th, td {
+            border: 1px solid #bdc3c7;
+            padding: 10px;
+            text-align: left;
+        }
+        th { background: #3498db; color: white; }
+        tr:nth-child(even) { background: #ecf0f1; }
+        ul { padding-left: 20px; }
+        li { margin: 5px 0; }
+        a { color: #3498db; }
+        .badge {
+            display: inline-block;
+            background: #27ae60;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        .warning { background: #e74c3c; }
+        .info { background: #3498db; }
+    </style>
+</head>
+<body>
+
+<h1>PowerPHPBoard</h1>
+
+<p>Ein einfaches PHP-Forum-System, ursprünglich entwickelt 2001-2009, jetzt modernisiert für PHP 8.4.</p>
+
+<p><strong>Repository:</strong> <a href="https://github.com/schubertnico/PowerPHPBoard">https://github.com/schubertnico/PowerPHPBoard</a></p>
+
+<h2>Features</h2>
+<ul>
+    <li>Foren mit Kategorien und Boards</li>
+    <li>Benutzerregistrierung und -verwaltung</li>
+    <li>BBCode und Smilies</li>
+    <li>Moderatoren-System</li>
+    <li>Admin-Panel</li>
+    <li>Mehrsprachig (Deutsch, Englisch)</li>
+</ul>
+
+<h2>Voraussetzungen</h2>
+<ul>
+    <li><span class="badge">PHP 8.4+</span></li>
+    <li><span class="badge info">MySQL 8.0+</span></li>
+    <li>Docker &amp; Docker Compose (empfohlen)</li>
+</ul>
+
+<h2>Installation mit Docker</h2>
+
+<h3>1. Repository klonen</h3>
+<pre><code>git clone https://github.com/schubertnico/PowerPHPBoard.git
+cd PowerPHPBoard</code></pre>
+
+<h3>2. Container starten</h3>
+<pre><code>cd .docker
+docker compose up -d --build</code></pre>
+
+<h3>3. Im Browser öffnen</h3>
+<ul>
+    <li><strong>Forum:</strong> <a href="http://localhost:8085">http://localhost:8085</a></li>
+    <li><strong>phpMyAdmin:</strong> <a href="http://localhost:8088">http://localhost:8088</a></li>
+    <li><strong>Mailpit (E-Mail-Test):</strong> <a href="http://localhost:8032">http://localhost:8032</a></li>
+</ul>
+
+<h3>Docker-Ports</h3>
+<table>
+    <tr><th>Service</th><th>Port</th><th>Beschreibung</th></tr>
+    <tr><td>Web</td><td>8085</td><td>Apache/PHP 8.4</td></tr>
+    <tr><td>MySQL</td><td>3315</td><td>Datenbank</td></tr>
+    <tr><td>phpMyAdmin</td><td>8088</td><td>Datenbank-Verwaltung</td></tr>
+    <tr><td>Mailpit</td><td>8032</td><td>E-Mail-Test-Interface</td></tr>
+    <tr><td>Mailpit</td><td>1032</td><td>SMTP für E-Mails</td></tr>
+</table>
+
+<h2>So prüfst du, ob es läuft</h2>
+<pre><code># Container-Status prüfen
+docker compose ps
+
+# Logs anzeigen
+docker compose logs web
+
+# PHP-Fehler-Log
+tail -f logs/php-error.log</code></pre>
+
+<h2>Manuelle Installation</h2>
+<ol>
+    <li>Dateien auf Webserver kopieren</li>
+    <li><code>config.inc.php</code> anpassen (Datenbank-Zugangsdaten)</li>
+    <li><code>install.sql</code> in MySQL importieren</li>
+    <li>Im Browser öffnen</li>
+</ol>
+
+<h2>Entwicklung</h2>
+
+<h3>Composer-Installation</h3>
+<pre><code>composer install</code></pre>
+
+<h3>PHPStan (Statische Analyse)</h3>
+<pre><code>composer run phpstan</code></pre>
+
+<h3>Rector (Code-Modernisierung)</h3>
+<pre><code># Vorschau der Änderungen
+composer run rector-dry
+
+# Änderungen anwenden
+composer run rector</code></pre>
+
+<h2>Lizenz</h2>
+<p><span class="badge">MIT License</span> - siehe <a href="LICENSE">LICENSE</a></p>
+
+<h2>Änderungen / Migration auf PHP 8.4</h2>
+
+<h3>Sicherheitsfixes</h3>
+<ul>
+    <li><strong>SQL Injection:</strong> Alle Datenbankabfragen verwenden jetzt PDO mit Prepared Statements</li>
+    <li><strong>XSS:</strong> Alle Ausgaben werden mit <code>htmlspecialchars()</code> escaped</li>
+    <li><strong>Passwort-Hashing:</strong> Base64 ersetzt durch Argon2id (<code>password_hash()</code>)</li>
+    <li><strong>Session-Sicherheit:</strong> Keine Passwörter mehr in Cookies, sichere Session-Konfiguration</li>
+    <li><strong>CSRF-Schutz:</strong> Token-Validierung für alle Formulare</li>
+    <li><strong>Credentials:</strong> Datenbank-Zugangsdaten über Environment-Variablen</li>
+</ul>
+
+<h3>PHP 8.4 Änderungen</h3>
+<ul>
+    <li><code>declare(strict_types=1)</code> in allen Dateien</li>
+    <li><code>mysql_*</code> Funktionen → PDO mit Prepared Statements</li>
+    <li><code>eregi_replace()</code> → <code>preg_replace()</code> mit 'i' Modifier</li>
+    <li><code>eregi()</code> → <code>preg_match()</code> mit 'i' Modifier</li>
+    <li><code>split()</code> → <code>explode()</code></li>
+    <li><code>match</code> Expression statt if/elseif-Ketten</li>
+    <li>Typed Properties und Return Types</li>
+</ul>
+
+<h3>Neue Dateien</h3>
+<ul>
+    <li><code>.docker/</code> - Docker-Konfiguration für PHP 8.4</li>
+    <li><code>includes/Database.php</code> - PDO Datenbank-Klasse</li>
+    <li><code>includes/Session.php</code> - Sichere Session-Verwaltung</li>
+    <li><code>includes/CSRF.php</code> - CSRF-Token-Schutz</li>
+    <li><code>includes/Security.php</code> - Sicherheits-Hilfsfunktionen</li>
+    <li><code>includes/TextFormatter.php</code> - BBCode/Smilies-Verarbeitung</li>
+    <li><code>composer.json</code> - Composer-Konfiguration</li>
+    <li><code>phpstan.neon</code> - PHPStan-Konfiguration</li>
+    <li><code>rector.php</code> - Rector-Konfiguration</li>
+    <li><code>LICENSE</code> - MIT-Lizenz</li>
+    <li><code>README.md</code> - Markdown-Dokumentation</li>
+    <li><code>README.html</code> - Diese HTML-Dokumentation</li>
+</ul>
+
+<h3>Migrierte Dateien</h3>
+<p>Alle PHP-Dateien wurden auf PHP 8.4 migriert:</p>
+<ul>
+    <li><code>config.inc.php</code> - Environment-Variablen, Autoload</li>
+    <li><code>header.inc.php</code> - PDO, Session, Security</li>
+    <li><code>footer.inc.php</code> - PDO Updates</li>
+    <li><code>functions.inc.php</code> - match Expression, PDO</li>
+    <li><code>login.php</code> - CSRF, Session, Password Verification</li>
+    <li><code>logout.php</code> - Session-basiertes Logout</li>
+    <li><code>register.php</code> - CSRF, Password Hashing, Prepared Statements</li>
+    <li><code>index.php</code> - PDO, Security Escaping</li>
+    <li>Alle weiteren Dateien</li>
+</ul>
+
+<h2>Ursprüngliche Autoren</h2>
+<ul>
+    <li>Stefan 'BFG' Kramer (PowerScripts, 2001-2009)</li>
+    <li>Nico Schubert (PHP 8.4 Migration, 2024)</li>
+</ul>
+
+</body>
+</html>
