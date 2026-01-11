@@ -14,6 +14,7 @@ use PowerPHPBoard\Database;
 use PowerPHPBoard\Session;
 use PowerPHPBoard\Security;
 use PowerPHPBoard\CSRF;
+use PowerPHPBoard\ErrorHandler;
 
 // Load configuration
 require_once __DIR__ . '/config.inc.php';
@@ -64,6 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $login === 1) {
 
             if ($user === null) {
                 $loginerror = $lang_nouserwithemail ?? 'No user with this email address found';
+                ErrorHandler::logFailedLogin($email, 'user_not_found');
             } else {
                 // Verify password (supports both legacy base64 and modern hashes)
                 if (Security::verifyPassword($password, $user['password'])) {
@@ -78,6 +80,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $login === 1) {
                         // Login user via secure session (no passwords in cookies!)
                         Session::login((int)$user['id']);
 
+                        // Log successful login
+                        ErrorHandler::logSuccessfulLogin((int)$user['id'], $email);
+
                         // Regenerate CSRF token
                         CSRF::regenerate();
                     } else {
@@ -85,6 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $login === 1) {
                     }
                 } else {
                     $loginerror = $lang_pwdnotcorrect ?? 'Password is incorrect';
+                    ErrorHandler::logFailedLogin($email, 'invalid_password');
                 }
             }
         }

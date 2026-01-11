@@ -155,7 +155,8 @@ class Database
      */
     public function lastInsertId(): string
     {
-        return $this->pdo->lastInsertId();
+        $id = $this->pdo->lastInsertId();
+        return $id !== false ? $id : '0';
     }
 
     /**

@@ -36,6 +36,7 @@ $mysql = [
 define('PPB_VERSION', '2.0.0');
 define('PPB_SESSION_LIFETIME', 3600);
 define('PPB_CSRF_ENABLED', true);
+define('PPB_DEBUG', (bool)(getenv('PPB_DEBUG') ?: false));
 
 // Include core classes
 require_once __DIR__ . '/includes/Database.php';
@@ -43,3 +44,10 @@ require_once __DIR__ . '/includes/Session.php';
 require_once __DIR__ . '/includes/CSRF.php';
 require_once __DIR__ . '/includes/Security.php';
 require_once __DIR__ . '/includes/TextFormatter.php';
+require_once __DIR__ . '/includes/ErrorHandler.php';
+
+// Initialize error handling
+PowerPHPBoard\ErrorHandler::init(
+    __DIR__ . '/logs/php-error.log',
+    PPB_DEBUG
+);

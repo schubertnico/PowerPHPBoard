@@ -1,12 +1,13 @@
 parameters:
-    level: 5
+    level: 8
     paths:
         - .
     excludePaths:
         - vendor
         - .docker
-        - tools
-        - logs
+        - tools (?)
+        - logs (?)
+        - tests
     phpVersion: 80400
     treatPhpDocTypesAsCertain: false
     reportUnmatchedIgnoredErrors: false

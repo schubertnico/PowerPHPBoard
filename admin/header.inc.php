@@ -134,7 +134,7 @@ $admin_tbl3 = '#9F9F9F';
     }
     echo '<a href="../faq.php">FAQ</a><br>';
     if ($loggedin === 'YES') {
-        echo '<br>Logged in as <b>' . Security::escape($ppbuser['username']) . '</b><br>';
+        echo '<br>Logged in as <b>' . Security::escape($ppbuser['username'] ?? '') . '</b><br>';
     }
   ?>
   <br>

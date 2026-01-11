@@ -75,11 +75,19 @@ class CSRF
 
     /**
      * Validate token from POST request
+     *
+     * @param bool $logFailure Whether to log validation failures
      */
-    public static function validateFromPost(): bool
+    public static function validateFromPost(bool $logFailure = true): bool
     {
         $token = $_POST[self::TOKEN_NAME] ?? null;
-        return self::validate($token);
+        $result = self::validate($token);
+
+        if (!$result && $logFailure && class_exists(ErrorHandler::class)) {
+            ErrorHandler::logCsrfFailure($_SERVER['REQUEST_URI'] ?? '');
+        }
+
+        return $result;
     }
 
     /**
@@ -92,6 +100,9 @@ class CSRF
         }
 
         if (!self::validate($token)) {
+            if (class_exists(ErrorHandler::class)) {
+                ErrorHandler::logCsrfFailure($_SERVER['REQUEST_URI'] ?? '');
+            }
             http_response_code(403);
             die('CSRF token validation failed. Please refresh the page and try again.');
         }

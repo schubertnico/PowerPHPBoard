@@ -122,7 +122,7 @@ if ($login === 1 && $loggedin === 'YES') {
                     $settings['tablebg2'] ?? '#eeeeee',
                     $settings['tablebg1'] ?? '#ffffff'
                 );
-            } elseif (!preg_match('/^([a-z0-9\._\&\+\-]+@(([a-z0-9\-]+\.)+([a-z0-9\-]{2,3})))$/i', trim($email1))) {
+            } elseif (!Security::isValidEmail($email1)) {
                 default_error(
                     $lang_emailnotcorrect ?? 'Invalid email address',
                     'javascript:history.back()',
@@ -134,6 +134,15 @@ if ($login === 1 && $loggedin === 'YES') {
             } elseif ($password1 !== $password2) {
                 default_error(
                     $lang_pwdsdifferent ?? 'Passwords do not match',
+                    'javascript:history.back()',
+                    $lang_backtoprofileform ?? 'Back',
+                    $settings['tablebg3'] ?? '#cccccc',
+                    $settings['tablebg2'] ?? '#eeeeee',
+                    $settings['tablebg1'] ?? '#ffffff'
+                );
+            } elseif (strlen($password1) < 6) {
+                default_error(
+                    $lang_pwdtooshort ?? 'Password must be at least 6 characters',
                     'javascript:history.back()',
                     $lang_backtoprofileform ?? 'Back',
                     $settings['tablebg3'] ?? '#cccccc',
@@ -246,12 +255,12 @@ if ($login === 1 && $loggedin === 'YES') {
         <tr><td width="*" bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '">
         <b>' . ($lang_password ?? 'Password') . '</b>
         </td><td width="300" bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '">
-        <input name="password1" size="25" maxlength="25" type="password" value="">
+        <input name="password1" size="25" maxlength="255" type="password" minlength="6" required>
         </td></tr>
         <tr><td width="*" bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '">
         <b>' . ($lang_password ?? 'Password') . '</b> <small>(' . ($lang_confirmation ?? 'Confirmation') . ')</small>
         </td><td width="300" bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '">
-        <input name="password2" size="25" maxlength="25" type="password" value="">
+        <input name="password2" size="25" maxlength="255" type="password" minlength="6" required>
         </td></tr>
         <tr><td colspan="2" bgcolor="' . Security::escape($settings['tablebg3'] ?? '#cccccc') . '">
         <b>' . ($lang_optionalinfo ?? 'Optional Information') . '</b>

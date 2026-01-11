@@ -161,9 +161,12 @@ class Security
 
     /**
      * Generate a random token
+     *
+     * @param int<1, max> $length Number of random bytes (minimum 1)
      */
     public static function generateToken(int $length = 32): string
     {
+        $length = max(1, $length);
         return bin2hex(random_bytes($length));
     }
 
