@@ -25,9 +25,8 @@ declare(strict_types=1);
  */
 
 use PowerPHPBoard\Database;
-use PowerPHPBoard\Session;
 use PowerPHPBoard\Security;
-use PowerPHPBoard\CSRF;
+use PowerPHPBoard\Session;
 
 // Load configuration and core classes
 require_once __DIR__ . '/config.inc.php';
@@ -59,7 +58,7 @@ try {
 }
 
 // Load global settings
-$settings = $db->fetchOne("SELECT * FROM ppb_config WHERE id = ?", [1]);
+$settings = $db->fetchOne('SELECT * FROM ppb_config WHERE id = ?', [1]);
 if ($settings === null) {
     $settings = [];
 }
@@ -91,7 +90,7 @@ if ($threadid > 0) {
         [$threadid]
     );
     if ($thread !== null) {
-        $boardid = (int)$thread['boardid'];
+        $boardid = (int) $thread['boardid'];
     } else {
         $thread = [];
     }
@@ -104,7 +103,7 @@ if ($boardid > 0) {
         [$boardid]
     );
     if ($board !== null) {
-        $catid = (int)$board['catid'];
+        $catid = (int) $board['catid'];
         // Override design settings from board
         foreach (['header', 'footer', 'bordercolor', 'tablebg1', 'tablebg2', 'tablebg3', 'newthread', 'newpost'] as $key) {
             if (!empty($board[$key])) {
@@ -130,7 +129,7 @@ if ($catid > 0) {
 // Check user authentication via session
 if (Session::isLoggedIn()) {
     $userId = Session::getUserId();
-    $ppbuser = $db->fetchOne("SELECT * FROM ppb_users WHERE id = ?", [$userId]);
+    $ppbuser = $db->fetchOne('SELECT * FROM ppb_users WHERE id = ?', [$userId]);
     if ($ppbuser !== null) {
         $loggedin = 'YES';
     } else {
@@ -180,7 +179,7 @@ if (!empty($board['title'])) {
       <tr><td width="54" height="15" valign="middle">
       <img src="images/dir3.gif" width="51" height="15" border="0" alt="">
       </td><td width="*" valign="middle">
-      <a href="showboard.php?boardid=' . (int)$board['id'] . '">' . Security::escape($board['title']) . '</a>
+      <a href="showboard.php?boardid=' . (int) $board['id'] . '">' . Security::escape($board['title']) . '</a>
       </td></tr>
       </table>
     ';
@@ -191,7 +190,7 @@ if (!empty($thread['title'])) {
       <tr><td width="70" height="15" valign="middle">
       <img src="images/dir4.gif" width="67" height="15" border="0" alt="">
       </td><td width="*" valign="middle">
-      <a href="showthread.php?threadid=' . (int)$thread['id'] . '">' . Security::escape($thread['title']) . '</a>
+      <a href="showthread.php?threadid=' . (int) $thread['id'] . '">' . Security::escape($thread['title']) . '</a>
       </td></tr>
       </table>
     ';
@@ -212,12 +211,12 @@ if (!empty($board['title'])) {
             if ($modEmail === '') {
                 continue;
             }
-            $mod = $db->fetchOne("SELECT id, username FROM ppb_users WHERE email = ?", [$modEmail]);
+            $mod = $db->fetchOne('SELECT id, username FROM ppb_users WHERE email = ?', [$modEmail]);
             if ($mod !== null) {
                 if (!$first) {
                     echo ', ';
                 }
-                echo '<a href="showprofile.php?userid=' . (int)$mod['id'] . '&catid=' . $catid . '&boardid=' . $boardid . '">' . Security::escape($mod['username']) . '</a>';
+                echo '<a href="showprofile.php?userid=' . (int) $mod['id'] . '&catid=' . $catid . '&boardid=' . $boardid . '">' . Security::escape($mod['username']) . '</a>';
                 $first = false;
             }
         }
@@ -230,10 +229,10 @@ if (!empty($board['title'])) {
 <?php
 if (!empty($board['title'])) {
     if (($board['status'] ?? '') !== 'Closed') {
-        echo '<a href="newthread.php?boardid=' . (int)$board['id'] . '"><img src="' . Security::escape($settings['newthread'] ?? 'images/newthread.gif') . '" border="0" width="120" height="20" alt="New Thread"></a>';
+        echo render_action_button('newthread.php?boardid=' . (int) $board['id'], $settings['newthread'] ?? 'images/newthread.gif', $lang_newthread ?? 'New Thread', $settings['tablebg3'] ?? '#cccccc');
         if (!empty($thread['title'])) {
             if (($thread['status'] ?? '') !== 'Closed') {
-                echo '&nbsp;&nbsp;<a href="newpost.php?threadid=' . (int)$thread['id'] . '&current=' . $current . '"><img src="' . Security::escape($settings['newpost'] ?? 'images/newpost.gif') . '" border="0" width="120" height="20" alt="New Post"></a>';
+                echo '&nbsp;&nbsp;' . render_action_button('newpost.php?threadid=' . (int) $thread['id'] . '&current=' . $current, $settings['newpost'] ?? 'images/newpost.gif', $lang_newpost ?? 'New Post', $settings['tablebg3'] ?? '#cccccc');
             } else {
                 echo '- [ ' . ($lang_threadclosed ?? 'Thread closed') . ' ] -';
             }

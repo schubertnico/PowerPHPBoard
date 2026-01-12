@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace PowerPHPBoard\Tests\Feature;
 
+use Error;
+use PDOException;
 use PHPUnit\Framework\TestCase;
-use PowerPHPBoard\Database;
-use PowerPHPBoard\Session;
 use PowerPHPBoard\CSRF;
+use PowerPHPBoard\Database;
 use PowerPHPBoard\Security;
+use PowerPHPBoard\Session;
+use Throwable;
 
 /**
  * Base test case for feature/integration tests
@@ -17,6 +20,7 @@ use PowerPHPBoard\Security;
 abstract class FeatureTestCase extends TestCase
 {
     protected ?Database $db = null;
+
     protected array $settings = [];
 
     protected function setUp(): void
@@ -61,7 +65,7 @@ abstract class FeatureTestCase extends TestCase
             ob_start();
             try {
                 require_once $configFile;
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 ob_end_clean();
                 $this->db = null;
                 return;
@@ -71,11 +75,11 @@ abstract class FeatureTestCase extends TestCase
             if (isset($mysql)) {
                 try {
                     $this->db = Database::getInstance($mysql);
-                    $this->settings = $this->db->fetchOne("SELECT * FROM ppb_config WHERE id = ?", [1]) ?? [];
-                } catch (\PDOException $e) {
+                    $this->settings = $this->db->fetchOne('SELECT * FROM ppb_config WHERE id = ?', [1]) ?? [];
+                } catch (PDOException $e) {
                     // Database not available, tests will skip DB operations
                     $this->db = null;
-                } catch (\Error $e) {
+                } catch (Error $e) {
                     // PDO constants not available
                     $this->db = null;
                 }
@@ -172,7 +176,7 @@ abstract class FeatureTestCase extends TestCase
                 [$email, $hashedPassword, $username]
             );
             return (int) $this->db->lastInsertId();
-        } catch (\PDOException $e) {
+        } catch (PDOException $e) {
             return null;
         }
     }
@@ -184,8 +188,8 @@ abstract class FeatureTestCase extends TestCase
     {
         if ($this->db !== null) {
             try {
-                $this->db->query("DELETE FROM ppb_users WHERE id = ?", [$userId]);
-            } catch (\PDOException $e) {
+                $this->db->query('DELETE FROM ppb_users WHERE id = ?', [$userId]);
+            } catch (PDOException $e) {
                 // Ignore errors
             }
         }
@@ -200,7 +204,7 @@ abstract class FeatureTestCase extends TestCase
             return null;
         }
 
-        return $this->db->fetchOne("SELECT * FROM ppb_users WHERE email = ?", [$email]);
+        return $this->db->fetchOne('SELECT * FROM ppb_users WHERE email = ?', [$email]);
     }
 
     /**

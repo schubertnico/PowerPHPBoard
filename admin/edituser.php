@@ -24,9 +24,9 @@ declare(strict_types=1);
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
  */
 
+use PowerPHPBoard\CSRF;
 use PowerPHPBoard\Database;
 use PowerPHPBoard\Security;
-use PowerPHPBoard\CSRF;
 
 include __DIR__ . '/header.inc.php';
 ?>
@@ -37,7 +37,7 @@ if (($ppbuser['status'] ?? '') === 'Administrator') {
     $userid = Security::getInt('userid', 'GET', 0);
     $edituser = Security::getInt('edituser', 'GET', 0);
 
-    $row = $db->fetchOne("SELECT * FROM ppb_users WHERE id = ?", [$userid]);
+    $row = $db->fetchOne('SELECT * FROM ppb_users WHERE id = ?', [$userid]);
 
     if ($row === null) {
         echo '
@@ -120,13 +120,13 @@ if (($ppbuser['status'] ?? '') === 'Administrator') {
                     </td></tr>
                 ';
             } else {
-                $icqInt = (int)$icq;
+                $icqInt = (int) $icq;
                 $password = Security::hashPassword($password1);
                 $username = strip_tags($username);
                 $biography = strip_tags($biography);
 
                 $existingUser = $db->fetchOne(
-                    "SELECT * FROM ppb_users WHERE email = ? AND id != ?",
+                    'SELECT * FROM ppb_users WHERE email = ? AND id != ?',
                     [$email1, $row['id']]
                 );
 
@@ -146,7 +146,7 @@ if (($ppbuser['status'] ?? '') === 'Administrator') {
                     // Update information in database
                     try {
                         $db->execute(
-                            "UPDATE ppb_users SET username = ?, email = ?, password = ?, homepage = ?, icq = ?, biography = ?, signature = ?, hideemail = ?, logincookie = ?, status = ? WHERE id = ?",
+                            'UPDATE ppb_users SET username = ?, email = ?, password = ?, homepage = ?, icq = ?, biography = ?, signature = ?, hideemail = ?, logincookie = ?, status = ? WHERE id = ?',
                             [$username, $email1, $password, $homepage, $icqInt, $biography, $signature, $hideemail, $logincookie, $status, $row['id']]
                         );
                         CSRF::regenerate();
@@ -189,7 +189,7 @@ if (($ppbuser['status'] ?? '') === 'Administrator') {
             }
 
             echo '
-              <form action="edituser.php?edituser=1&userid=' . (int)$row['id'] . '" method="post">
+              <form action="edituser.php?edituser=1&userid=' . (int) $row['id'] . '" method="post">
               ' . CSRF::getTokenField() . '
               <tr><td colspan="2" bgcolor="' . Security::escape($admin_tbl3) . '">
               <b>Required information</b>
@@ -230,7 +230,7 @@ if (($ppbuser['status'] ?? '') === 'Administrator') {
               <tr><td width="*" bgcolor="' . Security::escape($admin_tbl2) . '">
               <b>ICQ</b>
               </td><td width="300" bgcolor="' . Security::escape($admin_tbl2) . '">
-              <input name="icq" size="10" maxlength="10" value="' . Security::escape((string)$row['icq']) . '">
+              <input name="icq" size="10" maxlength="10" value="' . Security::escape((string) $row['icq']) . '">
               </td></tr>
               <tr><td width="*" bgcolor="' . Security::escape($admin_tbl1) . '" valign="top">
               <b>Biography</b> <small>(Write something about you)</small>

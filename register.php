@@ -10,8 +10,8 @@ declare(strict_types=1);
  * Copyright (c) 2024 PowerScripts
  */
 
-use PowerPHPBoard\Security;
 use PowerPHPBoard\CSRF;
+use PowerPHPBoard\Security;
 
 include __DIR__ . '/header.inc.php';
 ?>
@@ -34,8 +34,8 @@ if ($acception === 0) {
       <tr><td align="center" bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '"><br>
       <form action="register.php" method="get">
       <input type="hidden" name="acception" value="1">
-      <input type="hidden" name="catid" value="' . (int)$catid . '">
-      <input type="hidden" name="boardid" value="' . (int)$boardid . '">
+      <input type="hidden" name="catid" value="' . (int) $catid . '">
+      <input type="hidden" name="boardid" value="' . (int) $boardid . '">
       <input type="submit" value="' . ($lang_agree ?? 'I Agree') . '">
       </form>
       <form action="index.php" method="get">
@@ -135,7 +135,7 @@ if ($acception === 0) {
                 }
 
                 // Check if email already exists (using prepared statement)
-                $existing = $db->fetchOne("SELECT id FROM ppb_users WHERE email = ?", [$email1]);
+                $existing = $db->fetchOne('SELECT id FROM ppb_users WHERE email = ?', [$email1]);
 
                 if ($existing !== null) {
                     default_error(
@@ -171,14 +171,14 @@ if ($acception === 0) {
                         // Send registration email
                         $subject = ($settings['boardtitle'] ?? 'PowerPHPBoard') . ' ' . ($lang_registration ?? 'Registration');
                         $message = ($lang_hello ?? 'Hello') . " $username,\n\n" .
-                            ($lang_youregisteredsuccessfull ?? 'You have registered successfully at') . " " . ($settings['boardurl'] ?? '') . "\n\n" .
+                            ($lang_youregisteredsuccessfull ?? 'You have registered successfully at') . ' ' . ($settings['boardurl'] ?? '') . "\n\n" .
                             ($lang_hereisyourlogininformation ?? 'Your login information:') . "\n\n" .
-                            "     " . ($lang_username ?? 'Username') . ":  $username\n" .
-                            "     " . ($lang_email ?? 'Email') . ":  $email1\n\n" .
-                            ($lang_youcanloginhere ?? 'Login here') . ": " . ($settings['boardurl'] ?? '') . "/login.php\n\n" .
+                            '     ' . ($lang_username ?? 'Username') . ":  $username\n" .
+                            '     ' . ($lang_email ?? 'Email') . ":  $email1\n\n" .
+                            ($lang_youcanloginhere ?? 'Login here') . ': ' . ($settings['boardurl'] ?? '') . "/login.php\n\n" .
                             ($lang_donotanswertoautomail ?? 'This is an automated message, please do not reply.');
 
-                        $headers = "From: " . ($settings['adminemail'] ?? 'noreply@example.com');
+                        $headers = 'From: ' . ($settings['adminemail'] ?? 'noreply@example.com');
                         @mail($email1, $subject, $message, $headers);
 
                         echo '
@@ -191,7 +191,7 @@ if ($acception === 0) {
                             <tr><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '" align="center">
                         ';
                         if ($logincookie === 'YES') {
-                            echo '<a href="login.php?catid=' . (int)$catid . '&boardid=' . (int)$boardid . '">' . ($lang_login ?? 'Login') . '</a>';
+                            echo '<a href="login.php?catid=' . (int) $catid . '&boardid=' . (int) $boardid . '">' . ($lang_login ?? 'Login') . '</a>';
                         } else {
                             echo '<a href="index.php">Home</a>';
                         }
@@ -219,8 +219,8 @@ if ($acception === 0) {
         ' . CSRF::getTokenField() . '
         <input type="hidden" name="acception" value="1">
         <input type="hidden" name="register" value="1">
-        <input type="hidden" name="catid" value="' . (int)$catid . '">
-        <input type="hidden" name="boardid" value="' . (int)$boardid . '">
+        <input type="hidden" name="catid" value="' . (int) $catid . '">
+        <input type="hidden" name="boardid" value="' . (int) $boardid . '">
         <tr><td colspan="2" bgcolor="' . Security::escape($settings['tablebg3'] ?? '#cccccc') . '">
         <b>' . ($lang_requiredinfo ?? 'Required Information') . '</b>
         </td></tr>

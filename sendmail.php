@@ -10,10 +10,10 @@ declare(strict_types=1);
  * Copyright (c) 2024 PowerScripts
  */
 
-use PowerPHPBoard\Database;
-use PowerPHPBoard\Session;
-use PowerPHPBoard\Security;
 use PowerPHPBoard\CSRF;
+use PowerPHPBoard\Database;
+use PowerPHPBoard\Security;
+use PowerPHPBoard\Session;
 
 // Load configuration
 require_once __DIR__ . '/config.inc.php';
@@ -29,7 +29,7 @@ try {
 }
 
 // Load settings
-$settings = $db->fetchOne("SELECT * FROM ppb_config WHERE id = ?", [1]) ?? [];
+$settings = $db->fetchOne('SELECT * FROM ppb_config WHERE id = ?', [1]) ?? [];
 
 // Load language file
 $langFile = match ($settings['language'] ?? 'English') {
@@ -46,7 +46,7 @@ $loggedin = 'NO';
 $userId = Session::getUserId();
 
 if ($userId !== null) {
-    $userRow = $db->fetchOne("SELECT * FROM ppb_users WHERE id = ?", [$userId]);
+    $userRow = $db->fetchOne('SELECT * FROM ppb_users WHERE id = ?', [$userId]);
     if ($userRow !== null) {
         $loggedin = 'YES';
         $ppbuser = $userRow;
@@ -74,7 +74,7 @@ if ($userid === 0) {
     );
 } else {
     if ($loggedin === 'YES') {
-        $recipient = $db->fetchOne("SELECT * FROM ppb_users WHERE id = ?", [$userid]);
+        $recipient = $db->fetchOne('SELECT * FROM ppb_users WHERE id = ?', [$userid]);
 
         if ($recipient === null) {
             default_error(
@@ -114,7 +114,7 @@ if ($userid === 0) {
                     $message = $emailcontent . "\n\n\n" .
                         ($lang_thisemailwassentthrough ?? 'This email was sent through') . ' ' .
                         ($settings['boardurl'] ?? '') . "\n" .
-                        "PowerPHPBoard (C) Copyright 2024 by PowerScripts (www.powerscripts.org)";
+                        'PowerPHPBoard (C) Copyright 2024 by PowerScripts (www.powerscripts.org)';
 
                     $headers = 'From: ' . $ppbuser['username'] . ' <' . $ppbuser['email'] . '>';
 
@@ -146,12 +146,12 @@ if ($userid === 0) {
             <tr><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '" width="*">
             <b>' . ($lang_from ?? 'From') . '</b>
             </td><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '" width="300">
-            <a href="showprofile.php?userid=' . (int)$ppbuser['id'] . '">' . Security::escape($ppbuser['username']) . '</a>
+            <a href="showprofile.php?userid=' . (int) $ppbuser['id'] . '">' . Security::escape($ppbuser['username']) . '</a>
             </td></tr>
             <tr><td bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '" width="*">
             <b>' . ($lang_to ?? 'To') . '</b>
             </td><td bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '" width="300">
-            <a href="showprofile.php?userid=' . (int)$recipient['id'] . '">' . Security::escape($recipient['username']) . '</a>
+            <a href="showprofile.php?userid=' . (int) $recipient['id'] . '">' . Security::escape($recipient['username']) . '</a>
             </td></tr>
             <tr><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '" width="*">
             <b>' . ($lang_title ?? 'Title') . '</b>

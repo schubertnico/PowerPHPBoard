@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace PowerPHPBoard\Tests\Feature;
 
-use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
-use PowerPHPBoard\Security;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use PHPUnit\Framework\Attributes\Test;
 use PowerPHPBoard\CSRF;
+use PowerPHPBoard\Security;
 use PowerPHPBoard\Session;
 
 /**
@@ -20,7 +20,9 @@ use PowerPHPBoard\Session;
 class LoginWorkflowTest extends FeatureTestCase
 {
     private string $testEmail = 'logintest@example.com';
+
     private string $testPassword = 'TestPassword123';
+
     private ?int $testUserId = null;
 
     protected function setUp(): void

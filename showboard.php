@@ -10,10 +10,10 @@ declare(strict_types=1);
  * Copyright (c) 2024 PowerScripts
  */
 
-use PowerPHPBoard\Database;
-use PowerPHPBoard\Session;
-use PowerPHPBoard\Security;
 use PowerPHPBoard\CSRF;
+use PowerPHPBoard\Database;
+use PowerPHPBoard\Security;
+use PowerPHPBoard\Session;
 
 // Load configuration
 require_once __DIR__ . '/config.inc.php';
@@ -77,7 +77,7 @@ if (!empty($board['id'])) {
             if ($existingVisit !== null) {
                 if (empty($existingVisit['password']) || $existingVisit['password'] !== $board['password']) {
                     $db->query(
-                        "UPDATE ppb_visits SET password = ? WHERE id = ?",
+                        'UPDATE ppb_visits SET password = ? WHERE id = ?',
                         [$boardpasswordCoded, $existingVisit['id']]
                     );
                 }
@@ -95,13 +95,13 @@ if (!empty($board['id'])) {
 }
 
 // Load settings and user info
-$settings = $db->fetchOne("SELECT * FROM ppb_config WHERE id = ?", [1]) ?? [];
+$settings = $db->fetchOne('SELECT * FROM ppb_config WHERE id = ?', [1]) ?? [];
 $ppbuser = [];
 $loggedin = 'NO';
 
 if (Session::isLoggedIn()) {
     $userId = Session::getUserId();
-    $ppbuser = $db->fetchOne("SELECT * FROM ppb_users WHERE id = ?", [$userId]);
+    $ppbuser = $db->fetchOne('SELECT * FROM ppb_users WHERE id = ?', [$userId]);
     if ($ppbuser !== null) {
         $loggedin = 'YES';
     } else {
@@ -141,7 +141,7 @@ require_once __DIR__ . '/' . $langFile;
 if ($board['status'] === 'Private' && !$hasAccess) {
     // Show password form for private boards
     echo '
-    <form action="showboard.php?boardid=' . (int)$board['id'] . '" method="post">
+    <form action="showboard.php?boardid=' . (int) $board['id'] . '" method="post">
     ' . CSRF::getTokenField() . '
     <tr><td colspan="7" bgcolor="' . Security::escape($settings['tablebg3'] ?? '#cccccc') . '" align="center"><br>
     <b>' . ($lang_thisboardrequirespwd ?? 'This board requires a password') . '</b><br>
@@ -164,10 +164,10 @@ if ($board['status'] === 'Private' && !$hasAccess) {
 
             // Count posts in thread
             $postCountResult = $db->fetchOne(
-                "SELECT COUNT(*) as count FROM ppb_posts WHERE threadid = ? OR id = ?",
+                'SELECT COUNT(*) as count FROM ppb_posts WHERE threadid = ? OR id = ?',
                 [$row['id'], $row['id']]
             );
-            $postCount = (int)($postCountResult['count'] ?? 0);
+            $postCount = (int) ($postCountResult['count'] ?? 0);
 
             // Thread status icon
             if (($thread['status'] ?? '') === 'Closed' || ($board['status'] ?? '') === 'Closed') {
@@ -224,42 +224,42 @@ if ($board['status'] === 'Private' && !$hasAccess) {
                 );
                 if ($visit !== null) {
                     $firstUnread = $db->fetchOne(
-                        "SELECT id FROM ppb_posts WHERE (id = ? OR threadid = ?) AND `time` > ? ORDER BY `time` LIMIT 1",
+                        'SELECT id FROM ppb_posts WHERE (id = ? OR threadid = ?) AND `time` > ? ORDER BY `time` LIMIT 1',
                         [$row['id'], $row['id'], $visit['time']]
                     );
                     if ($firstUnread !== null) {
-                        $currentPosts = (int)floor($postCount / 25) * 25;
-                        echo '<a href="showthread.php?threadid=' . (int)$row['id'] . '&current=' . $currentPosts . '#post' . (int)$firstUnread['id'] . '"><img src="images/bluearrow.gif" border="0" width="10" height="9" alt="' . ($lang_jumptofirstunread ?? 'Jump to first unread') . '"></a> ';
+                        $currentPosts = (int) floor($postCount / 25) * 25;
+                        echo '<a href="showthread.php?threadid=' . (int) $row['id'] . '&current=' . $currentPosts . '#post' . (int) $firstUnread['id'] . '"><img src="images/bluearrow.gif" border="0" width="10" height="9" alt="' . ($lang_jumptofirstunread ?? 'Jump to first unread') . '"></a> ';
                     }
                 }
             }
 
             // Thread title with pages
-            echo '<a href="showthread.php?threadid=' . (int)$row['id'] . '">' . Security::escape($row['title']) . '</a> <small>';
-            getpages((int)$row['id'], $db);
+            echo '<a href="showthread.php?threadid=' . (int) $row['id'] . '">' . Security::escape($row['title']) . '</a> <small>';
+            getpages((int) $row['id'], $db);
             echo '</small>';
 
             echo '</td><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '">';
 
             // Author
-            $author = $db->fetchOne("SELECT id, username FROM ppb_users WHERE id = ?", [$row['author']]);
+            $author = $db->fetchOne('SELECT id, username FROM ppb_users WHERE id = ?', [$row['author']]);
             if ($author !== null) {
-                echo '<a href="showprofile.php?userid=' . (int)$author['id'] . '&catid=' . (int)$catid . '&boardid=' . $boardid . '">' . Security::escape($author['username']) . '</a>';
+                echo '<a href="showprofile.php?userid=' . (int) $author['id'] . '&catid=' . (int) $catid . '&boardid=' . $boardid . '">' . Security::escape($author['username']) . '</a>';
             }
 
             echo '</td><td bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '" align="center">';
 
             // Reply count
             $replyCount = $db->fetchOne(
-                "SELECT COUNT(*) as count FROM ppb_posts WHERE threadid = ?",
+                'SELECT COUNT(*) as count FROM ppb_posts WHERE threadid = ?',
                 [$row['id']]
             );
-            echo (int)($replyCount['count'] ?? 0);
+            echo (int) ($replyCount['count'] ?? 0);
 
             echo '</td><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '" align="center">';
 
             // Views
-            echo (int)$row['views'];
+            echo (int) $row['views'];
 
             echo '</td><td bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '" align="center">';
 
@@ -267,20 +267,20 @@ if ($board['status'] === 'Private' && !$hasAccess) {
             if ($row['lastreply'] == 0) {
                 echo $lang_noreplys ?? 'No replies';
             } else {
-                $lastAuthor = $db->fetchOne("SELECT username FROM ppb_users WHERE id = ?", [$row['lastauthor']]);
+                $lastAuthor = $db->fetchOne('SELECT username FROM ppb_users WHERE id = ?', [$row['lastauthor']]);
                 if ($lastAuthor !== null) {
                     // Find last post for linking
                     $lastPost = $db->fetchOne(
-                        "SELECT id FROM ppb_posts WHERE (threadid = ? OR id = ?) AND time = ? AND author = ?",
+                        'SELECT id FROM ppb_posts WHERE (threadid = ? OR id = ?) AND time = ? AND author = ?',
                         [$row['id'], $row['id'], $row['lastreply'], $row['lastauthor']]
                     );
 
                     if ($lastPost !== null) {
-                        $currentPosts = (int)floor($postCount / 25) * 25;
-                        echo '<a href="showthread.php?threadid=' . (int)$row['id'] . '&current=' . $currentPosts . '#post' . (int)$lastPost['id'] . '"><img src="images/bluearrow.gif" border="0" width="10" height="9" alt="' . ($lang_jumptolastpost ?? 'Jump to last post') . '"></a> ';
+                        $currentPosts = (int) floor($postCount / 25) * 25;
+                        echo '<a href="showthread.php?threadid=' . (int) $row['id'] . '&current=' . $currentPosts . '#post' . (int) $lastPost['id'] . '"><img src="images/bluearrow.gif" border="0" width="10" height="9" alt="' . ($lang_jumptolastpost ?? 'Jump to last post') . '"></a> ';
                     }
 
-                    $dateAndTime = date('d.m.Y - H:i', (int)$row['lastreply']);
+                    $dateAndTime = date('d.m.Y - H:i', (int) $row['lastreply']);
                     echo Security::escape($dateAndTime) . '<br>by ' . Security::escape($lastAuthor['username']);
                 }
             }
@@ -303,7 +303,7 @@ if ($board['status'] === 'Private' && !$hasAccess) {
         );
 
         if ($existingVisit !== null) {
-            $db->query("UPDATE ppb_visits SET time = ? WHERE id = ?", [$now, $existingVisit['id']]);
+            $db->query('UPDATE ppb_visits SET time = ? WHERE id = ?', [$now, $existingVisit['id']]);
         } else {
             $db->query(
                 "INSERT INTO ppb_visits (userid, vid, time, type) VALUES (?, ?, ?, 'Board')",
@@ -322,7 +322,7 @@ if ($board['status'] === 'Private' && !$hasAccess) {
 <?php
 if (!empty($board['title'])) {
     if (($board['status'] ?? '') !== 'Closed') {
-        echo '<a href="newthread.php?boardid=' . (int)$board['id'] . '"><img src="' . Security::escape($settings['newthread'] ?? 'images/newthread.gif') . '" border="0" width="120" height="20" alt="New Thread"></a>';
+        echo render_action_button('newthread.php?boardid=' . (int) $board['id'], $settings['newthread'] ?? 'images/newthread.gif', $lang_newthread ?? 'New Thread', $settings['tablebg3'] ?? '#cccccc');
     } else {
         echo '- [ ' . ($lang_boardclosed ?? 'Board closed') . ' ] -';
     }

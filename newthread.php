@@ -10,10 +10,10 @@ declare(strict_types=1);
  * Copyright (c) 2024 PowerScripts
  */
 
-use PowerPHPBoard\Database;
-use PowerPHPBoard\Session;
-use PowerPHPBoard\Security;
 use PowerPHPBoard\CSRF;
+use PowerPHPBoard\Database;
+use PowerPHPBoard\Security;
+use PowerPHPBoard\Session;
 
 // Load configuration
 require_once __DIR__ . '/config.inc.php';
@@ -23,7 +23,7 @@ Session::start();
 
 // Get parameters
 $boardid = Security::getInt('boardid');
-$newthread = Security::getInt('newthread', 'POST');
+$newthread = Security::getInt('newthread');
 
 // Connect to database
 try {
@@ -60,13 +60,13 @@ if (Session::isLoggedIn() && ($board['status'] ?? '') === 'Private') {
 }
 
 // Load settings and user info
-$settings = $db->fetchOne("SELECT * FROM ppb_config WHERE id = ?", [1]) ?? [];
+$settings = $db->fetchOne('SELECT * FROM ppb_config WHERE id = ?', [1]) ?? [];
 $ppbuser = [];
 $loggedin = 'NO';
 
 if (Session::isLoggedIn()) {
     $userId = Session::getUserId();
-    $ppbuser = $db->fetchOne("SELECT * FROM ppb_users WHERE id = ?", [$userId]);
+    $ppbuser = $db->fetchOne('SELECT * FROM ppb_users WHERE id = ?', [$userId]);
     if ($ppbuser !== null) {
         $loggedin = 'YES';
     } else {
@@ -92,7 +92,7 @@ require_once __DIR__ . '/functions.inc.php';
 if (($board['status'] ?? '') === 'Closed') {
     default_error(
         $lang_boardclosedcannotopenthread ?? 'Board is closed, cannot create thread',
-        'showboard.php?boardid=' . (int)($board['id'] ?? 0),
+        'showboard.php?boardid=' . (int) ($board['id'] ?? 0),
         ($lang_backto ?? 'Back to') . ' "' . Security::escape($board['title'] ?? '') . '" ' . ($lang_board ?? 'board'),
         $settings['tablebg3'] ?? '#cccccc',
         $settings['tablebg2'] ?? '#eeeeee',
@@ -126,11 +126,9 @@ if (($board['status'] ?? '') === 'Closed') {
             } else {
                 $title = Security::getString('title', 'POST');
                 $text = Security::getString('text', 'POST');
-                $email = Security::getString('email', 'POST');
-                $password = Security::getString('password', 'POST');
                 $icon = Security::getString('icon', 'POST');
 
-                if ($title === '' || $text === '' || $email === '' || $password === '') {
+                if ($title === '' || $text === '') {
                     default_error(
                         $lang_insertvaluesforall ?? 'Please fill in all fields',
                         'javascript:history.back()',
@@ -139,38 +137,61 @@ if (($board['status'] ?? '') === 'Closed') {
                         $settings['tablebg2'] ?? '#eeeeee',
                         $settings['tablebg1'] ?? '#ffffff'
                     );
+                } elseif ($loggedin === 'YES') {
+                    // User is logged in - use session data
+                    $user = $ppbuser;
                 } else {
-                    // Find user
-                    $user = $db->fetchOne("SELECT * FROM ppb_users WHERE email = ?", [$email]);
+                    // User not logged in - require email and password
+                    $email = Security::getString('email', 'POST');
+                    $password = Security::getString('password', 'POST');
 
-                    if ($user === null) {
+                    if ($email === '' || $password === '') {
                         default_error(
-                            $lang_nouserwithemail ?? 'No user with this email',
+                            $lang_insertvaluesforall ?? 'Please fill in all fields',
                             'javascript:history.back()',
                             $lang_backtonewthreadform ?? 'Back to form',
                             $settings['tablebg3'] ?? '#cccccc',
                             $settings['tablebg2'] ?? '#eeeeee',
                             $settings['tablebg1'] ?? '#ffffff'
                         );
-                    } elseif ($user['status'] === 'Deactivated') {
-                        default_error(
-                            $lang_accountdeactivated ?? 'Account deactivated',
-                            'index.php',
-                            'Home',
-                            $settings['tablebg3'] ?? '#cccccc',
-                            $settings['tablebg2'] ?? '#eeeeee',
-                            $settings['tablebg1'] ?? '#ffffff'
-                        );
-                    } elseif (!Security::verifyPassword($password, $user['password'])) {
-                        default_error(
-                            $lang_pwdnotcorrect ?? 'Password incorrect',
-                            'javascript:history.back()',
-                            $lang_backtonewthreadform ?? 'Back to form',
-                            $settings['tablebg3'] ?? '#cccccc',
-                            $settings['tablebg2'] ?? '#eeeeee',
-                            $settings['tablebg1'] ?? '#ffffff'
-                        );
+                        $user = null;
                     } else {
+                        $user = $db->fetchOne('SELECT * FROM ppb_users WHERE email = ?', [$email]);
+
+                        if ($user === null) {
+                            default_error(
+                                $lang_nouserwithemail ?? 'No user with this email',
+                                'javascript:history.back()',
+                                $lang_backtonewthreadform ?? 'Back to form',
+                                $settings['tablebg3'] ?? '#cccccc',
+                                $settings['tablebg2'] ?? '#eeeeee',
+                                $settings['tablebg1'] ?? '#ffffff'
+                            );
+                        } elseif ($user['status'] === 'Deactivated') {
+                            default_error(
+                                $lang_accountdeactivated ?? 'Account deactivated',
+                                'index.php',
+                                'Home',
+                                $settings['tablebg3'] ?? '#cccccc',
+                                $settings['tablebg2'] ?? '#eeeeee',
+                                $settings['tablebg1'] ?? '#ffffff'
+                            );
+                            $user = null;
+                        } elseif (!Security::verifyPassword($password, $user['password'])) {
+                            default_error(
+                                $lang_pwdnotcorrect ?? 'Password incorrect',
+                                'javascript:history.back()',
+                                $lang_backtonewthreadform ?? 'Back to form',
+                                $settings['tablebg3'] ?? '#cccccc',
+                                $settings['tablebg2'] ?? '#eeeeee',
+                                $settings['tablebg1'] ?? '#ffffff'
+                            );
+                            $user = null;
+                        }
+                    }
+                }
+
+                if (isset($user) && $user !== null) {
                         // Create thread
                         $title = trim($title);
                         $text = trim($text);
@@ -192,7 +213,7 @@ if (($board['status'] ?? '') === 'Closed') {
 
                         // Update board last change
                         $db->query(
-                            "UPDATE ppb_boards SET lastchange = ?, lastauthor = ? WHERE id = ?",
+                            'UPDATE ppb_boards SET lastchange = ?, lastauthor = ? WHERE id = ?',
                             [$now, $user['id'], $board['id']]
                         );
 
@@ -211,7 +232,6 @@ if (($board['status'] ?? '') === 'Closed') {
                         <a href="showboard.php?boardid=' . $boardid . '">' . ($lang_backto ?? 'Back to') . ' "' . Security::escape($board['title']) . '" ' . ($lang_board ?? 'board') . '</a>
                         </td></tr>
                         ';
-                    }
                 }
             }
         }
@@ -223,19 +243,25 @@ if (($board['status'] ?? '') === 'Closed') {
         <tr><td bgcolor="' . Security::escape($settings['tablebg3'] ?? '#cccccc') . '" colspan="2">
         <b>' . ($lang_newthread ?? 'New Thread') . '</b>
         </td></tr>
-        <tr><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '" width="300">
-        <b>' . ($lang_email ?? 'Email') . '</b>
-        </td><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '">
-        <input name="email" size="25" maxlength="100" type="email" value="' . Security::escape($ppbuser['email'] ?? '') . '">
-        <small><a href="register.php">' . ($lang_wanttoregister ?? 'Register') . '</a></small>
-        </td></tr>
-        <tr><td bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '" width="300">
-        <b>' . ($lang_password ?? 'Password') . '</b>
-        </td><td bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '">
-        <input name="password" size="25" maxlength="255" type="password">
-        <small><a href="sendpassword.php">' . ($lang_pwdforgotten ?? 'Forgot password?') . '</a></small>
-        </td></tr>
         ';
+
+        // Only show email/password fields if not logged in
+        if ($loggedin !== 'YES') {
+            echo '
+            <tr><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '" width="300">
+            <b>' . ($lang_email ?? 'Email') . '</b>
+            </td><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '">
+            <input name="email" size="25" maxlength="100" type="email">
+            <small><a href="register.php">' . ($lang_wanttoregister ?? 'Register') . '</a></small>
+            </td></tr>
+            <tr><td bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '" width="300">
+            <b>' . ($lang_password ?? 'Password') . '</b>
+            </td><td bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '">
+            <input name="password" size="25" maxlength="255" type="password">
+            <small><a href="sendpassword.php">' . ($lang_pwdforgotten ?? 'Forgot password?') . '</a></small>
+            </td></tr>
+            ';
+        }
 
         if (($board['status'] ?? '') === 'Private') {
             echo '
@@ -279,8 +305,8 @@ if (($board['status'] ?? '') === 'Closed') {
         <br>
         <small>
         ' . ($lang_htmlcodeis ?? 'HTML is') . ' <b>' . Security::escape($settings['htmlcode'] ?? 'OFF') . '</b><br>
-        <a href="bbcode.php?catid=' . (int)($catid ?? 0) . '&boardid=' . $boardid . '" target="_new">' . ($lang_bbcodeis ?? 'BBCode is') . ' <b>' . Security::escape($settings['bbcode'] ?? 'ON') . '</b></a><br>
-        <a href="smilies.php?catid=' . (int)($catid ?? 0) . '&boardid=' . $boardid . '" target="_new">' . ($lang_smiliesare ?? 'Smilies are') . ' <b>' . Security::escape($settings['smilies'] ?? 'ON') . '</b></a><br>
+        <a href="bbcode.php?catid=' . (int) ($catid ?? 0) . '&boardid=' . $boardid . '" target="_new">' . ($lang_bbcodeis ?? 'BBCode is') . ' <b>' . Security::escape($settings['bbcode'] ?? 'ON') . '</b></a><br>
+        <a href="smilies.php?catid=' . (int) ($catid ?? 0) . '&boardid=' . $boardid . '" target="_new">' . ($lang_smiliesare ?? 'Smilies are') . ' <b>' . Security::escape($settings['smilies'] ?? 'ON') . '</b></a><br>
         </small>
         </td><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '">
         <textarea name="text" cols="60" rows="20"></textarea>

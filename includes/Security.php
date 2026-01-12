@@ -148,7 +148,7 @@ class Security
         };
 
         $value = $source[$key] ?? null;
-        return $value !== null ? trim((string)$value) : $default;
+        return $value !== null ? trim((string) $value) : $default;
     }
 
     /**

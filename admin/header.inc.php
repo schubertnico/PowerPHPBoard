@@ -25,9 +25,8 @@ declare(strict_types=1);
  */
 
 use PowerPHPBoard\Database;
-use PowerPHPBoard\Session;
 use PowerPHPBoard\Security;
-use PowerPHPBoard\CSRF;
+use PowerPHPBoard\Session;
 
 require_once __DIR__ . '/../config.inc.php';
 require_once __DIR__ . '/../includes/Database.php';
@@ -50,7 +49,7 @@ $postid = Security::getInt('postid', 'GET', 0);
 $db = Database::getInstance($mysql);
 
 // Load board settings
-$settingsRow = $db->fetchOne("SELECT * FROM ppb_config WHERE id = ? LIMIT 1", [1]);
+$settingsRow = $db->fetchOne('SELECT * FROM ppb_config WHERE id = ? LIMIT 1', [1]);
 
 if ($settingsRow !== null) {
     $settings['id'] = $settingsRow['id'];
@@ -76,7 +75,7 @@ $userId = Session::getUserId();
 
 if ($userId !== null) {
     $userRow = $db->fetchOne(
-        "SELECT * FROM ppb_users WHERE id = ?",
+        'SELECT * FROM ppb_users WHERE id = ?',
         [$userId]
     );
 
@@ -125,18 +124,18 @@ $admin_tbl3 = '#9F9F9F';
     if ($loggedin === 'NO') {
         echo '<a href="../login.php">Login</a> | ';
     }
-    echo '<a href="../profile.php">Profile</a> | ';
-    if ($loggedin === 'NO') {
-        echo '<a href="../register.php">Register</a> | ';
-    }
-    if ($loggedin === 'YES') {
-        echo '<a href="../logout.php">Logout</a> | ';
-    }
-    echo '<a href="../faq.php">FAQ</a><br>';
-    if ($loggedin === 'YES') {
-        echo '<br>Logged in as <b>' . Security::escape($ppbuser['username'] ?? '') . '</b><br>';
-    }
-  ?>
+echo '<a href="../profile.php">Profile</a> | ';
+if ($loggedin === 'NO') {
+    echo '<a href="../register.php">Register</a> | ';
+}
+if ($loggedin === 'YES') {
+    echo '<a href="../logout.php">Logout</a> | ';
+}
+echo '<a href="../faq.php">FAQ</a><br>';
+if ($loggedin === 'YES') {
+    echo '<br>Logged in as <b>' . Security::escape($ppbuser['username'] ?? '') . '</b><br>';
+}
+?>
   <br>
 </small>
 </td></tr>

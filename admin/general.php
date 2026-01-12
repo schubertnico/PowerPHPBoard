@@ -24,9 +24,8 @@ declare(strict_types=1);
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
  */
 
-use PowerPHPBoard\Database;
-use PowerPHPBoard\Security;
 use PowerPHPBoard\CSRF;
+use PowerPHPBoard\Security;
 
 include __DIR__ . '/header.inc.php';
 ?>
@@ -35,7 +34,7 @@ include __DIR__ . '/header.inc.php';
 
 <?php
 if (($ppbuser['status'] ?? '') === 'Administrator') {
-    $row = $db->fetchOne("SELECT * FROM ppb_config WHERE id = ?", [1]);
+    $row = $db->fetchOne('SELECT * FROM ppb_config WHERE id = ?', [1]);
 
     if ($row !== null) {
         $editgeneral = Security::getInt('editgeneral', 'GET', 0);
@@ -76,7 +75,7 @@ if (($ppbuser['status'] ?? '') === 'Administrator') {
                 ';
             } else {
                 $db->execute(
-                    "UPDATE ppb_config SET boardtitle = ?, boardurl = ?, adminemail = ?, header = ?, footer = ?, bordercolor = ?, tablebg1 = ?, tablebg2 = ?, tablebg3 = ?, htmlcode = ?, bbcode = ?, smilies = ?, newthread = ?, newpost = ?, language = ? WHERE id = ?",
+                    'UPDATE ppb_config SET boardtitle = ?, boardurl = ?, adminemail = ?, header = ?, footer = ?, bordercolor = ?, tablebg1 = ?, tablebg2 = ?, tablebg3 = ?, htmlcode = ?, bbcode = ?, smilies = ?, newthread = ?, newpost = ?, language = ? WHERE id = ?',
                     [$boardtitle, $boardurl, $adminemail, $header, $footer, $bordercolor, $tablebg1, $tablebg2, $tablebg3, $htmlcode, $bbcode, $smilies, $newthread, $newpost, $language, 1]
                 );
                 CSRF::regenerate();

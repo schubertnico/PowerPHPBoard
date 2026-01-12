@@ -4,13 +4,17 @@ declare(strict_types=1);
 
 namespace PowerPHPBoard;
 
+use Throwable;
+
 /**
  * Centralized error and exception handler with security event logging
  */
 class ErrorHandler
 {
     private static bool $initialized = false;
+
     private static string $logPath = '';
+
     private static bool $displayErrors = false;
 
     /**
@@ -61,7 +65,7 @@ class ErrorHandler
         };
 
         $message = sprintf(
-            "[%s] %s: %s in %s on line %d",
+            '[%s] %s: %s in %s on line %d',
             date('Y-m-d H:i:s'),
             $errorType,
             $errstr,
@@ -78,7 +82,7 @@ class ErrorHandler
     /**
      * Handle uncaught exceptions
      */
-    public static function handleException(\Throwable $e): void
+    public static function handleException(Throwable $e): void
     {
         $message = sprintf(
             "[%s] EXCEPTION: %s in %s on line %d\nStack trace:\n%s",
@@ -115,7 +119,7 @@ class ErrorHandler
 
         if ($error !== null && in_array($error['type'], [E_ERROR, E_CORE_ERROR, E_COMPILE_ERROR, E_PARSE], true)) {
             $message = sprintf(
-                "[%s] FATAL: %s in %s on line %d",
+                '[%s] FATAL: %s in %s on line %d',
                 date('Y-m-d H:i:s'),
                 $error['message'],
                 $error['file'],
@@ -139,7 +143,7 @@ class ErrorHandler
         $contextStr = !empty($context) ? ' | ' . json_encode($context, JSON_UNESCAPED_UNICODE) : '';
 
         $message = sprintf(
-            "[%s] SECURITY [%s] User:%s IP:%s%s",
+            '[%s] SECURITY [%s] User:%s IP:%s%s',
             date('Y-m-d H:i:s'),
             $event,
             $userId,
@@ -221,7 +225,7 @@ class ErrorHandler
         // Ensure log directory exists
         $logDir = dirname($logFile);
         if (!is_dir($logDir)) {
-            mkdir($logDir, 0755, true);
+            mkdir($logDir, 0o755, true);
         }
 
         // Append to log file
@@ -237,7 +241,7 @@ class ErrorHandler
         $headers = ['HTTP_X_FORWARDED_FOR', 'HTTP_X_REAL_IP', 'HTTP_CLIENT_IP', 'REMOTE_ADDR'];
 
         foreach ($headers as $header) {
-            if (!empty($_SERVER[$header])) {
+            if (!empty($_SERVER[$header]) && is_string($_SERVER[$header])) {
                 $ip = $_SERVER[$header];
                 // X-Forwarded-For can contain multiple IPs, take the first one
                 if (str_contains($ip, ',')) {

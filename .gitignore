@@ -6,6 +6,8 @@
 *.swp
 *.swo
 .vscode/
+*.sublime-project
+*.sublime-workspace
 
 # Logs
 /logs/*.log
@@ -14,14 +16,52 @@
 # OS
 .DS_Store
 Thumbs.db
+Desktop.ini
+._*
 
 # Environment
 .env
 .env.local
+.env.*.local
+config.inc.php
 
 # Cache
 *.cache
 /.phpunit.cache/
+/.psalm-cache/
+/.php-cs-fixer.cache
 
 # Coverage
 /coverage/
+
+# Infection (Mutation Testing)
+infection.log
+infection.html
+infection-summary.log
+infection-log.txt
+
+# PHPUnit
+.phpunit.result.cache
+
+# Composer
+composer.phar
+
+# Build artifacts
+/build/
+/dist/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.orig
+
+# Setup scripts (security risk)
+create-admin.php
+install.php
+
+# Claude Code
+/.claude/
+
+# Windows NUL device artifact
+nul

@@ -10,10 +10,10 @@ declare(strict_types=1);
  * Copyright (c) 2024 PowerScripts
  */
 
-use PowerPHPBoard\Database;
-use PowerPHPBoard\Session;
-use PowerPHPBoard\Security;
 use PowerPHPBoard\CSRF;
+use PowerPHPBoard\Database;
+use PowerPHPBoard\Security;
+use PowerPHPBoard\Session;
 use PowerPHPBoard\TextFormatter;
 
 // Load configuration
@@ -44,7 +44,7 @@ if ($threadid > 0) {
         [$threadid]
     );
     if ($thread !== null) {
-        $boardid = (int)$thread['boardid'];
+        $boardid = (int) $thread['boardid'];
     } else {
         $thread = [];
     }
@@ -94,7 +94,7 @@ if (!empty($board['id'])) {
             if ($existingVisit !== null) {
                 if (empty($existingVisit['password']) || $existingVisit['password'] !== $board['password']) {
                     $db->query(
-                        "UPDATE ppb_visits SET password = ? WHERE id = ?",
+                        'UPDATE ppb_visits SET password = ? WHERE id = ?',
                         [$boardpasswordCoded, $existingVisit['id']]
                     );
                 }
@@ -112,13 +112,13 @@ if (!empty($board['id'])) {
 }
 
 // Load settings and user info
-$settings = $db->fetchOne("SELECT * FROM ppb_config WHERE id = ?", [1]) ?? [];
+$settings = $db->fetchOne('SELECT * FROM ppb_config WHERE id = ?', [1]) ?? [];
 $ppbuser = [];
 $loggedin = 'NO';
 
 if (Session::isLoggedIn()) {
     $userId = Session::getUserId();
-    $ppbuser = $db->fetchOne("SELECT * FROM ppb_users WHERE id = ?", [$userId]);
+    $ppbuser = $db->fetchOne('SELECT * FROM ppb_users WHERE id = ?', [$userId]);
     if ($ppbuser !== null) {
         $loggedin = 'YES';
     } else {
@@ -151,23 +151,23 @@ $current3 = $current - 25;
 <?php
 if (!empty($thread['id'])) {
     $postCountResult = $db->fetchOne(
-        "SELECT COUNT(*) as count FROM ppb_posts WHERE threadid = ? OR id = ?",
+        'SELECT COUNT(*) as count FROM ppb_posts WHERE threadid = ? OR id = ?',
         [$thread['id'], $thread['id']]
     );
-    $cnum = (int)($postCountResult['count'] ?? 0);
+    $cnum = (int) ($postCountResult['count'] ?? 0);
 
     echo '<center>';
     echo '<small>' . ($lang_pages ?? 'Pages') . ': ';
-    echo getpages((int)$thread['id'], $db);
+    echo getpages((int) $thread['id'], $db);
     echo '</small> ';
 
     if ($cnum > $current2) {
         if ($current >= 25) {
-            echo '[ <a href="showthread.php?threadid=' . (int)$thread['id'] . '&current=' . $current3 . '">' . ($lang_prevpage ?? 'Previous') . '</a> ]';
+            echo '[ <a href="showthread.php?threadid=' . (int) $thread['id'] . '&current=' . $current3 . '">' . ($lang_prevpage ?? 'Previous') . '</a> ]';
         }
-        echo '&nbsp;[ <a href="showthread.php?threadid=' . (int)$thread['id'] . '&current=' . $current2 . '">' . ($lang_nextpage ?? 'Next') . '</a> ]';
+        echo '&nbsp;[ <a href="showthread.php?threadid=' . (int) $thread['id'] . '&current=' . $current2 . '">' . ($lang_nextpage ?? 'Next') . '</a> ]';
     } elseif ($cnum <= $current2 && $current > 1) {
-        echo '[ <a href="showthread.php?threadid=' . (int)$thread['id'] . '&current=' . $current3 . '">' . ($lang_prevpage ?? 'Previous') . '</a> ]';
+        echo '[ <a href="showthread.php?threadid=' . (int) $thread['id'] . '&current=' . $current3 . '">' . ($lang_prevpage ?? 'Previous') . '</a> ]';
     }
 }
 ?>
@@ -179,7 +179,7 @@ $boardpasswordCoded = base64_encode($boardpassword);
 if (($board['status'] ?? '') === 'Private' && !$hasAccess) {
     // Show password form for private boards
     echo '
-    <form action="showthread.php?threadid=' . (int)$thread['id'] . '" method="post">
+    <form action="showthread.php?threadid=' . (int) $thread['id'] . '" method="post">
     ' . CSRF::getTokenField() . '
     <tr><td colspan="2" bgcolor="' . Security::escape($settings['tablebg3'] ?? '#cccccc') . '" align="center"><br>
     <b>' . ($lang_threadrequirespwd ?? 'This thread requires a board password') . '</b><br>
@@ -192,7 +192,7 @@ if (($board['status'] ?? '') === 'Private' && !$hasAccess) {
 } else {
     // Get posts
     $posts = $db->fetchAll(
-        "SELECT * FROM ppb_posts WHERE threadid = ? OR id = ? ORDER BY id LIMIT ?, 25",
+        'SELECT * FROM ppb_posts WHERE threadid = ? OR id = ? ORDER BY id LIMIT ?, 25',
         [$thread['id'] ?? 0, $thread['id'] ?? 0, $current]
     );
 
@@ -218,12 +218,12 @@ if (($board['status'] ?? '') === 'Private' && !$hasAccess) {
 
             echo '
             <tr><td bgcolor="' . Security::escape($tablebg) . '" rowspan="2" valign="top" width="175">
-            <a name="post' . (int)$row['id'] . '"></a>
+            <a name="post' . (int) $row['id'] . '"></a>
             <b>
             ';
 
             // Get author info
-            $author = $db->fetchOne("SELECT * FROM ppb_users WHERE id = ?", [$row['author']]);
+            $author = $db->fetchOne('SELECT * FROM ppb_users WHERE id = ?', [$row['author']]);
             if ($author !== null) {
                 echo Security::escape($author['username']);
             } else {
@@ -241,7 +241,7 @@ if (($board['status'] ?? '') === 'Private' && !$hasAccess) {
                 if ($author['status'] === 'Deactivated') {
                     echo $lang_deactivated ?? 'Deactivated';
                 } elseif ($author['status'] === 'Normal user') {
-                    $rank = getrank((int)$author['id'], $db);
+                    $rank = getrank((int) $author['id'], $db);
                     echo Security::escape($rank);
                 } elseif ($author['status'] === 'Administrator') {
                     echo '<b class="mark">Administrator</b>';
@@ -254,17 +254,17 @@ if (($board['status'] ?? '') === 'Private' && !$hasAccess) {
             <small>' . ($lang_registeredsince ?? 'Registered') . '
             ';
 
-            $registeredDate = $author !== null ? date('d.m.Y', (int)$author['registered']) : '';
+            $registeredDate = $author !== null ? date('d.m.Y', (int) $author['registered']) : '';
             echo Security::escape($registeredDate) . '</small><br>
             <small>Postings: ';
 
             // User post count
             if ($author !== null) {
                 $userPostCount = $db->fetchOne(
-                    "SELECT COUNT(*) as count FROM ppb_posts WHERE author = ?",
+                    'SELECT COUNT(*) as count FROM ppb_posts WHERE author = ?',
                     [$author['id']]
                 );
-                echo (int)($userPostCount['count'] ?? 0);
+                echo (int) ($userPostCount['count'] ?? 0);
             } else {
                 echo '0';
             }
@@ -275,15 +275,15 @@ if (($board['status'] ?? '') === 'Private' && !$hasAccess) {
               <tr><td width="50%">
               <small>' . ($lang_postedon ?? 'Posted on') . ' ';
 
-            $postedDate = date('d.m.Y - H:i', (int)$row['time']);
+            $postedDate = date('d.m.Y - H:i', (int) $row['time']);
             echo Security::escape($postedDate) . '</small>
               </td><td width="50%" align="right">';
 
             if ($author !== null) {
-                echo '<a href="showprofile.php?userid=' . (int)$author['id'] . '&catid=' . (int)($catid ?? 0) . '&boardid=' . $boardid . '"><img src="images/profile.gif" width="20" height="16" border="0" alt="' . Security::escape($author['username']) . '\'s ' . ($lang_profile ?? 'Profile') . '"></a>';
+                echo '<a href="showprofile.php?userid=' . (int) $author['id'] . '&catid=' . (int) ($catid ?? 0) . '&boardid=' . $boardid . '"><img src="images/profile.gif" width="20" height="16" border="0" alt="' . Security::escape($author['username']) . '\'s ' . ($lang_profile ?? 'Profile') . '"></a>';
 
                 if (($author['hideemail'] ?? 'YES') === 'NO') {
-                    echo '<a href="sendmail.php?userid=' . (int)$author['id'] . '&catid=' . (int)($catid ?? 0) . '&boardid=' . $boardid . '"><img src="images/email.gif" width="20" height="16" border="0" alt="' . ($lang_writemail ?? 'Write mail to') . ' ' . Security::escape($author['username']) . '"></a>';
+                    echo '<a href="sendmail.php?userid=' . (int) $author['id'] . '&catid=' . (int) ($catid ?? 0) . '&boardid=' . $boardid . '"><img src="images/email.gif" width="20" height="16" border="0" alt="' . ($lang_writemail ?? 'Write mail to') . ' ' . Security::escape($author['username']) . '"></a>';
                 }
 
                 if (!empty($author['homepage']) && $author['homepage'] !== 'http://') {
@@ -296,8 +296,8 @@ if (($board['status'] ?? '') === 'Private' && !$hasAccess) {
             }
 
             echo '
-              <a href="editpost.php?postid=' . (int)$row['id'] . '&catid=' . (int)($catid ?? 0) . '&boardid=' . $boardid . '"><img src="images/editpost.gif" width="20" height="16" border="0" alt="' . ($lang_editpost ?? 'Edit post') . '"></a>
-              <a href="newpost.php?threadid=' . (int)$thread['id'] . '&postid=' . (int)$row['id'] . '"><img src="images/quoteanswer.gif" width="39" height="16" border="0" alt="' . ($lang_writequotedanswer ?? 'Quote reply') . '">
+              <a href="editpost.php?postid=' . (int) $row['id'] . '&catid=' . (int) ($catid ?? 0) . '&boardid=' . $boardid . '"><img src="images/editpost.gif" width="20" height="16" border="0" alt="' . ($lang_editpost ?? 'Edit post') . '"></a>
+              <a href="newpost.php?threadid=' . (int) $thread['id'] . '&postid=' . (int) $row['id'] . '"><img src="images/quoteanswer.gif" width="39" height="16" border="0" alt="' . ($lang_writequotedanswer ?? 'Quote reply') . '">
               </td></tr>
               </table>
             </td></tr>
@@ -318,7 +318,7 @@ if (($board['status'] ?? '') === 'Private' && !$hasAccess) {
             }
 
             echo '
-            <small><div align="right">IP: <a href="showip.php?threadid=' . (int)$thread['id'] . '&postid=' . (int)$row['id'] . '">' . ($lang_logged ?? 'logged') . '</a></div></small>
+            <small><div align="right">IP: <a href="showip.php?threadid=' . (int) $thread['id'] . '&postid=' . (int) $row['id'] . '">' . ($lang_logged ?? 'logged') . '</a></div></small>
             </td></tr>
             ';
         }
@@ -326,8 +326,8 @@ if (($board['status'] ?? '') === 'Private' && !$hasAccess) {
 
     // Update thread views
     if (!empty($thread['id'])) {
-        $threadViews = (int)($thread['views'] ?? 0) + 1;
-        $db->query("UPDATE ppb_posts SET views = ? WHERE id = ?", [$threadViews, $threadid]);
+        $threadViews = (int) ($thread['views'] ?? 0) + 1;
+        $db->query('UPDATE ppb_posts SET views = ? WHERE id = ?', [$threadViews, $threadid]);
     }
 
     // Update visit time
@@ -339,7 +339,7 @@ if (($board['status'] ?? '') === 'Private' && !$hasAccess) {
         );
 
         if ($existingVisit !== null) {
-            $db->query("UPDATE ppb_visits SET time = ? WHERE id = ?", [$now, $existingVisit['id']]);
+            $db->query('UPDATE ppb_visits SET time = ? WHERE id = ?', [$now, $existingVisit['id']]);
         } else {
             $db->query(
                 "INSERT INTO ppb_visits (userid, vid, time, type) VALUES (?, ?, ?, 'Thread')",
@@ -357,23 +357,23 @@ if (($board['status'] ?? '') === 'Private' && !$hasAccess) {
 <?php
 if (!empty($thread['id'])) {
     $postCountResult = $db->fetchOne(
-        "SELECT COUNT(*) as count FROM ppb_posts WHERE threadid = ? OR id = ?",
+        'SELECT COUNT(*) as count FROM ppb_posts WHERE threadid = ? OR id = ?',
         [$thread['id'], $thread['id']]
     );
-    $cnum = (int)($postCountResult['count'] ?? 0);
+    $cnum = (int) ($postCountResult['count'] ?? 0);
 
     echo '<center>';
     echo '<small>' . ($lang_pages ?? 'Pages') . ': ';
-    echo getpages((int)$thread['id'], $db);
+    echo getpages((int) $thread['id'], $db);
     echo '</small> ';
 
     if ($cnum > $current2) {
         if ($current >= 25) {
-            echo '[ <a href="showthread.php?threadid=' . (int)$thread['id'] . '&current=' . $current3 . '">' . ($lang_prevpage ?? 'Previous') . '</a> ]';
+            echo '[ <a href="showthread.php?threadid=' . (int) $thread['id'] . '&current=' . $current3 . '">' . ($lang_prevpage ?? 'Previous') . '</a> ]';
         }
-        echo '&nbsp;[ <a href="showthread.php?threadid=' . (int)$thread['id'] . '&current=' . $current2 . '">' . ($lang_nextpage ?? 'Next') . '</a> ]';
+        echo '&nbsp;[ <a href="showthread.php?threadid=' . (int) $thread['id'] . '&current=' . $current2 . '">' . ($lang_nextpage ?? 'Next') . '</a> ]';
     } elseif ($cnum <= $current2 && $current > 1) {
-        echo '[ <a href="showthread.php?threadid=' . (int)$thread['id'] . '&current=' . $current3 . '">' . ($lang_prevpage ?? 'Previous') . '</a> ]';
+        echo '[ <a href="showthread.php?threadid=' . (int) $thread['id'] . '&current=' . $current3 . '">' . ($lang_prevpage ?? 'Previous') . '</a> ]';
     }
 }
 ?>
@@ -389,10 +389,10 @@ if (!empty($thread['id'])) {
 <?php
 if (!empty($board['title'])) {
     if (($board['status'] ?? '') !== 'Closed') {
-        echo '<a href="newthread.php?boardid=' . (int)$board['id'] . '"><img src="' . Security::escape($settings['newthread'] ?? 'images/newthread.gif') . '" border="0" width="120" height="20" alt="New Thread"></a>';
+        echo render_action_button('newthread.php?boardid=' . (int) $board['id'], $settings['newthread'] ?? 'images/newthread.gif', $lang_newthread ?? 'New Thread', $settings['tablebg3'] ?? '#cccccc');
         if (!empty($thread['title'])) {
             if (($thread['status'] ?? '') !== 'Closed') {
-                echo '&nbsp;&nbsp;<a href="newpost.php?threadid=' . (int)$thread['id'] . '&current=' . $current . '"><img src="' . Security::escape($settings['newpost'] ?? 'images/newpost.gif') . '" border="0" width="120" height="20" alt="New Post"></a>';
+                echo '&nbsp;&nbsp;' . render_action_button('newpost.php?threadid=' . (int) $thread['id'] . '&current=' . $current, $settings['newpost'] ?? 'images/newpost.gif', $lang_newpost ?? 'New Post', $settings['tablebg3'] ?? '#cccccc');
             } else {
                 echo '- [ ' . ($lang_threadclosed ?? 'Thread closed') . ' ] -';
             }

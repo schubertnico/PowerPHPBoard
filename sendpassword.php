@@ -10,10 +10,10 @@ declare(strict_types=1);
  * Copyright (c) 2024 PowerScripts
  */
 
-use PowerPHPBoard\Database;
-use PowerPHPBoard\Session;
-use PowerPHPBoard\Security;
 use PowerPHPBoard\CSRF;
+use PowerPHPBoard\Database;
+use PowerPHPBoard\Security;
+use PowerPHPBoard\Session;
 
 // Load configuration
 require_once __DIR__ . '/config.inc.php';
@@ -29,7 +29,7 @@ try {
 }
 
 // Load settings
-$settings = $db->fetchOne("SELECT * FROM ppb_config WHERE id = ?", [1]) ?? [];
+$settings = $db->fetchOne('SELECT * FROM ppb_config WHERE id = ?', [1]) ?? [];
 
 // Load language file
 $langFile = match ($settings['language'] ?? 'English') {
@@ -73,7 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $send === 1) {
                 $settings['tablebg1'] ?? '#ffffff'
             );
         } else {
-            $user = $db->fetchOne("SELECT * FROM ppb_users WHERE email = ?", [$email]);
+            $user = $db->fetchOne('SELECT * FROM ppb_users WHERE email = ?', [$email]);
 
             if ($user === null) {
                 default_error(
@@ -90,16 +90,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $send === 1) {
                 $hashedPassword = Security::hashPassword($newPassword);
 
                 // Update user password
-                $db->query("UPDATE ppb_users SET password = ? WHERE id = ?", [$hashedPassword, $user['id']]);
+                $db->query('UPDATE ppb_users SET password = ? WHERE id = ?', [$hashedPassword, $user['id']]);
 
                 // Send email with new password
                 $subject = ($settings['boardtitle'] ?? 'PowerPHPBoard') . ' - ' . ($lang_passwordreminder ?? 'Password Reminder');
                 $message = ($lang_hello ?? 'Hello') . ' ' . $user['username'] . ",\n\n" .
                     ($lang_hereisyourrequestedlogininfo ?? 'Here is your requested login information for') . ' ' . ($settings['boardurl'] ?? '') . "\n\n" .
                     ($lang_ifyoudidntrequestmail ?? 'If you did not request this email, please ignore it.') . "\n\n" .
-                    ($lang_username ?? 'Username') . ": " . $user['username'] . "\n" .
-                    ($lang_email ?? 'Email') . ": " . $user['email'] . "\n" .
-                    ($lang_password ?? 'Password') . ": " . $newPassword . "\n\n" .
+                    ($lang_username ?? 'Username') . ': ' . $user['username'] . "\n" .
+                    ($lang_email ?? 'Email') . ': ' . $user['email'] . "\n" .
+                    ($lang_password ?? 'Password') . ': ' . $newPassword . "\n\n" .
                     ($lang_donotanswertoautomail ?? 'Please do not reply to this automated message.');
 
                 $headers = 'From: ' . ($settings['adminemail'] ?? 'noreply@example.com');

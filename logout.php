@@ -10,15 +10,17 @@ declare(strict_types=1);
  * Copyright (c) 2024 PowerScripts
  */
 
-use PowerPHPBoard\Session;
 use PowerPHPBoard\Security;
+use PowerPHPBoard\Session;
 
-// Get logout parameter before including header (which starts session)
+// Load configuration first (includes autoloader)
+require_once __DIR__ . '/config.inc.php';
+
+// Get logout parameter
 $logout = Security::getInt('logout');
 
 // Process logout before header if requested
 if ($logout === 1) {
-    require_once __DIR__ . '/config.inc.php';
     Session::start();
     Session::logout();
 }
@@ -50,8 +52,8 @@ if ($logout === 1) {
       ' . ($lang_reallylogout ?? 'Do you really want to logout?') . '<br><br>
       </td></tr>
       <tr><td bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '" align="center">
-      <a href="logout.php?logout=1&catid=' . (int)$catid . '&boardid=' . (int)$boardid . '">' . ($lang_yeslogout ?? 'Yes, logout') . '</a> |
-      <a href="index.php?catid=' . (int)$catid . '&boardid=' . (int)$boardid . '">' . ($lang_nologout ?? 'No, stay logged in') . '</a>
+      <a href="logout.php?logout=1&catid=' . (int) $catid . '&boardid=' . (int) $boardid . '">' . ($lang_yeslogout ?? 'Yes, logout') . '</a> |
+      <a href="index.php?catid=' . (int) $catid . '&boardid=' . (int) $boardid . '">' . ($lang_nologout ?? 'No, stay logged in') . '</a>
       </td></tr>
     ';
 }

@@ -10,10 +10,10 @@ declare(strict_types=1);
  * Copyright (c) 2024 PowerScripts
  */
 
-use PowerPHPBoard\Database;
-use PowerPHPBoard\Session;
-use PowerPHPBoard\Security;
 use PowerPHPBoard\CSRF;
+use PowerPHPBoard\Database;
+use PowerPHPBoard\Security;
+use PowerPHPBoard\Session;
 
 // Load configuration
 require_once __DIR__ . '/config.inc.php';
@@ -29,7 +29,7 @@ try {
 }
 
 // Load settings
-$settings = $db->fetchOne("SELECT * FROM ppb_config WHERE id = ?", [1]) ?? [];
+$settings = $db->fetchOne('SELECT * FROM ppb_config WHERE id = ?', [1]) ?? [];
 
 // Load language file
 $langFile = match ($settings['language'] ?? 'English') {
@@ -46,7 +46,7 @@ $loggedin = 'NO';
 $userId = Session::getUserId();
 
 if ($userId !== null) {
-    $userRow = $db->fetchOne("SELECT * FROM ppb_users WHERE id = ?", [$userId]);
+    $userRow = $db->fetchOne('SELECT * FROM ppb_users WHERE id = ?', [$userId]);
     if ($userRow !== null) {
         $loggedin = 'YES';
         $ppbuser = $userRow;
@@ -161,7 +161,7 @@ if ($login === 1 && $loggedin === 'YES') {
             } else {
                 // Check if email is already used by another user
                 $existingUser = $db->fetchOne(
-                    "SELECT id FROM ppb_users WHERE email = ? AND id != ?",
+                    'SELECT id FROM ppb_users WHERE email = ? AND id != ?',
                     [$email1, $user['id']]
                 );
 
@@ -182,7 +182,7 @@ if ($login === 1 && $loggedin === 'YES') {
                     $updateSuccess = true;
                     try {
                         $db->query(
-                            "UPDATE ppb_users SET username = ?, email = ?, password = ?, homepage = ?, icq = ?, biography = ?, signature = ?, hideemail = ?, logincookie = ? WHERE id = ?",
+                            'UPDATE ppb_users SET username = ?, email = ?, password = ?, homepage = ?, icq = ?, biography = ?, signature = ?, hideemail = ?, logincookie = ? WHERE id = ?',
                             [
                                 strip_tags($username),
                                 $email1,
@@ -193,7 +193,7 @@ if ($login === 1 && $loggedin === 'YES') {
                                 $signature,
                                 $hideemail === 'YES' ? 'YES' : 'NO',
                                 $logincookie === 'YES' ? 'YES' : 'NO',
-                                $user['id']
+                                $user['id'],
                             ]
                         );
                     } catch (PDOException) {

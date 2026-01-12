@@ -32,6 +32,7 @@ namespace PowerPHPBoard;
 class CSRF
 {
     private const string TOKEN_NAME = 'csrf_token';
+
     private const int TOKEN_LENGTH = 32;
 
     /**

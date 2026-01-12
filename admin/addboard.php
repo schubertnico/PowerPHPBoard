@@ -24,9 +24,8 @@ declare(strict_types=1);
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
  */
 
-use PowerPHPBoard\Database;
-use PowerPHPBoard\Security;
 use PowerPHPBoard\CSRF;
+use PowerPHPBoard\Security;
 
 include __DIR__ . '/header.inc.php';
 ?>
@@ -37,41 +36,45 @@ include __DIR__ . '/header.inc.php';
 if (($ppbuser['status'] ?? '') === 'Administrator') {
     $addboard = Security::getInt('addboard', 'GET', 0);
 
-    if ($addboard === 1) {
+    if ($addboard === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
         // Validate CSRF token
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            CSRF::validateOrDie();
-        }
+        CSRF::validateOrDie();
 
         $title = Security::getString('title', 'POST');
-        $description = Security::getString('description', 'POST');
-        $mods = Security::getString('mods', 'POST');
-        $catidPost = Security::getInt('catid', 'POST', 0);
-        $header = Security::getString('header', 'POST');
-        $footer = Security::getString('footer', 'POST');
-        $bordercolor = Security::getString('bordercolor', 'POST');
-        $tablebg1 = Security::getString('tablebg1', 'POST');
-        $tablebg2 = Security::getString('tablebg2', 'POST');
-        $tablebg3 = Security::getString('tablebg3', 'POST');
-        $newthread = Security::getString('newthread', 'POST');
-        $newpost = Security::getString('newpost', 'POST');
 
-        if ($title === '' || $description === '' || $bordercolor === '' || $newthread === '' || $newpost === '' || $catidPost === 0) {
+        if ($title === '') {
             echo '
                 <tr><td bgcolor="' . Security::escape($admin_tbl3) . '">
                 <b>Error message</b>
                 </td></tr>
                 <tr><td bgcolor="' . Security::escape($admin_tbl2) . '"><br>
-                Please insert values for all fields!<br><br>
+                Please insert a board title!<br><br>
                 </td></tr>
                 <tr><td bgcolor="' . Security::escape($admin_tbl1) . '" align="center">
                 <a href="javascript:history.back()">Back to add board form</a>
                 </td></tr>
             ';
         } else {
+            // Get values with defaults from global settings
+            $description = Security::getString('description', 'POST');
+            $mods = trim(Security::getString('mods', 'POST'));
+            $catidPost = Security::getInt('catid', 'POST', 0);
+            $header = Security::getString('header', 'POST') ?: ($settings['header'] ?? '');
+            $footer = Security::getString('footer', 'POST') ?: ($settings['footer'] ?? '');
+            $bordercolor = Security::getString('bordercolor', 'POST') ?: ($settings['bordercolor'] ?? '#000000');
+            $tablebg1 = Security::getString('tablebg1', 'POST') ?: ($settings['tablebg1'] ?? '#FFFFFF');
+            $tablebg2 = Security::getString('tablebg2', 'POST') ?: ($settings['tablebg2'] ?? '#F0F0F0');
+            $tablebg3 = Security::getString('tablebg3', 'POST') ?: ($settings['tablebg3'] ?? '#E0E0E0');
+            $newthread = Security::getString('newthread', 'POST') ?: ($settings['newthread'] ?? '');
+            $newpost = Security::getString('newpost', 'POST') ?: ($settings['newpost'] ?? '');
+
+            // If no category selected, use first available
+            if ($catidPost === 0) {
+                $firstCat = $db->fetchOne('SELECT id FROM ppb_boards WHERE type = ? ORDER BY id LIMIT 1', ['Boardcategory']);
+                $catidPost = $firstCat ? (int) $firstCat['id'] : 0;
+            }
             $title = strip_tags($title);
             $description = strip_tags($description);
-            $mods = trim($mods);
 
             $db->execute(
                 "INSERT INTO ppb_boards (title, description, type, mods, catid, header, footer, bordercolor, tablebg1, tablebg2, tablebg3, newthread, newpost) VALUES (?, ?, 'Board', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -117,12 +120,12 @@ if (($ppbuser['status'] ?? '') === 'Administrator') {
           </td><td bgcolor="' . Security::escape($admin_tbl2) . '">
         ';
 
-        $categories = $db->fetchAll("SELECT * FROM ppb_boards WHERE type = ? ORDER BY id", ['Boardcategory']);
+        $categories = $db->fetchAll('SELECT * FROM ppb_boards WHERE type = ? ORDER BY id', ['Boardcategory']);
 
         if (count($categories) > 0) {
             echo '<select name="catid" size="1">';
             foreach ($categories as $row) {
-                echo '<option value="' . (int)$row['id'] . '">' . Security::escape($row['title']) . '</option>' . "\n";
+                echo '<option value="' . (int) $row['id'] . '">' . Security::escape($row['title']) . '</option>' . "\n";
             }
             echo '</select>';
         } else {

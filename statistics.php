@@ -21,13 +21,13 @@ include __DIR__ . '/header.inc.php';
 <b><?php echo $lang_statistics ?? 'Statistics'; ?></b>
 </td></tr>
 <?php
-$allusersResult = $db->fetchOne("SELECT COUNT(*) as count FROM ppb_users");
+$allusersResult = $db->fetchOne('SELECT COUNT(*) as count FROM ppb_users');
 $allthreadsResult = $db->fetchOne("SELECT COUNT(*) as count FROM ppb_posts WHERE type = 'Thread'");
-$allpostingsResult = $db->fetchOne("SELECT COUNT(*) as count FROM ppb_posts");
+$allpostingsResult = $db->fetchOne('SELECT COUNT(*) as count FROM ppb_posts');
 
-$allusers = (int)($allusersResult['count'] ?? 0);
-$allthreads = (int)($allthreadsResult['count'] ?? 0);
-$allpostings = (int)($allpostingsResult['count'] ?? 0);
+$allusers = (int) ($allusersResult['count'] ?? 0);
+$allthreads = (int) ($allthreadsResult['count'] ?? 0);
+$allpostings = (int) ($allpostingsResult['count'] ?? 0);
 ?>
 <tr><td bgcolor="<?php echo Security::escape($settings['tablebg2'] ?? '#eeeeee'); ?>" valign="top">
 <?php echo $lang_numregistered ?? 'Registered users'; ?>

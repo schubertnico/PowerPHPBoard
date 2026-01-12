@@ -24,7 +24,6 @@ declare(strict_types=1);
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
  */
 
-use PowerPHPBoard\Database;
 use PowerPHPBoard\Security;
 
 include __DIR__ . '/header.inc.php';
@@ -52,20 +51,20 @@ include __DIR__ . '/header.inc.php';
 
 <?php
 if ($catid > 0) {
-    $categories = $db->fetchAll("SELECT * FROM ppb_boards WHERE type = ? AND id = ?", ['Boardcategory', $catid]);
+    $categories = $db->fetchAll('SELECT * FROM ppb_boards WHERE type = ? AND id = ?', ['Boardcategory', $catid]);
 } else {
-    $categories = $db->fetchAll("SELECT * FROM ppb_boards WHERE type = ? ORDER BY id", ['Boardcategory']);
+    $categories = $db->fetchAll('SELECT * FROM ppb_boards WHERE type = ? ORDER BY id', ['Boardcategory']);
 }
 
 if (count($categories) > 0) {
     foreach ($categories as $row) {
         echo '
             <tr><td bgcolor="' . Security::escape($admin_tbl3) . '" colspan="4">
-            <a href="boards.php?catid=' . (int)$row['id'] . '"><b>' . Security::escape($row['title']) . '</b></a> <a href="editboardcategory.php?catid=' . (int)$row['id'] . '">Edit boardcategory</a> | <a href="boarddesign.php?catid=' . (int)$row['id'] . '">All boards in this category to category design</a>
+            <a href="boards.php?catid=' . (int) $row['id'] . '"><b>' . Security::escape($row['title']) . '</b></a> <a href="editboardcategory.php?catid=' . (int) $row['id'] . '">Edit boardcategory</a> | <a href="boarddesign.php?catid=' . (int) $row['id'] . '">All boards in this category to category design</a>
             </td></tr>
         ';
 
-        $boards = $db->fetchAll("SELECT * FROM ppb_boards WHERE type = ? AND catid = ? ORDER BY title", ['Board', $row['id']]);
+        $boards = $db->fetchAll('SELECT * FROM ppb_boards WHERE type = ? AND catid = ? ORDER BY title', ['Board', $row['id']]);
 
         if (count($boards) > 0) {
             foreach ($boards as $row2) {
@@ -79,20 +78,20 @@ if (count($categories) > 0) {
                 }
                 echo '
                     </td><td bgcolor="' . Security::escape($admin_tbl2) . '">
-                    <b><a href="../showboard.php?boardid=' . (int)$row2['id'] . '">' . Security::escape($row2['title']) . '</a></b><br>
+                    <b><a href="../showboard.php?boardid=' . (int) $row2['id'] . '">' . Security::escape($row2['title']) . '</a></b><br>
                     <small>' . Security::escape($row2['description']) . '</small>
                     </td><td bgcolor="' . Security::escape($admin_tbl1) . '">
                     <small>
                 ';
                 if (!empty($row2['mods'])) {
-                    $mods = explode(',', (string)$row2['mods']);
+                    $mods = explode(',', (string) $row2['mods']);
                     $modnum = count($mods);
                     for ($i = 0; $i < $modnum; $i++) {
                         $modEmail = trim($mods[$i]);
                         if ($modEmail !== '') {
-                            $modUser = $db->fetchOne("SELECT * FROM ppb_users WHERE email = ?", [$modEmail]);
+                            $modUser = $db->fetchOne('SELECT * FROM ppb_users WHERE email = ?', [$modEmail]);
                             if ($modUser !== null) {
-                                echo '<a href="../showprofile.php?userid=' . (int)$modUser['id'] . '">' . Security::escape($modUser['username']) . '</a> ';
+                                echo '<a href="../showprofile.php?userid=' . (int) $modUser['id'] . '">' . Security::escape($modUser['username']) . '</a> ';
                             }
                         }
                     }
@@ -102,7 +101,7 @@ if (count($categories) > 0) {
                 echo '
                     </small>
                     </td><td bgcolor="' . Security::escape($admin_tbl2) . '">
-                    <a href="editboard.php?boardid=' . (int)$row2['id'] . '">Edit board</a>
+                    <a href="editboard.php?boardid=' . (int) $row2['id'] . '">Edit board</a>
                     </td></tr>
                 ';
             }

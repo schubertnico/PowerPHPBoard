@@ -24,9 +24,8 @@ declare(strict_types=1);
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
  */
 
-use PowerPHPBoard\Database;
-use PowerPHPBoard\Security;
 use PowerPHPBoard\CSRF;
+use PowerPHPBoard\Security;
 
 include __DIR__ . '/header.inc.php';
 ?>
@@ -35,7 +34,7 @@ include __DIR__ . '/header.inc.php';
 
 <?php
 if (($ppbuser['status'] ?? '') === 'Administrator') {
-    $row = $db->fetchOne("SELECT * FROM ppb_boards WHERE id = ?", [$boardid]);
+    $row = $db->fetchOne('SELECT * FROM ppb_boards WHERE id = ?', [$boardid]);
 
     if ($row !== null) {
         $editboard = Security::getInt('editboard', 'GET', 0);
@@ -92,7 +91,7 @@ if (($ppbuser['status'] ?? '') === 'Administrator') {
                 $passwordEncoded = base64_encode($password);
 
                 $db->execute(
-                    "UPDATE ppb_boards SET title = ?, description = ?, mods = ?, catid = ?, status = ?, password = ?, header = ?, footer = ?, bordercolor = ?, tablebg1 = ?, tablebg2 = ?, tablebg3 = ?, newthread = ?, newpost = ? WHERE id = ?",
+                    'UPDATE ppb_boards SET title = ?, description = ?, mods = ?, catid = ?, status = ?, password = ?, header = ?, footer = ?, bordercolor = ?, tablebg1 = ?, tablebg2 = ?, tablebg3 = ?, newthread = ?, newpost = ? WHERE id = ?',
                     [$title, $description, $mods, $catidPost, $status, $passwordEncoded, $header, $footer, $bordercolor, $tablebg1, $tablebg2, $tablebg3, $newthread, $newpost, $boardid]
                 );
                 CSRF::regenerate();
@@ -109,9 +108,9 @@ if (($ppbuser['status'] ?? '') === 'Administrator') {
                 ';
             }
         } else {
-            $password = base64_decode((string)$row['password']);
+            $password = base64_decode((string) $row['password']);
             echo '
-              <form action="editboard.php?editboard=1&boardid=' . (int)$row['id'] . '" method="post">
+              <form action="editboard.php?editboard=1&boardid=' . (int) $row['id'] . '" method="post">
               ' . CSRF::getTokenField() . '
               <tr><td bgcolor="' . Security::escape($admin_tbl3) . '" colspan="2">
               <b>Edit board</b>
@@ -136,17 +135,17 @@ if (($ppbuser['status'] ?? '') === 'Administrator') {
               </td><td bgcolor="' . Security::escape($admin_tbl2) . '">
             ';
 
-            $categories = $db->fetchAll("SELECT * FROM ppb_boards WHERE type = ? ORDER BY id", ['Boardcategory']);
+            $categories = $db->fetchAll('SELECT * FROM ppb_boards WHERE type = ? ORDER BY id', ['Boardcategory']);
 
             if (count($categories) > 0) {
-                $currentCat = $db->fetchOne("SELECT * FROM ppb_boards WHERE id = ?", [$row['catid']]);
+                $currentCat = $db->fetchOne('SELECT * FROM ppb_boards WHERE id = ?', [$row['catid']]);
                 echo '<select name="catid" size="1">';
                 if ($currentCat !== null) {
-                    echo '<option value="' . (int)$currentCat['id'] . '">' . Security::escape($currentCat['title']) . '</option>';
+                    echo '<option value="' . (int) $currentCat['id'] . '">' . Security::escape($currentCat['title']) . '</option>';
                 }
                 echo '<option>-----</option>' . "\n";
                 foreach ($categories as $row2) {
-                    echo '<option value="' . (int)$row2['id'] . '">' . Security::escape($row2['title']) . '</option>' . "\n";
+                    echo '<option value="' . (int) $row2['id'] . '">' . Security::escape($row2['title']) . '</option>' . "\n";
                 }
                 echo '</select>';
             } else {

@@ -4,11 +4,10 @@ declare(strict_types=1);
 
 namespace PowerPHPBoard\Tests\Feature;
 
-use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use PHPUnit\Framework\Attributes\Test;
 use PowerPHPBoard\Security;
-use PowerPHPBoard\CSRF;
 
 /**
  * Feature tests for Registration workflow

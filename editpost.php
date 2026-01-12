@@ -10,10 +10,10 @@ declare(strict_types=1);
  * Copyright (c) 2024 PowerScripts
  */
 
-use PowerPHPBoard\Database;
-use PowerPHPBoard\Session;
-use PowerPHPBoard\Security;
 use PowerPHPBoard\CSRF;
+use PowerPHPBoard\Database;
+use PowerPHPBoard\Security;
+use PowerPHPBoard\Session;
 
 // Load configuration
 require_once __DIR__ . '/config.inc.php';
@@ -36,13 +36,13 @@ try {
 }
 
 // Load settings and user info
-$settings = $db->fetchOne("SELECT * FROM ppb_config WHERE id = ?", [1]) ?? [];
+$settings = $db->fetchOne('SELECT * FROM ppb_config WHERE id = ?', [1]) ?? [];
 $ppbuser = [];
 $loggedin = 'NO';
 
 if (Session::isLoggedIn()) {
     $userId = Session::getUserId();
-    $ppbuser = $db->fetchOne("SELECT * FROM ppb_users WHERE id = ?", [$userId]);
+    $ppbuser = $db->fetchOne('SELECT * FROM ppb_users WHERE id = ?', [$userId]);
     if ($ppbuser !== null) {
         $loggedin = 'YES';
         $login = 1;
@@ -77,7 +77,7 @@ if ($postid === 0) {
     );
 } else {
     // Get post
-    $post = $db->fetchOne("SELECT * FROM ppb_posts WHERE id = ?", [$postid]);
+    $post = $db->fetchOne('SELECT * FROM ppb_posts WHERE id = ?', [$postid]);
 
     if ($post === null) {
         default_error(
@@ -91,7 +91,7 @@ if ($postid === 0) {
     } elseif ($login !== 1) {
         // Show login form
         echo '
-        <form action="editpost.php?postid=' . (int)$post['id'] . '&login=1&catid=' . $catid . '&boardid=' . $boardid . '" method="post">
+        <form action="editpost.php?postid=' . (int) $post['id'] . '&login=1&catid=' . $catid . '&boardid=' . $boardid . '" method="post">
         ' . CSRF::getTokenField() . '
         <tr><td bgcolor="' . Security::escape($settings['tablebg3'] ?? '#cccccc') . '">
         <b>' . ($lang_editpost ?? 'Edit Post') . '</b>
@@ -159,7 +159,7 @@ if ($postid === 0) {
                 );
             } else {
                 // Find user
-                $user = $db->fetchOne("SELECT * FROM ppb_users WHERE email = ?", [$email]);
+                $user = $db->fetchOne('SELECT * FROM ppb_users WHERE email = ?', [$email]);
 
                 if ($user === null) {
                     default_error(
@@ -185,9 +185,9 @@ if ($postid === 0) {
                     $ismod = false;
 
                     // Check if user is moderator
-                    $boardData = $db->fetchOne("SELECT mods FROM ppb_boards WHERE id = ?", [$post['boardid']]);
+                    $boardData = $db->fetchOne('SELECT mods FROM ppb_boards WHERE id = ?', [$post['boardid']]);
                     if ($boardData !== null && !empty($boardData['mods'])) {
-                        $mods = explode(',', (string)$boardData['mods']);
+                        $mods = explode(',', (string) $boardData['mods']);
                         foreach ($mods as $modEmail) {
                             $modEmail = trim($modEmail);
                             if ($modEmail === $user['email']) {
@@ -199,7 +199,7 @@ if ($postid === 0) {
                     }
 
                     // Author or admin can always edit
-                    if ((int)$user['id'] === (int)$post['author'] || $user['status'] === 'Administrator') {
+                    if ((int) $user['id'] === (int) $post['author'] || $user['status'] === 'Administrator') {
                         $canedit = true;
                     }
 
@@ -243,8 +243,8 @@ if ($postid === 0) {
                                 );
                             } elseif ($deletepost === 'YES' && ($ismod || $user['status'] === 'Administrator')) {
                                 // Delete thread and all posts
-                                $db->query("DELETE FROM ppb_posts WHERE id = ?", [$postid]);
-                                $db->query("DELETE FROM ppb_posts WHERE threadid = ?", [$postid]);
+                                $db->query('DELETE FROM ppb_posts WHERE id = ?', [$postid]);
+                                $db->query('DELETE FROM ppb_posts WHERE threadid = ?', [$postid]);
 
                                 echo '
                                 <tr><td bgcolor="' . Security::escape($settings['tablebg3'] ?? '#cccccc') . '">
@@ -254,7 +254,7 @@ if ($postid === 0) {
                                 ' . ($lang_threaddeleted ?? 'Thread deleted') . '<br><br>
                                 </td></tr>
                                 <tr><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '" align="center">
-                                <a href="showboard.php?boardid=' . (int)$post['boardid'] . '">' . ($lang_showboard ?? 'Show board') . '</a>
+                                <a href="showboard.php?boardid=' . (int) $post['boardid'] . '">' . ($lang_showboard ?? 'Show board') . '</a>
                                 </td></tr>
                                 ';
                             } elseif ($closethread === 'YES' && ($ismod || $user['status'] === 'Administrator')) {
@@ -269,7 +269,7 @@ if ($postid === 0) {
                                 ' . ($lang_threadclosed ?? 'Thread closed') . '<br><br>
                                 </td></tr>
                                 <tr><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '" align="center">
-                                <a href="showboard.php?boardid=' . (int)$post['boardid'] . '">' . ($lang_showboard ?? 'Show board') . '</a>
+                                <a href="showboard.php?boardid=' . (int) $post['boardid'] . '">' . ($lang_showboard ?? 'Show board') . '</a>
                                 </td></tr>
                                 ';
                             } elseif ($openthread === 'YES' && ($ismod || $user['status'] === 'Administrator')) {
@@ -284,7 +284,7 @@ if ($postid === 0) {
                                 ' . ($lang_threadopened ?? 'Thread opened') . '<br><br>
                                 </td></tr>
                                 <tr><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '" align="center">
-                                <a href="showboard.php?boardid=' . (int)$post['boardid'] . '">' . ($lang_showboard ?? 'Show board') . '</a>
+                                <a href="showboard.php?boardid=' . (int) $post['boardid'] . '">' . ($lang_showboard ?? 'Show board') . '</a>
                                 </td></tr>
                                 ';
                             } else {
@@ -300,7 +300,7 @@ if ($postid === 0) {
                                 }
 
                                 $db->query(
-                                    "UPDATE ppb_posts SET title = ?, text = ?, icon = ? WHERE id = ?",
+                                    'UPDATE ppb_posts SET title = ?, text = ?, icon = ? WHERE id = ?',
                                     [$title, $text, $icon, $postid]
                                 );
 
@@ -312,7 +312,7 @@ if ($postid === 0) {
                                 ' . ($lang_threadedited ?? 'Thread edited') . '<br><br>
                                 </td></tr>
                                 <tr><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '" align="center">
-                                <a href="showthread.php?threadid=' . (int)$post['id'] . '">' . ($lang_showthread ?? 'Show thread') . '</a>
+                                <a href="showthread.php?threadid=' . (int) $post['id'] . '">' . ($lang_showthread ?? 'Show thread') . '</a>
                                 </td></tr>
                                 ';
                             }
@@ -320,7 +320,7 @@ if ($postid === 0) {
                             // Editing a post (not thread)
                             if ($deletepost === 'YES' && ($ismod || $user['status'] === 'Administrator')) {
                                 // Delete post
-                                $db->query("DELETE FROM ppb_posts WHERE id = ?", [$postid]);
+                                $db->query('DELETE FROM ppb_posts WHERE id = ?', [$postid]);
 
                                 echo '
                                 <tr><td bgcolor="' . Security::escape($settings['tablebg3'] ?? '#cccccc') . '">
@@ -330,13 +330,13 @@ if ($postid === 0) {
                                 ' . ($lang_postingdeleted ?? 'Post deleted') . '<br><br>
                                 </td></tr>
                                 <tr><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '" align="center">
-                                <a href="showthread.php?threadid=' . (int)$post['threadid'] . '">' . ($lang_showthread ?? 'Show thread') . '</a>
+                                <a href="showthread.php?threadid=' . (int) $post['threadid'] . '">' . ($lang_showthread ?? 'Show thread') . '</a>
                                 </td></tr>
                                 ';
                             } else {
                                 // Update post
                                 $text = trim($text);
-                                $db->query("UPDATE ppb_posts SET text = ? WHERE id = ?", [$text, $postid]);
+                                $db->query('UPDATE ppb_posts SET text = ? WHERE id = ?', [$text, $postid]);
 
                                 echo '
                                 <tr><td bgcolor="' . Security::escape($settings['tablebg3'] ?? '#cccccc') . '">
@@ -346,7 +346,7 @@ if ($postid === 0) {
                                 ' . ($lang_postingedited ?? 'Post edited') . '<br><br>
                                 </td></tr>
                                 <tr><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '" align="center">
-                                <a href="showthread.php?threadid=' . (int)$post['threadid'] . '">' . ($lang_showthread ?? 'Show thread') . '</a>
+                                <a href="showthread.php?threadid=' . (int) $post['threadid'] . '">' . ($lang_showthread ?? 'Show thread') . '</a>
                                 </td></tr>
                                 ';
                             }
@@ -356,7 +356,7 @@ if ($postid === 0) {
                         $text = $post['text'];
 
                         echo '
-                        <form action="editpost.php?postid=' . (int)$post['id'] . '&login=1&editpost=1&catid=' . $catid . '&boardid=' . $boardid . '" method="post">
+                        <form action="editpost.php?postid=' . (int) $post['id'] . '&login=1&editpost=1&catid=' . $catid . '&boardid=' . $boardid . '" method="post">
                         ' . CSRF::getTokenField() . '
                         <input type="hidden" name="email" value="' . Security::escape($email) . '">
                         <input type="hidden" name="password" value="">

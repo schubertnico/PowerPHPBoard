@@ -44,7 +44,7 @@ if (count($categories) > 0) {
     foreach ($categories as $category) {
         echo '
         <tr><td bgcolor="' . Security::escape($settings['tablebg3'] ?? '#cccccc') . '" colspan="6">
-        <a href="index.php?catid=' . (int)$category['id'] . '"><b>' . Security::escape($category['title']) . '</b></a>
+        <a href="index.php?catid=' . (int) $category['id'] . '"><b>' . Security::escape($category['title']) . '</b></a>
         </td></tr>
         ';
 
@@ -79,16 +79,16 @@ if (count($categories) > 0) {
                 }
 
                 echo '</td><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '">
-                <b><a href="showboard.php?boardid=' . (int)$boardRow['id'] . '">' . Security::escape($boardRow['title']) . '</a></b><br>
+                <b><a href="showboard.php?boardid=' . (int) $boardRow['id'] . '">' . Security::escape($boardRow['title']) . '</a></b><br>
                 <small>' . Security::escape($boardRow['description']) . '</small>
                 </td><td bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '" align="center">';
 
                 // Post count
                 $postCount = $db->fetchOne(
-                    "SELECT COUNT(*) as count FROM ppb_posts WHERE boardid = ?",
+                    'SELECT COUNT(*) as count FROM ppb_posts WHERE boardid = ?',
                     [$boardRow['id']]
                 );
-                echo (int)($postCount['count'] ?? 0);
+                echo (int) ($postCount['count'] ?? 0);
 
                 echo '</td><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '" align="center">';
 
@@ -97,24 +97,24 @@ if (count($categories) > 0) {
                     "SELECT COUNT(*) as count FROM ppb_posts WHERE boardid = ? AND type = 'Thread'",
                     [$boardRow['id']]
                 );
-                echo (int)($threadCount['count'] ?? 0);
+                echo (int) ($threadCount['count'] ?? 0);
 
                 echo '</td><td bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '" align="center">
                 <small>';
 
                 // Last post info
                 if ($boardRow['lastchange'] != 0) {
-                    $dateAndTime = date('d.m.Y - H:i', (int)$boardRow['lastchange']);
+                    $dateAndTime = date('d.m.Y - H:i', (int) $boardRow['lastchange']);
 
                     $lastAuthor = $db->fetchOne(
-                        "SELECT username FROM ppb_users WHERE id = ?",
+                        'SELECT username FROM ppb_users WHERE id = ?',
                         [$boardRow['lastauthor']]
                     );
 
                     if ($lastAuthor !== null) {
                         // Find the last post for linking
                         $lastPost = $db->fetchOne(
-                            "SELECT id, threadid FROM ppb_posts WHERE boardid = ? AND time = ? AND author = ?",
+                            'SELECT id, threadid FROM ppb_posts WHERE boardid = ? AND time = ? AND author = ?',
                             [$boardRow['id'], $boardRow['lastchange'], $boardRow['lastauthor']]
                         );
 
@@ -122,12 +122,12 @@ if (count($categories) > 0) {
                             $lastPostThreadId = ($lastPost['threadid'] == 0) ? $lastPost['id'] : $lastPost['threadid'];
 
                             $postInThread = $db->fetchOne(
-                                "SELECT COUNT(*) as count FROM ppb_posts WHERE threadid = ?",
+                                'SELECT COUNT(*) as count FROM ppb_posts WHERE threadid = ?',
                                 [$lastPostThreadId]
                             );
-                            $currentPostings = (int)floor(((int)($postInThread['count'] ?? 0)) / 25) * 25;
+                            $currentPostings = (int) floor(((int) ($postInThread['count'] ?? 0)) / 25) * 25;
 
-                            echo '<a href="showthread.php?threadid=' . (int)$lastPostThreadId . '&current=' . $currentPostings . '#post' . (int)$lastPost['id'] . '"><img src="images/bluearrow.gif" border="0" width="10" height="9" alt="' . ($lang_jumptolastpost ?? 'Jump to last post') . '"></a> ';
+                            echo '<a href="showthread.php?threadid=' . (int) $lastPostThreadId . '&current=' . $currentPostings . '#post' . (int) $lastPost['id'] . '"><img src="images/bluearrow.gif" border="0" width="10" height="9" alt="' . ($lang_jumptolastpost ?? 'Jump to last post') . '"></a> ';
                         }
                         echo Security::escape($dateAndTime) . '<br>by ' . Security::escape($lastAuthor['username']);
                     }
@@ -149,14 +149,14 @@ if (count($categories) > 0) {
                         }
 
                         $mod = $db->fetchOne(
-                            "SELECT id, username FROM ppb_users WHERE email = ?",
+                            'SELECT id, username FROM ppb_users WHERE email = ?',
                             [$modEmail]
                         );
                         if ($mod !== null) {
                             if (!$first) {
                                 echo ' ';
                             }
-                            echo '<a href="showprofile.php?userid=' . (int)$mod['id'] . '&catid=' . (int)$catid . '&boardid=' . (int)$boardid . '">' . Security::escape($mod['username']) . '</a>';
+                            echo '<a href="showprofile.php?userid=' . (int) $mod['id'] . '&catid=' . (int) $catid . '&boardid=' . (int) $boardid . '">' . Security::escape($mod['username']) . '</a>';
                             $first = false;
                         }
                     }
@@ -181,7 +181,7 @@ if (count($categories) > 0) {
 // Update last visit and show online users
 if ($loggedin === 'YES') {
     $now = time();
-    $db->query("UPDATE ppb_users SET lastvisit = ? WHERE id = ?", [$now, $ppbuser['id']]);
+    $db->query('UPDATE ppb_users SET lastvisit = ? WHERE id = ?', [$now, $ppbuser['id']]);
 }
 
 echo '<tr><td colspan="6" bgcolor="' . Security::escape($settings['tablebg3'] ?? '#cccccc') . '">
@@ -193,7 +193,7 @@ echo '<tr><td colspan="6" bgcolor="' . Security::escape($settings['tablebg3'] ??
 $now = time();
 $userOnlineTime = $now - 30;
 $onlineUsers = $db->fetchAll(
-    "SELECT id, username FROM ppb_users WHERE lastvisit > ? ORDER BY username",
+    'SELECT id, username FROM ppb_users WHERE lastvisit > ? ORDER BY username',
     [$userOnlineTime]
 );
 
@@ -203,7 +203,7 @@ if (count($onlineUsers) > 0) {
         if (!$first) {
             echo ', ';
         }
-        echo '<a href="showprofile.php?userid=' . (int)$onlineUser['id'] . '&catid=' . (int)$catid . '&boardid=' . (int)$boardid . '">' . Security::escape($onlineUser['username']) . '</a>';
+        echo '<a href="showprofile.php?userid=' . (int) $onlineUser['id'] . '&catid=' . (int) $catid . '&boardid=' . (int) $boardid . '">' . Security::escape($onlineUser['username']) . '</a>';
         $first = false;
     }
 } else {

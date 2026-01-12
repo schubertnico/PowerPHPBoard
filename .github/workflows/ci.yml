@@ -44,12 +44,15 @@ jobs:
       - name: Run PHPStan
         run: vendor/bin/phpstan analyse --memory-limit=512M
 
+      - name: Run Psalm
+        run: vendor/bin/psalm --no-cache
+
       - name: Run PHPUnit
         run: vendor/bin/phpunit --testsuite Unit
 
   code-style:
     runs-on: ubuntu-latest
-    name: Code Style
+    name: Code Quality
 
     steps:
       - name: Checkout code
@@ -66,3 +69,32 @@ jobs:
 
       - name: Check PHP syntax
         run: find . -name "*.php" -not -path "./vendor/*" -exec php -l {} \; | grep -v "No syntax errors"
+
+      - name: Run PHP-CS-Fixer
+        run: vendor/bin/php-cs-fixer fix --dry-run --format=txt
+
+      - name: Run PHPMD
+        run: composer phpmd
+
+  mutation-testing:
+    runs-on: ubuntu-latest
+    name: Mutation Testing
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo, pdo_mysql, mbstring
+          coverage: pcov
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress
+
+      - name: Run Infection
+        run: vendor/bin/infection --threads=4 --min-msi=50 --min-covered-msi=70 --logger-github
+        env:
+          INFECTION_BADGE_API_KEY: ${{ secrets.INFECTION_BADGE_API_KEY }}

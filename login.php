@@ -10,11 +10,11 @@ declare(strict_types=1);
  * Copyright (c) 2024 PowerScripts
  */
 
-use PowerPHPBoard\Database;
-use PowerPHPBoard\Session;
-use PowerPHPBoard\Security;
 use PowerPHPBoard\CSRF;
+use PowerPHPBoard\Database;
 use PowerPHPBoard\ErrorHandler;
+use PowerPHPBoard\Security;
+use PowerPHPBoard\Session;
 
 // Load configuration
 require_once __DIR__ . '/config.inc.php';
@@ -30,7 +30,7 @@ try {
 }
 
 // Load settings
-$settings = $db->fetchOne("SELECT * FROM ppb_config WHERE id = ?", [1]) ?? [];
+$settings = $db->fetchOne('SELECT * FROM ppb_config WHERE id = ?', [1]) ?? [];
 
 // Load language file
 $langFile = match ($settings['language'] ?? 'English') {
@@ -61,7 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $login === 1) {
             $loginerror = $lang_insertpwd ?? 'Please enter your password';
         } else {
             // Find user by email using prepared statement (prevents SQL injection)
-            $user = $db->fetchOne("SELECT * FROM ppb_users WHERE email = ?", [$email]);
+            $user = $db->fetchOne('SELECT * FROM ppb_users WHERE email = ?', [$email]);
 
             if ($user === null) {
                 $loginerror = $lang_nouserwithemail ?? 'No user with this email address found';
@@ -74,14 +74,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $login === 1) {
                         // Rehash password if using legacy format
                         if (Security::needsRehash($user['password'])) {
                             $newHash = Security::hashPassword($password);
-                            $db->query("UPDATE ppb_users SET password = ? WHERE id = ?", [$newHash, $user['id']]);
+                            $db->query('UPDATE ppb_users SET password = ? WHERE id = ?', [$newHash, $user['id']]);
                         }
 
                         // Login user via secure session (no passwords in cookies!)
-                        Session::login((int)$user['id']);
+                        Session::login((int) $user['id']);
 
                         // Log successful login
-                        ErrorHandler::logSuccessfulLogin((int)$user['id'], $email);
+                        ErrorHandler::logSuccessfulLogin((int) $user['id'], $email);
 
                         // Regenerate CSRF token
                         CSRF::regenerate();
@@ -96,7 +96,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $login === 1) {
         }
     }
 }
-
 
 include __DIR__ . '/header.inc.php';
 ?>

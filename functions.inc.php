@@ -68,6 +68,7 @@ function default_error(
  * @param string $bbcode Enable BBCode ('ON' or 'OFF')
  * @param string $smilies Enable smilies ('ON' or 'OFF')
  * @param string $htmlcode Allow HTML ('ON' or 'OFF')
+ *
  * @return string Formatted text
  */
 function posting_replace(string &$text, string $bbcode, string $smilies, string $htmlcode): string
@@ -81,15 +82,16 @@ function posting_replace(string &$text, string $bbcode, string $smilies, string 
  *
  * @param int $userId User ID
  * @param Database $db Database instance
+ *
  * @return string User rank title
  */
 function getrank(int $userId, Database $db): string
 {
     $result = $db->fetchOne(
-        "SELECT COUNT(*) as count FROM ppb_posts WHERE author = ?",
+        'SELECT COUNT(*) as count FROM ppb_posts WHERE author = ?',
         [$userId]
     );
-    $postCount = (int)($result['count'] ?? 0);
+    $postCount = (int) ($result['count'] ?? 0);
 
     return match (true) {
         $postCount > 8192 => 'Admiral',
@@ -112,18 +114,19 @@ function getrank(int $userId, Database $db): string
  *
  * @param int $threadId Thread ID
  * @param Database $db Database instance
+ *
  * @return string HTML pagination links
  */
 function getpages(int $threadId, Database $db): string
 {
     $result = $db->fetchOne(
-        "SELECT COUNT(*) as count FROM ppb_posts WHERE threadid = ? OR id = ?",
+        'SELECT COUNT(*) as count FROM ppb_posts WHERE threadid = ? OR id = ?',
         [$threadId, $threadId]
     );
-    $postCount = (int)($result['count'] ?? 0);
+    $postCount = (int) ($result['count'] ?? 0);
 
     $postsPerPage = 25;
-    $pageNum = (int)ceil($postCount / $postsPerPage);
+    $pageNum = (int) ceil($postCount / $postsPerPage);
 
     if ($pageNum <= 1) {
         return '';
@@ -144,6 +147,7 @@ function getpages(int $threadId, Database $db): string
  *
  * @param int $timestamp Unix timestamp
  * @param string $format Date format string
+ *
  * @return string Formatted date
  */
 function format_date(int $timestamp, string $format = 'd.m.Y H:i'): string
@@ -157,6 +161,7 @@ function format_date(int $timestamp, string $format = 'd.m.Y H:i'): string
  * @param string $text Text to truncate
  * @param int $length Maximum length
  * @param string $suffix Suffix to append if truncated
+ *
  * @return string Truncated text
  */
 function truncate_text(string $text, int $length = 100, string $suffix = '...'): string
@@ -165,4 +170,25 @@ function truncate_text(string $text, int $length = 100, string $suffix = '...'):
         return $text;
     }
     return mb_substr($text, 0, $length) . $suffix;
+}
+
+/**
+ * Render action button (image if exists, otherwise text button)
+ *
+ * @param string $href Link URL
+ * @param string $imagePath Path to image file
+ * @param string $altText Alt text / button label
+ * @param string $buttonBg Background color for fallback button
+ *
+ * @return string HTML for the button
+ */
+function render_action_button(string $href, string $imagePath, string $altText, string $buttonBg = '#cccccc'): string
+{
+    $fullPath = __DIR__ . '/' . $imagePath;
+
+    if ($imagePath !== '' && file_exists($fullPath)) {
+        return '<a href="' . Security::escape($href) . '"><img src="' . Security::escape($imagePath) . '" border="0" width="120" height="20" alt="' . Security::escape($altText) . '"></a>';
+    }
+
+    return '<a href="' . Security::escape($href) . '" style="display:inline-block;padding:2px 10px;background:' . Security::escape($buttonBg) . ';text-decoration:none;color:#000;border:1px solid #999;font-size:12px;">' . Security::escape($altText) . '</a>';
 }

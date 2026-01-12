@@ -5,7 +5,6 @@
  * MIT License - Copyright (c) 2024 PowerScripts
  */
 
-use PowerPHPBoard\Security;
 ?>
   </td></tr>
   </table>
@@ -20,7 +19,7 @@ use PowerPHPBoard\Security;
 // Update last visit time for logged in users
 if ($loggedin === 'YES' && isset($ppbuser['id'])) {
     $now = time();
-    $db->query("UPDATE ppb_users SET lastvisit = ? WHERE id = ?", [$now, $ppbuser['id']]);
+    $db->query('UPDATE ppb_users SET lastvisit = ? WHERE id = ?', [$now, $ppbuser['id']]);
 }
 
 // Include custom footer template if set

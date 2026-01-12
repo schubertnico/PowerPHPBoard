@@ -58,6 +58,7 @@ class TextFormatter
      * @param string $bbcode Enable BBCode processing ('ON' or 'OFF')
      * @param string $smilies Enable smilie replacement ('ON' or 'OFF')
      * @param string $htmlcode Allow HTML in post ('ON' or 'OFF')
+     *
      * @return string Formatted HTML output
      */
     public static function formatPost(

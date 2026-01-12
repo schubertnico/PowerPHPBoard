@@ -4,11 +4,10 @@ declare(strict_types=1);
 
 namespace PowerPHPBoard\Tests\Feature;
 
-use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use PHPUnit\Framework\Attributes\Test;
 use PowerPHPBoard\Security;
-use PowerPHPBoard\CSRF;
 use PowerPHPBoard\Session;
 
 /**
@@ -20,7 +19,9 @@ use PowerPHPBoard\Session;
 class ProfileWorkflowTest extends FeatureTestCase
 {
     private string $testEmail = 'profiletest@example.com';
+
     private string $testPassword = 'ProfilePass123';
+
     private ?int $testUserId = null;
 
     protected function setUp(): void
@@ -295,7 +296,7 @@ class ProfileWorkflowTest extends FeatureTestCase
 
         // Try to check if email exists for another user
         $existingUser = $this->db->fetchOne(
-            "SELECT id FROM ppb_users WHERE email = ? AND id != ?",
+            'SELECT id FROM ppb_users WHERE email = ? AND id != ?',
             [$otherEmail, $this->testUserId]
         );
 

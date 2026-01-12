@@ -33,7 +33,7 @@ if ($userid === 0) {
     </td></tr>
     ';
 } else {
-    $user = $db->fetchOne("SELECT * FROM ppb_users WHERE id = ?", [$userid]);
+    $user = $db->fetchOne('SELECT * FROM ppb_users WHERE id = ?', [$userid]);
 
     if ($user === null) {
         echo '
@@ -65,7 +65,7 @@ if ($userid === 0) {
         if ($user['hideemail'] === 'NO') {
             echo '<a href="mailto:' . Security::escape($user['email']) . '">' . Security::escape($user['email']) . '</a>';
         } else {
-            echo '<a href="sendmail.php?userid=' . (int)$user['id'] . '&catid=' . (int)$catid . '&boardid=' . (int)$boardid . '">' . ($lang_sendmail ?? 'Send mail') . '</a>';
+            echo '<a href="sendmail.php?userid=' . (int) $user['id'] . '&catid=' . (int) $catid . '&boardid=' . (int) $boardid . '">' . ($lang_sendmail ?? 'Send mail') . '</a>';
         }
 
         echo '
@@ -118,7 +118,7 @@ if ($userid === 0) {
         if ($user['status'] === 'Deactivated' || $user['status'] === 'Administrator') {
             echo Security::escape($user['status']);
         } else {
-            $rank = getrank((int)$user['id'], $db);
+            $rank = getrank((int) $user['id'], $db);
             echo Security::escape($rank);
         }
 

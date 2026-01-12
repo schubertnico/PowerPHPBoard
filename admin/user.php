@@ -24,9 +24,8 @@ declare(strict_types=1);
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
  */
 
-use PowerPHPBoard\Database;
-use PowerPHPBoard\Security;
 use PowerPHPBoard\CSRF;
+use PowerPHPBoard\Security;
 
 include __DIR__ . '/header.inc.php';
 ?>
@@ -83,7 +82,7 @@ if ($username === '') {
     ';
 } else {
     $users = $db->fetchAll(
-        "SELECT * FROM ppb_users WHERE username LIKE ? ORDER BY id",
+        'SELECT * FROM ppb_users WHERE username LIKE ? ORDER BY id',
         ['%' . $username . '%']
     );
 
@@ -107,7 +106,7 @@ if ($username === '') {
             </td><td bgcolor="' . Security::escape($tablebg) . '">
             ' . Security::escape($row['status']) . '
             </td><td bgcolor="' . Security::escape($tablebg) . '">
-            <a href="edituser.php?userid=' . (int)$row['id'] . '">Edit user</a>
+            <a href="edituser.php?userid=' . (int) $row['id'] . '">Edit user</a>
             </td></tr>
             ';
         }

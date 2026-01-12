@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace PowerPHPBoard\Tests\Unit;
 
-use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\TestCase;
 use PowerPHPBoard\TextFormatter;
 
 /**

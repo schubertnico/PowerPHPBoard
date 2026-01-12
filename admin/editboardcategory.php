@@ -24,9 +24,8 @@ declare(strict_types=1);
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
  */
 
-use PowerPHPBoard\Database;
-use PowerPHPBoard\Security;
 use PowerPHPBoard\CSRF;
+use PowerPHPBoard\Security;
 
 include __DIR__ . '/header.inc.php';
 ?>
@@ -36,7 +35,7 @@ include __DIR__ . '/header.inc.php';
 <?php
 if (($ppbuser['status'] ?? '') === 'Administrator') {
     $catid = Security::getInt('catid', 'GET', 0);
-    $row = $db->fetchOne("SELECT * FROM ppb_boards WHERE id = ?", [$catid]);
+    $row = $db->fetchOne('SELECT * FROM ppb_boards WHERE id = ?', [$catid]);
 
     if ($row !== null) {
         $editboardcategory = Security::getInt('editboardcategory', 'GET', 0);
@@ -74,7 +73,7 @@ if (($ppbuser['status'] ?? '') === 'Administrator') {
                 $title = trim($title);
 
                 $db->execute(
-                    "UPDATE ppb_boards SET title = ?, header = ?, footer = ?, bordercolor = ?, tablebg1 = ?, tablebg2 = ?, tablebg3 = ?, newthread = ?, newpost = ? WHERE id = ?",
+                    'UPDATE ppb_boards SET title = ?, header = ?, footer = ?, bordercolor = ?, tablebg1 = ?, tablebg2 = ?, tablebg3 = ?, newthread = ?, newpost = ? WHERE id = ?',
                     [$title, $header, $footer, $bordercolor, $tablebg1, $tablebg2, $tablebg3, $newthread, $newpost, $catid]
                 );
                 CSRF::regenerate();
@@ -92,7 +91,7 @@ if (($ppbuser['status'] ?? '') === 'Administrator') {
             }
         } else {
             echo '
-              <form action="editboardcategory.php?editboardcategory=1&catid=' . (int)$row['id'] . '" method="post">
+              <form action="editboardcategory.php?editboardcategory=1&catid=' . (int) $row['id'] . '" method="post">
               ' . CSRF::getTokenField() . '
               <tr><td bgcolor="' . Security::escape($admin_tbl3) . '" colspan="2">
               <b>Edit boardcategory</b>

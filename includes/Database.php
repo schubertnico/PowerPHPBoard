@@ -27,8 +27,8 @@ declare(strict_types=1);
 namespace PowerPHPBoard;
 
 use PDO;
-use PDOStatement;
 use PDOException;
+use PDOStatement;
 
 /**
  * PDO-based database abstraction layer
@@ -37,6 +37,7 @@ use PDOException;
 class Database
 {
     private static ?Database $instance = null;
+
     private readonly PDO $pdo;
 
     /**
@@ -50,12 +51,18 @@ class Database
             $config['database']
         );
 
-        $this->pdo = new PDO($dsn, $config['user'], $config['password'], [
+        $options = [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES => false,
-            PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci",
-        ]);
+        ];
+
+        // MySQL-specific: Set charset on connection
+        if (defined('PDO::MYSQL_ATTR_INIT_COMMAND')) {
+            $options[PDO::MYSQL_ATTR_INIT_COMMAND] = 'SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci';
+        }
+
+        $this->pdo = new PDO($dsn, $config['user'], $config['password'], $options);
     }
 
     /**
@@ -106,6 +113,7 @@ class Database
      * Fetch a single row
      *
      * @param array<int|string, mixed> $params
+     *
      * @return array<string, mixed>|null
      */
     public function fetchOne(string $sql, array $params = []): ?array
@@ -119,6 +127,7 @@ class Database
      * Fetch all rows
      *
      * @param array<int|string, mixed> $params
+     *
      * @return array<int, array<string, mixed>>
      */
     public function fetchAll(string $sql, array $params = []): array
@@ -136,7 +145,7 @@ class Database
     {
         $stmt = $this->query($sql, $params);
         $result = $stmt->fetch();
-        return $result !== false ? (int)($result['count'] ?? $result[0] ?? 0) : 0;
+        return $result !== false ? (int) ($result['count'] ?? $result[0] ?? 0) : 0;
     }
 
     /**
@@ -155,8 +164,9 @@ class Database
      */
     public function lastInsertId(): string
     {
+        /** @var string $id PHPStan/Psalm disagree on PDO::lastInsertId return type */
         $id = $this->pdo->lastInsertId();
-        return $id !== false ? $id : '0';
+        return $id;
     }
 
     /**

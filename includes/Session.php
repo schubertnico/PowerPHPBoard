@@ -141,7 +141,7 @@ class Session
      */
     public static function getUserId(): ?int
     {
-        return isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null;
+        return isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : null;
     }
 
     /**

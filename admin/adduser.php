@@ -24,9 +24,9 @@ declare(strict_types=1);
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
  */
 
+use PowerPHPBoard\CSRF;
 use PowerPHPBoard\Database;
 use PowerPHPBoard\Security;
-use PowerPHPBoard\CSRF;
 
 include __DIR__ . '/header.inc.php';
 ?>
@@ -104,12 +104,12 @@ if (($ppbuser['status'] ?? '') === 'Administrator') {
                 </td></tr>
             ';
         } else {
-            $icqInt = (int)$icq;
+            $icqInt = (int) $icq;
             $password = Security::hashPassword($password1);
             $username = strip_tags($username);
             $biography = strip_tags($biography);
 
-            $existingUser = $db->fetchOne("SELECT * FROM ppb_users WHERE email = ?", [$email1]);
+            $existingUser = $db->fetchOne('SELECT * FROM ppb_users WHERE email = ?', [$email1]);
 
             if ($existingUser !== null) {
                 echo '
@@ -133,18 +133,18 @@ if (($ppbuser['status'] ?? '') === 'Administrator') {
                     );
                     CSRF::regenerate();
 
-                    mail($email1, ($settings['boardtitle'] ?? '') . " registration", "
-Hello " . $username . ",
-you were registered successfully at " . ($settings['boardurl'] ?? '') . "/ from " . ($ppbuser['username'] ?? '') . ".
+                    mail($email1, ($settings['boardtitle'] ?? '') . ' registration', '
+Hello ' . $username . ',
+you were registered successfully at ' . ($settings['boardurl'] ?? '') . '/ from ' . ($ppbuser['username'] ?? '') . '.
 Here is your login information:
 
-     Username:  " . $username . "
-     eMail   :  " . $email1 . "
-     Password:  " . $password2 . "
+     Username:  ' . $username . '
+     eMail   :  ' . $email1 . '
+     Password:  ' . $password2 . '
 
-You can log in here: " . ($settings['boardurl'] ?? '') . "/login.php
+You can log in here: ' . ($settings['boardurl'] ?? '') . '/login.php
 
-Please do not answer to this automatic generated eMail!", "FROM: " . ($settings['adminemail'] ?? ''));
+Please do not answer to this automatic generated eMail!', 'FROM: ' . ($settings['adminemail'] ?? ''));
 
                     echo '
                         <tr><td bgcolor="' . Security::escape($admin_tbl3) . '">

@@ -1,0 +1,29 @@
+{
+    "$schema": "https://raw.githubusercontent.com/infection/infection/0.29.0/resources/schema.json",
+    "source": {
+        "directories": [
+            "includes"
+        ]
+    },
+    "logs": {
+        "text": "infection.log",
+        "html": "infection.html",
+        "summary": "infection-summary.log"
+    },
+    "mutators": {
+        "@default": true,
+        // Disable some noisy mutators for legacy code
+        "CastString": false,
+        "CastInt": false,
+        "CastFloat": false
+    },
+    "phpUnit": {
+        "configDir": ".",
+        "customPath": "vendor/bin/phpunit"
+    },
+    "testFramework": "phpunit",
+    "testFrameworkOptions": "--testsuite=Unit",
+    "timeout": 10,
+    "minMsi": 50,
+    "minCoveredMsi": 70
+}

@@ -11,8 +11,8 @@ declare(strict_types=1);
  */
 
 use PowerPHPBoard\Database;
-use PowerPHPBoard\Session;
 use PowerPHPBoard\Security;
+use PowerPHPBoard\Session;
 
 // Load configuration
 require_once __DIR__ . '/config.inc.php';
@@ -28,7 +28,7 @@ try {
 }
 
 // Load settings
-$settings = $db->fetchOne("SELECT * FROM ppb_config WHERE id = ?", [1]) ?? [];
+$settings = $db->fetchOne('SELECT * FROM ppb_config WHERE id = ?', [1]) ?? [];
 
 // Load language file
 $langFile = match ($settings['language'] ?? 'English') {
@@ -45,7 +45,7 @@ $loggedin = 'NO';
 $userId = Session::getUserId();
 
 if ($userId !== null) {
-    $userRow = $db->fetchOne("SELECT * FROM ppb_users WHERE id = ?", [$userId]);
+    $userRow = $db->fetchOne('SELECT * FROM ppb_users WHERE id = ?', [$userId]);
     if ($userRow !== null) {
         $loggedin = 'YES';
         $ppbuser = $userRow;
@@ -60,7 +60,7 @@ $postid = Security::getInt('postid');
 // Load board info for moderator check
 $board = [];
 if ($boardid > 0) {
-    $board = $db->fetchOne("SELECT * FROM ppb_boards WHERE id = ?", [$boardid]) ?? [];
+    $board = $db->fetchOne('SELECT * FROM ppb_boards WHERE id = ?', [$boardid]) ?? [];
 }
 ?>
 <?php include __DIR__ . '/header.inc.php'; ?>
@@ -76,7 +76,7 @@ if ($threadid > 0 && $postid > 0) {
         $showip = 'YES';
     } else {
         // Check if user is a moderator for this board
-        $mods = explode(',', (string)($board['mods'] ?? ''));
+        $mods = explode(',', (string) ($board['mods'] ?? ''));
         foreach ($mods as $mod) {
             if (($ppbuser['email'] ?? '') === trim($mod)) {
                 $showip = 'YES';
@@ -93,11 +93,11 @@ if ($threadid > 0 && $postid > 0) {
         <tr><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '"><br>
         ';
 
-        $post = $db->fetchOne("SELECT * FROM ppb_posts WHERE id = ?", [$postid]);
+        $post = $db->fetchOne('SELECT * FROM ppb_posts WHERE id = ?', [$postid]);
 
         if ($post === null) {
             echo $lang_nopostwithid ?? 'No post with this ID found';
-        } elseif ((int)$post['threadid'] === $threadid || (int)$post['id'] === $threadid) {
+        } elseif ((int) $post['threadid'] === $threadid || (int) $post['id'] === $threadid) {
             echo ($lang_ipaddressis ?? 'IP Address is') . ': <b>' . Security::escape($post['ip'] ?? 'Unknown') . '</b>';
         } else {
             echo $lang_postingdoesntbelongtothread ?? 'This post does not belong to this thread';
