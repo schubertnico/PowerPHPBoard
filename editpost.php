@@ -89,35 +89,15 @@ if ($postid === 0) {
             $settings['tablebg1'] ?? '#ffffff'
         );
     } elseif ($login !== 1) {
-        // Show login form
-        echo '
-        <form action="editpost.php?postid=' . (int) $post['id'] . '&login=1&catid=' . $catid . '&boardid=' . $boardid . '" method="post">
-        ' . CSRF::getTokenField() . '
-        <tr><td bgcolor="' . Security::escape($settings['tablebg3'] ?? '#cccccc') . '">
-        <b>' . ($lang_editpost ?? 'Edit Post') . '</b>
-        </td></tr>
-        <tr><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '" align="center">
-          <table border="0" cellpadding="3" cellspacing="0">
-          <tr><td>
-          <b>' . ($lang_email ?? 'Email') . '</b>
-          </td><td>
-          <input name="email" size="25" maxlength="100" type="email" value="' . Security::escape($ppbuser['email'] ?? '') . '">
-          </td><td>
-          <small><a href="register.php">' . ($lang_wanttoregister ?? 'Register') . '</a></small>
-          </td></tr>
-          <tr><td>
-          <b>' . ($lang_password ?? 'Password') . '</b>
-          </td><td>
-          <input name="password" size="25" maxlength="255" type="password">
-          </td><td>
-          <small><a href="sendpassword.php">' . ($lang_pwdforgotten ?? 'Forgot password?') . '</a></small>
-          </td></tr>
-          <tr><td colspan="2" align="center">
-          <input type="submit" value="' . ($lang_send ?? 'Send') . '">
-          </td></tr>
-          </table>
-        </td></tr>
-        </form>';
+        // BUG-014: Editing a post requires an active session
+        default_error(
+            $lang_loginfirst ?? 'You have to log in first',
+            'login.php',
+            $lang_login ?? 'Login',
+            $settings['tablebg3'] ?? '#cccccc',
+            $settings['tablebg2'] ?? '#eeeeee',
+            $settings['tablebg1'] ?? '#ffffff'
+        );
     } else {
         // Validate CSRF if POST request
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && !CSRF::validateFromPost()) {
@@ -130,56 +110,19 @@ if ($postid === 0) {
                 $settings['tablebg1'] ?? '#ffffff'
             );
         } else {
-            // Get email and password
-            $email = Security::getString('email', 'POST');
-            $password = Security::getString('password', 'POST');
-
-            // Use session data if available
-            if ($loggedin === 'YES') {
-                $email = $ppbuser['email'];
-            }
-
-            if ($email === '') {
+            // BUG-014: Editing requires session (no email/password fallback)
+            if ($loggedin !== 'YES') {
                 default_error(
-                    $lang_insertemail ?? 'Please enter your email',
-                    'javascript:history.back()',
-                    $lang_backtologin ?? 'Back to login',
-                    $settings['tablebg3'] ?? '#cccccc',
-                    $settings['tablebg2'] ?? '#eeeeee',
-                    $settings['tablebg1'] ?? '#ffffff'
-                );
-            } elseif ($password === '' && $loggedin !== 'YES') {
-                default_error(
-                    $lang_insertpwd ?? 'Please enter your password',
-                    'javascript:history.back()',
-                    $lang_backtologin ?? 'Back to login',
+                    $lang_loginfirst ?? 'You have to log in first',
+                    'login.php',
+                    $lang_login ?? 'Login',
                     $settings['tablebg3'] ?? '#cccccc',
                     $settings['tablebg2'] ?? '#eeeeee',
                     $settings['tablebg1'] ?? '#ffffff'
                 );
             } else {
-                // Find user
-                $user = $db->fetchOne('SELECT * FROM ppb_users WHERE email = ?', [$email]);
-
-                if ($user === null) {
-                    default_error(
-                        $lang_nouserwithemail ?? 'No user with this email',
-                        'javascript:history.back()',
-                        $lang_backtologin ?? 'Back to login',
-                        $settings['tablebg3'] ?? '#cccccc',
-                        $settings['tablebg2'] ?? '#eeeeee',
-                        $settings['tablebg1'] ?? '#ffffff'
-                    );
-                } elseif ($loggedin !== 'YES' && !Security::verifyPassword($password, $user['password'])) {
-                    default_error(
-                        $lang_pwdnotcorrect ?? 'Password incorrect',
-                        'javascript:history.back()',
-                        $lang_backtologin ?? 'Back to login',
-                        $settings['tablebg3'] ?? '#cccccc',
-                        $settings['tablebg2'] ?? '#eeeeee',
-                        $settings['tablebg1'] ?? '#ffffff'
-                    );
-                } else {
+                $user = $ppbuser;
+                {
                     // Check permissions
                     $canedit = false;
                     $ismod = false;

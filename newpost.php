@@ -152,58 +152,32 @@ if (($board['status'] ?? '') === 'Closed' || ($thread['status'] ?? '') === 'Clos
                         $settings['tablebg2'] ?? '#eeeeee',
                         $settings['tablebg1'] ?? '#ffffff'
                     );
-                } elseif ($loggedin === 'YES') {
-                    // User is logged in - use session data
-                    $user = $ppbuser;
+                    $user = null;
+                } elseif (!\PowerPHPBoard\Validator::withinLength($text, \PowerPHPBoard\Validator::POST_MAX)) {
+                    // BUG-015: explicit length check instead of silent DB-overflow
+                    default_error(
+                        $lang_posttoolong ?? 'Post text is too long.',
+                        'javascript:history.back()',
+                        $lang_backtonewpostform ?? 'Back to form',
+                        $settings['tablebg3'] ?? '#cccccc',
+                        $settings['tablebg2'] ?? '#eeeeee',
+                        $settings['tablebg1'] ?? '#ffffff'
+                    );
+                    $user = null;
+                } elseif ($loggedin !== 'YES') {
+                    // BUG-014: Posting erfordert jetzt eine aktive Session.
+                    // Fallback auf email/password im Post-Formular entfernt.
+                    default_error(
+                        $lang_loginfirst ?? 'You have to log in first',
+                        'login.php',
+                        $lang_login ?? 'Login',
+                        $settings['tablebg3'] ?? '#cccccc',
+                        $settings['tablebg2'] ?? '#eeeeee',
+                        $settings['tablebg1'] ?? '#ffffff'
+                    );
+                    $user = null;
                 } else {
-                    // User not logged in - require email and password
-                    $email = Security::getString('email', 'POST');
-                    $password = Security::getString('password', 'POST');
-
-                    if ($email === '' || $password === '') {
-                        default_error(
-                            $lang_insertvaluesforall ?? 'Please fill in all fields',
-                            'javascript:history.back()',
-                            $lang_backtonewpostform ?? 'Back to form',
-                            $settings['tablebg3'] ?? '#cccccc',
-                            $settings['tablebg2'] ?? '#eeeeee',
-                            $settings['tablebg1'] ?? '#ffffff'
-                        );
-                        $user = null;
-                    } else {
-                        $user = $db->fetchOne('SELECT * FROM ppb_users WHERE email = ?', [$email]);
-
-                        if ($user === null) {
-                            default_error(
-                                $lang_nouserwithemail ?? 'No user with this email',
-                                'javascript:history.back()',
-                                $lang_backtonewpostform ?? 'Back to form',
-                                $settings['tablebg3'] ?? '#cccccc',
-                                $settings['tablebg2'] ?? '#eeeeee',
-                                $settings['tablebg1'] ?? '#ffffff'
-                            );
-                        } elseif ($user['status'] === 'Deactivated') {
-                            default_error(
-                                $lang_accountdeactivated ?? 'Account deactivated',
-                                'index.php',
-                                'Home',
-                                $settings['tablebg3'] ?? '#cccccc',
-                                $settings['tablebg2'] ?? '#eeeeee',
-                                $settings['tablebg1'] ?? '#ffffff'
-                            );
-                            $user = null;
-                        } elseif (!Security::verifyPassword($password, $user['password'])) {
-                            default_error(
-                                $lang_pwdnotcorrect ?? 'Password incorrect',
-                                'javascript:history.back()',
-                                $lang_backtonewpostform ?? 'Back to form',
-                                $settings['tablebg3'] ?? '#cccccc',
-                                $settings['tablebg2'] ?? '#eeeeee',
-                                $settings['tablebg1'] ?? '#ffffff'
-                            );
-                            $user = null;
-                        }
-                    }
+                    $user = $ppbuser;
                 }
 
                 if (isset($user) && is_array($user)) {
