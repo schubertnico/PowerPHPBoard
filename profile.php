@@ -97,6 +97,7 @@ if ($login === 1 && $loggedin === 'YES') {
             $email2 = Security::getString('email2', 'POST');
             $password1 = Security::getString('password1', 'POST');
             $password2 = Security::getString('password2', 'POST');
+            $currentPassword = Security::getString('current_password', 'POST');
             $homepage = Security::getString('homepage', 'POST');
             $icq = Security::getString('icq', 'POST');
             $biography = Security::getString('biography', 'POST');
@@ -104,54 +105,60 @@ if ($login === 1 && $loggedin === 'YES') {
             $hideemail = Security::getString('hideemail', 'POST');
             $logincookie = Security::getString('logincookie', 'POST');
 
-            if ($username === '' || $email1 === '' || $email2 === '' || $password1 === '' || $password2 === '') {
-                default_error(
-                    $lang_insertvaluesforall ?? 'Please fill in all required fields',
-                    'javascript:history.back()',
-                    $lang_backtoprofileform ?? 'Back',
-                    $settings['tablebg3'] ?? '#cccccc',
-                    $settings['tablebg2'] ?? '#eeeeee',
-                    $settings['tablebg1'] ?? '#ffffff'
-                );
+            // BUG-011: Passwoerter sind nur Pflicht, wenn sie tatsaechlich geaendert werden sollen
+            $passwordWillChange = $password1 !== '' || $password2 !== '';
+            // BUG-012: Re-Auth fuer sensible Aenderungen (Email-Wechsel oder Passwort-Wechsel)
+            $emailWillChange = $email1 !== $user['email'];
+            $sensitiveChange = $passwordWillChange || $emailWillChange;
+
+            $errorMsg = null;
+            if ($username === '' || $email1 === '' || $email2 === '') {
+                $errorMsg = $lang_insertvaluesforall ?? 'Please fill in all required fields';
+            } elseif ($sensitiveChange && ($currentPassword === '' || !Security::verifyPassword($currentPassword, $user['password']))) {
+                $errorMsg = $lang_currentpasswordwrong ?? 'Current password is not correct';
             } elseif ($email1 !== $email2) {
-                default_error(
-                    $lang_emailsdifferent ?? 'Email addresses do not match',
-                    'javascript:history.back()',
-                    $lang_backtoprofileform ?? 'Back',
-                    $settings['tablebg3'] ?? '#cccccc',
-                    $settings['tablebg2'] ?? '#eeeeee',
-                    $settings['tablebg1'] ?? '#ffffff'
-                );
+                $errorMsg = $lang_emailsdifferent ?? 'Email addresses do not match';
             } elseif (!Security::isValidEmail($email1)) {
-                default_error(
-                    $lang_emailnotcorrect ?? 'Invalid email address',
-                    'javascript:history.back()',
-                    $lang_backtoprofileform ?? 'Back',
-                    $settings['tablebg3'] ?? '#cccccc',
-                    $settings['tablebg2'] ?? '#eeeeee',
-                    $settings['tablebg1'] ?? '#ffffff'
-                );
-            } elseif ($password1 !== $password2) {
-                default_error(
-                    $lang_pwdsdifferent ?? 'Passwords do not match',
-                    'javascript:history.back()',
-                    $lang_backtoprofileform ?? 'Back',
-                    $settings['tablebg3'] ?? '#cccccc',
-                    $settings['tablebg2'] ?? '#eeeeee',
-                    $settings['tablebg1'] ?? '#ffffff'
-                );
-            } elseif (strlen($password1) < 6) {
-                default_error(
-                    $lang_pwdtooshort ?? 'Password must be at least 6 characters',
-                    'javascript:history.back()',
-                    $lang_backtoprofileform ?? 'Back',
-                    $settings['tablebg3'] ?? '#cccccc',
-                    $settings['tablebg2'] ?? '#eeeeee',
-                    $settings['tablebg1'] ?? '#ffffff'
-                );
+                $errorMsg = $lang_emailnotcorrect ?? 'Invalid email address';
+            } elseif ($passwordWillChange && $password1 !== $password2) {
+                $errorMsg = $lang_pwdsdifferent ?? 'Passwords do not match';
+            } elseif ($passwordWillChange && !\PowerPHPBoard\Validator::isStrongPassword($password1)) {
+                $errorMsg = $lang_pwdtooshort ?? 'Password must be at least 8 characters';
+            } elseif (!\PowerPHPBoard\Validator::isValidUsername($username)) {
+                $errorMsg = $lang_usernameinvalid ?? 'Username invalid';
             } elseif ($icq !== '' && !ctype_digit($icq)) {
+                $errorMsg = $lang_icqnotcorrect ?? 'ICQ number must be numeric';
+            } elseif (!\PowerPHPBoard\Validator::withinLength($biography, \PowerPHPBoard\Validator::BIOGRAPHY_MAX)
+                || !\PowerPHPBoard\Validator::withinLength($signature, \PowerPHPBoard\Validator::SIGNATURE_MAX)
+                || !\PowerPHPBoard\Validator::withinLength($homepage, \PowerPHPBoard\Validator::HOMEPAGE_MAX)) {
+                $errorMsg = $lang_inputstoolong ?? 'One or more fields exceed the allowed length';
+            }
+
+            if ($errorMsg === null) {
+                // Username uniqueness check (BUG-003 in profile too)
+                $existingByUsername = $db->fetchOne(
+                    'SELECT id FROM ppb_users WHERE username = ? AND id != ?',
+                    [$username, $user['id']]
+                );
+                if ($existingByUsername !== null) {
+                    $errorMsg = $lang_usernametaken ?? 'This username is already taken';
+                }
+            }
+
+            if ($errorMsg === null) {
+                // Email uniqueness check
+                $existingUser = $db->fetchOne(
+                    'SELECT id FROM ppb_users WHERE email = ? AND id != ?',
+                    [$email1, $user['id']]
+                );
+                if ($existingUser !== null) {
+                    $errorMsg = $lang_emailalreadyexists ?? 'Email already exists';
+                }
+            }
+
+            if ($errorMsg !== null) {
                 default_error(
-                    $lang_icqnotcorrect ?? 'ICQ number must be numeric',
+                    $errorMsg,
                     'javascript:history.back()',
                     $lang_backtoprofileform ?? 'Back',
                     $settings['tablebg3'] ?? '#cccccc',
@@ -159,70 +166,54 @@ if ($login === 1 && $loggedin === 'YES') {
                     $settings['tablebg1'] ?? '#ffffff'
                 );
             } else {
-                // Check if email is already used by another user
-                $existingUser = $db->fetchOne(
-                    'SELECT id FROM ppb_users WHERE email = ? AND id != ?',
-                    [$email1, $user['id']]
-                );
+                // BUG-010: Signatur sanitieren - nur Whitelist-Tags erlauben
+                $signature = strip_tags($signature, '<b><i><u><strong><em><br><a>');
+                // Passwort nur hashen, wenn geaendert wird
+                $finalPasswordHash = $passwordWillChange
+                    ? Security::hashPassword($password1)
+                    : $user['password'];
 
-                if ($existingUser !== null) {
+                $updateSuccess = true;
+                try {
+                    $db->query(
+                        'UPDATE ppb_users SET username = ?, email = ?, password = ?, homepage = ?, icq = ?, biography = ?, signature = ?, hideemail = ?, logincookie = ? WHERE id = ?',
+                        [
+                            $username,
+                            $email1,
+                            $finalPasswordHash,
+                            $homepage,
+                            $icq,
+                            strip_tags($biography),
+                            $signature,
+                            $hideemail === 'YES' ? 'YES' : 'NO',
+                            $logincookie === 'YES' ? 'YES' : 'NO',
+                            $user['id'],
+                        ]
+                    );
+                } catch (PDOException) {
+                    $updateSuccess = false;
                     default_error(
-                        $lang_emailalreadyexists ?? 'Email already exists',
+                        $lang_errorwhileupdprofile ?? 'Error updating profile',
                         'javascript:history.back()',
                         $lang_backtoprofileform ?? 'Back',
                         $settings['tablebg3'] ?? '#cccccc',
                         $settings['tablebg2'] ?? '#eeeeee',
                         $settings['tablebg1'] ?? '#ffffff'
                     );
-                } else {
-                    // Hash the new password
-                    $hashedPassword = Security::hashPassword($password1);
-
-                    // Update user
-                    $updateSuccess = true;
-                    // BUG-010: Signatur sanitieren - nur Whitelist-Tags erlauben
-                    $signature = strip_tags($signature, '<b><i><u><strong><em><br><a>');
-                    try {
-                        $db->query(
-                            'UPDATE ppb_users SET username = ?, email = ?, password = ?, homepage = ?, icq = ?, biography = ?, signature = ?, hideemail = ?, logincookie = ? WHERE id = ?',
-                            [
-                                strip_tags($username),
-                                $email1,
-                                $hashedPassword,
-                                $homepage,
-                                $icq,
-                                strip_tags($biography),
-                                $signature,
-                                $hideemail === 'YES' ? 'YES' : 'NO',
-                                $logincookie === 'YES' ? 'YES' : 'NO',
-                                $user['id'],
-                            ]
-                        );
-                    } catch (PDOException) {
-                        $updateSuccess = false;
-                        default_error(
-                            $lang_errorwhileupdprofile ?? 'Error updating profile',
-                            'javascript:history.back()',
-                            $lang_backtoprofileform ?? 'Back',
-                            $settings['tablebg3'] ?? '#cccccc',
-                            $settings['tablebg2'] ?? '#eeeeee',
-                            $settings['tablebg1'] ?? '#ffffff'
-                        );
-                    }
-                    if ($updateSuccess) {
-                        CSRF::regenerate();
-                        echo '
-                        <tr><td bgcolor="' . Security::escape($settings['tablebg3'] ?? '#cccccc') . '">
-                        <b>' . ($lang_statusmessage ?? 'Status') . '</b>
-                        </td></tr>
-                        <tr><td bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '"><br>
-                        ' . ($lang_changedprofilesuccessfull ?? 'Profile updated successfully') . '<br><br>
-                        </td></tr>
-                        <tr><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '" align="center">
-                        <a href="index.php">Home</a>
-                        </td></tr>
-                        ';
-                    }
+                }
+                if ($updateSuccess) {
+                    CSRF::regenerate();
+                    echo '
+                    <tr><td bgcolor="' . Security::escape($settings['tablebg3'] ?? '#cccccc') . '">
+                    <b>' . ($lang_statusmessage ?? 'Status') . '</b>
+                    </td></tr>
+                    <tr><td bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '"><br>
+                    ' . ($lang_changedprofilesuccessfull ?? 'Profile updated successfully') . '<br><br>
+                    </td></tr>
+                    <tr><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '" align="center">
+                    <a href="index.php">Home</a>
+                    </td></tr>
+                    ';
                 }
             }
         }
@@ -255,14 +246,21 @@ if ($login === 1 && $loggedin === 'YES') {
         <input name="email2" size="25" maxlength="100" value="' . Security::escape($user['email']) . '">
         </td></tr>
         <tr><td width="*" bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '">
-        <b>' . ($lang_password ?? 'Password') . '</b>
+        <b>' . ($lang_currentpassword ?? 'Current Password') . '</b><br>
+        <small>' . ($lang_currentpwdnote ?? 'Only required if you change email or password') . '</small>
         </td><td width="300" bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '">
-        <input name="password1" size="25" maxlength="255" type="password" minlength="6" required>
+        <input name="current_password" size="25" maxlength="255" type="password" autocomplete="current-password">
         </td></tr>
         <tr><td width="*" bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '">
-        <b>' . ($lang_password ?? 'Password') . '</b> <small>(' . ($lang_confirmation ?? 'Confirmation') . ')</small>
+        <b>' . ($lang_newpassword ?? 'New Password') . '</b><br>
+        <small>' . ($lang_leaveemptynochange ?? 'Leave empty to keep current password') . '</small>
         </td><td width="300" bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '">
-        <input name="password2" size="25" maxlength="255" type="password" minlength="6" required>
+        <input name="password1" size="25" maxlength="255" type="password" minlength="8" autocomplete="new-password">
+        </td></tr>
+        <tr><td width="*" bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '">
+        <b>' . ($lang_newpassword ?? 'New Password') . '</b> <small>(' . ($lang_confirmation ?? 'Confirmation') . ')</small>
+        </td><td width="300" bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '">
+        <input name="password2" size="25" maxlength="255" type="password" minlength="8" autocomplete="new-password">
         </td></tr>
         <tr><td colspan="2" bgcolor="' . Security::escape($settings['tablebg3'] ?? '#cccccc') . '">
         <b>' . ($lang_optionalinfo ?? 'Optional Information') . '</b>
@@ -275,7 +273,7 @@ if ($login === 1 && $loggedin === 'YES') {
         <tr><td width="*" bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '">
         <b>' . ($lang_icq ?? 'ICQ') . '</b>
         </td><td width="300" bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '">
-        <input name="icq" size="10" maxlength="10" value="' . Security::escape($user['icq'] ?? '') . '">
+        <input name="icq" size="10" maxlength="10" value="' . Security::escape((string) ($user['icq'] ?? '') === '0' ? '' : (string) ($user['icq'] ?? '')) . '">
         </td></tr>
         <tr><td width="*" bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '" valign="top">
         <b>' . ($lang_biography ?? 'Biography') . '</b> <small>(' . ($lang_writesomethingaboutyou ?? 'Write something about yourself') . ')</small>
