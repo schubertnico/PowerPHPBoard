@@ -12,7 +12,9 @@ declare(strict_types=1);
 
 use PowerPHPBoard\CSRF;
 use PowerPHPBoard\Database;
+use PowerPHPBoard\DatabaseRateLimitStorage;
 use PowerPHPBoard\ErrorHandler;
+use PowerPHPBoard\RateLimiter;
 use PowerPHPBoard\Security;
 use PowerPHPBoard\Session;
 
@@ -46,11 +48,21 @@ $boardid = Security::getInt('boardid');
 $login = Security::getInt('login', 'POST');
 $loginerror = '';
 
+$rateLimiter = new RateLimiter(
+    new DatabaseRateLimitStorage($db),
+    maxAttempts: 10,
+    windowSeconds: 900,
+    lockSeconds: 900
+);
+$rateLimitIdentifier = (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown');
+
 // Process login form
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $login === 1) {
     // Validate CSRF token
     if (!CSRF::validateFromPost()) {
         $loginerror = 'Security token invalid. Please try again.';
+    } elseif (!$rateLimiter->check('login', $rateLimitIdentifier)) {
+        $loginerror = $lang_toomanyattempts ?? 'Too many attempts. Please try again later.';
     } else {
         $email = Security::getString('email', 'POST');
         $password = Security::getString('password', 'POST');
@@ -64,8 +76,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $login === 1) {
             $user = $db->fetchOne('SELECT * FROM ppb_users WHERE email = ?', [$email]);
 
             if ($user === null) {
-                $loginerror = $lang_nouserwithemail ?? 'No user with this email address found';
+                // BUG-006: Unified error message (no user enumeration)
+                $loginerror = $lang_loginfailed ?? 'Invalid email or password.';
                 ErrorHandler::logFailedLogin($email, 'user_not_found');
+                $rateLimiter->recordFailure('login', $rateLimitIdentifier);
             } else {
                 // Verify password (supports both legacy base64 and modern hashes)
                 if (Security::verifyPassword($password, $user['password'])) {
@@ -85,12 +99,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $login === 1) {
 
                         // Regenerate CSRF token
                         CSRF::regenerate();
+
+                        // Reset rate limit on success
+                        $rateLimiter->recordSuccess('login', $rateLimitIdentifier);
                     } else {
-                        $loginerror = $lang_nocookielogin ?? 'Cookie login is disabled for this account';
+                        $loginerror = $lang_loginfailed ?? 'Invalid email or password.';
+                        $rateLimiter->recordFailure('login', $rateLimitIdentifier);
                     }
                 } else {
-                    $loginerror = $lang_pwdnotcorrect ?? 'Password is incorrect';
+                    // BUG-006: Unified error message (no user enumeration)
+                    $loginerror = $lang_loginfailed ?? 'Invalid email or password.';
                     ErrorHandler::logFailedLogin($email, 'invalid_password');
+                    $rateLimiter->recordFailure('login', $rateLimitIdentifier);
                 }
             }
         }
