@@ -197,3 +197,22 @@ $lang_statistics = 'Statistics';
 $lang_numregistered = '<b>Registered users</b><br><small>The number of all registered boardusers</small>';
 $lang_numthreads = '<b>Threads</b><br><small>The number of all threads</small>';
 $lang_numposts = '<b>Postings</b><br><small>The number of all postings</small>';
+
+// Userbereich-Bugfixes 2026-04-23 (new language keys)
+$lang_loginfailed = "Invalid email or password.";
+$lang_toomanyattempts = "Too many attempts. Please try again later.";
+$lang_usernameinvalid = "Username must be 2-50 chars and contain only letters, digits and . _ -";
+$lang_usernametaken = "This username is already taken.";
+$lang_inputstoolong = "One or more fields exceed the allowed length.";
+$lang_pwdtooshort = "Password must be at least 8 characters.";
+$lang_currentpasswordwrong = "Current password is not correct.";
+$lang_pwdresetlinksent = "If the email is registered, a reset link has been sent.";
+$lang_pwdresetsuccess = "Password has been reset. You can now log in.";
+$lang_pwdresettokeninvalid = "Invalid or expired reset link.";
+$lang_pwdresetclicklink = "Click this link within one hour to reset your password:";
+$lang_currentpassword = "Current password";
+$lang_newpassword = "New password";
+$lang_currentpwdnote = "Only required if you change email or password";
+$lang_leaveemptynochange = "Leave empty to keep current password";
+$lang_posttoolong = "Post text is too long.";
+$lang_loginfirst = "You have to log in first";

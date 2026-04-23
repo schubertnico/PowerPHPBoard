@@ -11,7 +11,9 @@ declare(strict_types=1);
  */
 
 use PowerPHPBoard\CSRF;
+use PowerPHPBoard\Mailer;
 use PowerPHPBoard\Security;
+use PowerPHPBoard\Validator;
 
 include __DIR__ . '/header.inc.php';
 ?>
@@ -19,7 +21,7 @@ include __DIR__ . '/header.inc.php';
 <table border="0" cellpadding="2" cellspacing="1" width="100%">
 
 <?php
-$acception = Security::getInt('acception');
+$acception = Security::getInt('acception', 'REQUEST');
 $register = Security::getInt('register', 'POST');
 
 if ($acception === 0) {
@@ -107,9 +109,29 @@ if ($acception === 0) {
                     $settings['tablebg2'] ?? '#eeeeee',
                     $settings['tablebg1'] ?? '#ffffff'
                 );
-            } elseif (strlen($password1) < 6) {
+            } elseif (!Validator::isStrongPassword($password1)) {
                 default_error(
-                    'Password must be at least 6 characters',
+                    $lang_pwdtooshort ?? 'Password must be at least 8 characters',
+                    'javascript:history.back()',
+                    $lang_backtoregform ?? 'Back',
+                    $settings['tablebg3'] ?? '#cccccc',
+                    $settings['tablebg2'] ?? '#eeeeee',
+                    $settings['tablebg1'] ?? '#ffffff'
+                );
+            } elseif (!Validator::isValidUsername($username)) {
+                default_error(
+                    $lang_usernameinvalid ?? 'Username must be 2-50 chars and only contain letters, digits, . _ -',
+                    'javascript:history.back()',
+                    $lang_backtoregform ?? 'Back',
+                    $settings['tablebg3'] ?? '#cccccc',
+                    $settings['tablebg2'] ?? '#eeeeee',
+                    $settings['tablebg1'] ?? '#ffffff'
+                );
+            } elseif (!Validator::withinLength($biography, Validator::BIOGRAPHY_MAX)
+                || !Validator::withinLength($signature, Validator::SIGNATURE_MAX)
+                || !Validator::withinLength($homepage, Validator::HOMEPAGE_MAX)) {
+                default_error(
+                    $lang_inputstoolong ?? 'One or more fields exceed the allowed length',
                     'javascript:history.back()',
                     $lang_backtoregform ?? 'Back',
                     $settings['tablebg3'] ?? '#cccccc',
@@ -136,10 +158,20 @@ if ($acception === 0) {
 
                 // Check if email already exists (using prepared statement)
                 $existing = $db->fetchOne('SELECT id FROM ppb_users WHERE email = ?', [$email1]);
+                $existingUsername = $existing !== null ? null : $db->fetchOne('SELECT id FROM ppb_users WHERE username = ?', [$username]);
 
                 if ($existing !== null) {
                     default_error(
                         $lang_emailalreadyexists ?? 'Email address already registered',
+                        'javascript:history.back()',
+                        $lang_backtoregform ?? 'Back',
+                        $settings['tablebg3'] ?? '#cccccc',
+                        $settings['tablebg2'] ?? '#eeeeee',
+                        $settings['tablebg1'] ?? '#ffffff'
+                    );
+                } elseif ($existingUsername !== null) {
+                    default_error(
+                        $lang_usernametaken ?? 'This username is already taken',
                         'javascript:history.back()',
                         $lang_backtoregform ?? 'Back',
                         $settings['tablebg3'] ?? '#cccccc',
@@ -151,8 +183,9 @@ if ($acception === 0) {
                     $passwordHash = Security::hashPassword($password1);
 
                     // Sanitize inputs
-                    $username = strip_tags($username);
                     $biography = strip_tags($biography);
+                    // Signature: whitelist safe inline tags only (BUG-010)
+                    $signature = strip_tags($signature, '<b><i><u><strong><em><br><a>');
                     $homepage = filter_var($homepage, FILTER_VALIDATE_URL) ? $homepage : '';
                     $hideemail = in_array($hideemail, ['YES', 'NO'], true) ? $hideemail : 'NO';
                     $logincookie = in_array($logincookie, ['YES', 'NO'], true) ? $logincookie : 'YES';
@@ -178,8 +211,15 @@ if ($acception === 0) {
                             ($lang_youcanloginhere ?? 'Login here') . ': ' . ($settings['boardurl'] ?? '') . "/login.php\n\n" .
                             ($lang_donotanswertoautomail ?? 'This is an automated message, please do not reply.');
 
-                        $headers = 'From: ' . ($settings['adminemail'] ?? 'noreply@example.com');
-                        @mail($email1, $subject, $message, $headers);
+                        $mailer = new Mailer(
+                            (string) ($mail['host'] ?? 'mailpit'),
+                            (int) ($mail['port'] ?? 1025)
+                        );
+                        $fromAddress = (string) ($settings['adminemail'] ?? '');
+                        if ($fromAddress === '' || !Security::isValidEmail($fromAddress)) {
+                            $fromAddress = (string) ($mail['from'] ?? 'noreply@powerphpboard.local');
+                        }
+                        $mailer->send($email1, $fromAddress, $subject, $message);
 
                         echo '
                             <tr><td bgcolor="' . Security::escape($settings['tablebg3'] ?? '#cccccc') . '">
@@ -215,7 +255,7 @@ if ($acception === 0) {
     } else {
         // Display registration form
         echo '
-        <form action="register.php" method="post">
+        <form action="register.php?acception=1" method="post">
         ' . CSRF::getTokenField() . '
         <input type="hidden" name="acception" value="1">
         <input type="hidden" name="register" value="1">
@@ -242,12 +282,12 @@ if ($acception === 0) {
         <tr><td width="*" bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '">
         <b>' . ($lang_password ?? 'Password') . '</b>
         </td><td width="300" bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '">
-        <input name="password1" size="25" maxlength="255" type="password" required minlength="6">
+        <input name="password1" size="25" maxlength="255" type="password" required minlength="8">
         </td></tr>
         <tr><td width="*" bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '">
         <b>' . ($lang_password ?? 'Password') . '</b> <small>(' . ($lang_confirmation ?? 'Confirmation') . ')</small>
         </td><td width="300" bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '">
-        <input name="password2" size="25" maxlength="255" type="password" required minlength="6">
+        <input name="password2" size="25" maxlength="255" type="password" required minlength="8">
         </td></tr>
         <tr><td colspan="2" bgcolor="' . Security::escape($settings['tablebg3'] ?? '#cccccc') . '">
         <b>' . ($lang_optionalinfo ?? 'Optional Information') . '</b>
