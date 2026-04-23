@@ -133,4 +133,43 @@ class CSRFTest extends TestCase
     {
         $this->assertSame('csrf_token', CSRF::getTokenName());
     }
+
+    #[Test]
+    public function validateFromPostWithoutLogging(): void
+    {
+        CSRF::generateToken();
+        $_POST['csrf_token'] = 'wrong_token';
+
+        // Should return false but not log (logFailure=false)
+        $this->assertFalse(CSRF::validateFromPost(false));
+    }
+
+    #[Test]
+    public function validateOrDiePassesWithValidToken(): void
+    {
+        $token = CSRF::generateToken();
+
+        // Should not throw or die
+        CSRF::validateOrDie($token);
+
+        $this->assertTrue(true);
+    }
+
+    #[Test]
+    public function getTokenFieldContainsGeneratedToken(): void
+    {
+        $token = CSRF::generateToken();
+        $field = CSRF::getTokenField();
+
+        $this->assertStringContainsString($token, $field);
+    }
+
+    #[Test]
+    public function regenerateInvalidatesOldToken(): void
+    {
+        $oldToken = CSRF::generateToken();
+        CSRF::regenerate();
+
+        $this->assertFalse(CSRF::validate($oldToken));
+    }
 }

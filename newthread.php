@@ -191,7 +191,7 @@ if (($board['status'] ?? '') === 'Closed') {
                     }
                 }
 
-                if (isset($user) && $user !== null) {
+                if (isset($user) && is_array($user)) {
                         // Create thread
                         $title = trim($title);
                         $text = trim($text);

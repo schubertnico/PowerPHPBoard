@@ -42,9 +42,13 @@ infection-log.txt
 
 # PHPUnit
 .phpunit.result.cache
+clover.xml
+coverage.xml
+junit.xml
 
 # Composer
 composer.phar
+composer.lock
 
 # Build artifacts
 /build/
@@ -55,6 +59,10 @@ composer.phar
 *.temp
 *.bak
 *.orig
+*~
+
+# PHP
+*.phar
 
 # Setup scripts (security risk)
 create-admin.php
@@ -62,6 +70,12 @@ install.php
 
 # Claude Code
 /.claude/
+
+# Rector
+/rector-output/
+
+# PHPStan
+phpstan-baseline.neon
 
 # Windows NUL device artifact
 nul

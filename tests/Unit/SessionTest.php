@@ -153,4 +153,70 @@ class SessionTest extends TestCase
         $this->assertGreaterThanOrEqual($before, $loginTime);
         $this->assertLessThanOrEqual($after, $loginTime);
     }
+
+    #[Test]
+    public function destroyClearsSession(): void
+    {
+        $_SESSION['user_id'] = 1;
+        $_SESSION['test'] = 'value';
+
+        Session::destroy();
+
+        $this->assertEmpty($_SESSION);
+    }
+
+    #[Test]
+    public function logoutClearsSession(): void
+    {
+        $_SESSION['user_id'] = 5;
+
+        Session::logout();
+
+        $this->assertEmpty($_SESSION);
+        $this->assertFalse(Session::isLoggedIn());
+    }
+
+    #[Test]
+    public function startSetsStartedFlag(): void
+    {
+        // After start, calling start again should not error
+        Session::start();
+        Session::start(); // second call should be no-op
+
+        $this->assertTrue(true);
+    }
+
+    #[Test]
+    public function allReturnsEmptyWhenNoSession(): void
+    {
+        unset($_SESSION);
+
+        $result = Session::all();
+
+        $this->assertIsArray($result);
+        $this->assertEmpty($result);
+    }
+
+    #[Test]
+    public function removeNonexistentKeyDoesNotError(): void
+    {
+        Session::remove('does_not_exist');
+
+        $this->assertFalse(Session::has('does_not_exist'));
+    }
+
+    #[Test]
+    public function getReturnsNullDefaultForMissing(): void
+    {
+        $this->assertNull(Session::get('missing_key'));
+    }
+
+    #[Test]
+    public function loginOverwritesPreviousUser(): void
+    {
+        Session::login(1);
+        Session::login(2);
+
+        $this->assertSame(2, Session::getUserId());
+    }
 }

@@ -206,7 +206,7 @@ if (($board['status'] ?? '') === 'Closed' || ($thread['status'] ?? '') === 'Clos
                     }
                 }
 
-                if (isset($user) && $user !== null) {
+                if (isset($user) && is_array($user)) {
                         // Create post
                         $text = trim($text);
                         $now = time();

@@ -59,7 +59,6 @@ class ErrorHandler
             E_ERROR, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR => 'ERROR',
             E_WARNING, E_CORE_WARNING, E_COMPILE_WARNING, E_USER_WARNING => 'WARNING',
             E_NOTICE, E_USER_NOTICE => 'NOTICE',
-            E_STRICT => 'STRICT',
             E_DEPRECATED, E_USER_DEPRECATED => 'DEPRECATED',
             default => 'UNKNOWN',
         };
