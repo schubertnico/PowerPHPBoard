@@ -32,6 +32,13 @@ $mysql = [
     'database' => getenv('PPB_DB_NAME') ?: 'PowerPHPBoard_v2',
 ];
 
+// Mail configuration (Mailpit for dev, real SMTP in production)
+$mail = [
+    'host' => getenv('PPB_MAIL_HOST') ?: 'mailpit',
+    'port' => (int) (getenv('PPB_MAIL_PORT') ?: 1025),
+    'from' => getenv('PPB_MAIL_FROM') ?: 'noreply@powerphpboard.local',
+];
+
 // Application settings
 define('PPB_VERSION', '2.0.0');
 define('PPB_SESSION_LIFETIME', 3600);
