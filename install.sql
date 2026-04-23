@@ -91,12 +91,13 @@ CREATE TABLE ppb_users (
   status enum('Deactivated','Normal user','Administrator') NOT NULL default 'Deactivated',
   registered int(14) NOT NULL default '0',
   lastvisit int(14) NOT NULL default '0',
-  PRIMARY KEY  (id)
+  PRIMARY KEY  (id),
+  UNIQUE KEY idx_users_username_unique (username)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 # --------------------------------------------------------
 
 #
-# Tabellenstruktur f�r Tabelle `ppb_visits`
+# Tabellenstruktur fuer Tabelle `ppb_visits`
 #
 
 CREATE TABLE ppb_visits (
@@ -107,6 +108,41 @@ CREATE TABLE ppb_visits (
   type enum('Board','Thread') NOT NULL default 'Board',
   password varchar(255) NOT NULL default '',
   PRIMARY KEY  (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+# --------------------------------------------------------
+
+#
+# Tabellenstruktur fuer Tabelle `ppb_password_resets`
+#
+
+CREATE TABLE ppb_password_resets (
+  id int(11) NOT NULL auto_increment,
+  userid int(11) NOT NULL,
+  token_hash varchar(64) NOT NULL,
+  expires_at int(14) NOT NULL,
+  used_at int(14) NOT NULL default '0',
+  created_at int(14) NOT NULL,
+  PRIMARY KEY (id),
+  INDEX idx_pwreset_userid (userid),
+  INDEX idx_pwreset_token (token_hash),
+  INDEX idx_pwreset_expires (expires_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+# --------------------------------------------------------
+
+#
+# Tabellenstruktur fuer Tabelle `ppb_rate_limits`
+#
+
+CREATE TABLE ppb_rate_limits (
+  id int(11) NOT NULL auto_increment,
+  action varchar(50) NOT NULL,
+  identifier varchar(255) NOT NULL,
+  attempts int(11) NOT NULL default '0',
+  window_start int(14) NOT NULL,
+  locked_until int(14) NOT NULL default '0',
+  PRIMARY KEY (id),
+  UNIQUE KEY idx_rl_action_identifier (action, identifier),
+  INDEX idx_rl_window (window_start)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 #
