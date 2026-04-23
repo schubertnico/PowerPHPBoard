@@ -311,7 +311,9 @@ if (($board['status'] ?? '') === 'Private' && !$hasAccess) {
 
             // Signature
             if ($author !== null && !empty($author['signature'])) {
-                $signature = TextFormatter::formatPost($author['signature'], $settings['bbcode'] ?? 'ON', $settings['smilies'] ?? 'ON', $settings['htmlcode'] ?? 'OFF');
+                // BUG-010: Signaturen immer mit htmlcode=OFF rendern (unabhaengig von $settings),
+                // damit rohes HTML in der Signatur keinen Stored-XSS ermoeglicht.
+                $signature = TextFormatter::formatPost($author['signature'], $settings['bbcode'] ?? 'ON', $settings['smilies'] ?? 'ON', 'OFF');
                 echo '
                 <br><br><hr width="20%" noshade color="' . Security::escape($settings['text'] ?? '#000000') . '" align="left">
                 ' . $signature;

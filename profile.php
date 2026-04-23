@@ -180,6 +180,8 @@ if ($login === 1 && $loggedin === 'YES') {
 
                     // Update user
                     $updateSuccess = true;
+                    // BUG-010: Signatur sanitieren - nur Whitelist-Tags erlauben
+                    $signature = strip_tags($signature, '<b><i><u><strong><em><br><a>');
                     try {
                         $db->query(
                             'UPDATE ppb_users SET username = ?, email = ?, password = ?, homepage = ?, icq = ?, biography = ?, signature = ?, hideemail = ?, logincookie = ? WHERE id = ?',
