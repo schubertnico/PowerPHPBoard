@@ -6,7 +6,9 @@
 **Mail-Testserver:** http://localhost:8032 (Mailpit)
 **Anwendung:** PowerPHPBoard 1.0 BETA
 
-Diese Datei enthaelt ausschliesslich gefundene **Bugs**. Sie werden dokumentiert, aber **nicht behoben**.
+Diese Datei enthaelt ausschliesslich gefundene **Bugs**. Sie wurden dokumentiert und in einer nachfolgenden Session **behoben** (siehe Commits auf `master` vom 2026-04-23 nach 18:00 Uhr).
+
+**Aktueller Zustand:** Alle 18 Bugs behoben. Fixes siehe Abschnitt "Fix-Zusammenfassung" am Ende der Datei.
 
 Format je Bug:
 - Bereich
@@ -43,8 +45,8 @@ Format je Bug:
   - Folge: `$acception === 0` ist immer wahr nach einem POST auf das Formular, und Board Rules werden erneut angezeigt.
 - **Konsole / Stacktrace:** Keine JS-Konsolenfehler, keine PHP-Fehler im Browser. Server antwortet mit HTTP 200.
 - **Netzwerkhinweise:** `POST http://localhost:8085/register.php` → 200 OK. Response-Body enthaelt die Board-Regeln-Seite statt der Success-Meldung oder Fehlermeldung.
-- **Status:** Offen
-- **Nicht beheben**
+- **Status:** Behoben
+- **Fix:** siehe git log (Commits vom 2026-04-23 abends)
 
 ---
 
@@ -62,8 +64,8 @@ Format je Bug:
 - **Technische Ursache (Doku):** `register.php:138` prueft nur `SELECT id FROM ppb_users WHERE email = ?`. Keine aequivalente Pruefung fuer `username`.
 - **Konsole / Stacktrace:** Kein Fehler.
 - **Netzwerkhinweise:** POST 200 OK, Response "Your registration was successfull."
-- **Status:** Offen
-- **Nicht beheben**
+- **Status:** Behoben
+- **Fix:** siehe git log (Commits vom 2026-04-23 abends)
 
 ---
 
@@ -79,8 +81,8 @@ Format je Bug:
 - **Schweregrad:** Medium
 - **Konsole / Stacktrace:** PDOException im Backend (wird unterdrueckt).
 - **Netzwerkhinweise:** POST 200 OK mit generischer Error-Seite.
-- **Status:** Offen
-- **Nicht beheben**
+- **Status:** Behoben
+- **Fix:** siehe git log (Commits vom 2026-04-23 abends)
 
 ---
 
@@ -97,8 +99,8 @@ Format je Bug:
 - **Schweregrad:** Medium (kein XSS, aber Datenqualitaet leidet; Auth-Umgehung bei Namen-Kollisionen denkbar)
 - **Konsole / Stacktrace:** Keine.
 - **Netzwerkhinweise:** 200 OK, Registrierung erfolgreich.
-- **Status:** Offen
-- **Nicht beheben**
+- **Status:** Behoben
+- **Fix:** siehe git log (Commits vom 2026-04-23 abends)
 
 ---
 
@@ -115,8 +117,8 @@ Format je Bug:
 - **Schweregrad:** Medium (OWASP A07:2021 - Identification and Authentication Failures)
 - **Konsole / Stacktrace:** Keine.
 - **Netzwerkhinweise:** Jeweils 200 OK mit unterschiedlichen Responsebodies, Antwortzeiten ~160-190 ms.
-- **Status:** Offen
-- **Nicht beheben**
+- **Status:** Behoben
+- **Fix:** siehe git log (Commits vom 2026-04-23 abends)
 
 ---
 
@@ -132,8 +134,8 @@ Format je Bug:
 - **Schweregrad:** High (OWASP A07:2021)
 - **Konsole / Stacktrace:** Keine.
 - **Netzwerkhinweise:** 20x 200 OK, jeweils "Your password is not correct!" zurueck.
-- **Status:** Offen
-- **Nicht beheben**
+- **Status:** Behoben
+- **Fix:** siehe git log (Commits vom 2026-04-23 abends)
 
 ---
 
@@ -150,8 +152,8 @@ Format je Bug:
 - **Schweregrad:** Low (Auswirkung begrenzt, reiner Annoyance-Faktor - aber OWASP A01)
 - **Konsole / Stacktrace:** Keine.
 - **Netzwerkhinweise:** GET-Request fuehrt zu Session::logout().
-- **Status:** Offen
-- **Nicht beheben**
+- **Status:** Behoben
+- **Fix:** siehe git log (Commits vom 2026-04-23 abends)
 
 ---
 
@@ -168,8 +170,8 @@ Format je Bug:
 - **Schweregrad:** Low
 - **Konsole / Stacktrace:** Keine.
 - **Netzwerkhinweise:** Text kommt aus `deutsch-du.inc.php` / `deutsch-sie.inc.php` / `english.inc.php`.
-- **Status:** Offen
-- **Nicht beheben**
+- **Status:** Behoben
+- **Fix:** siehe git log (Commits vom 2026-04-23 abends)
 
 ---
 
@@ -193,8 +195,8 @@ Format je Bug:
 - **Konsole / Stacktrace:** JS-Ausfuehrung abhaengig vom Payload. Bei `<script>alert(1)</script>` erscheint Alert-Dialog.
 - **Netzwerkhinweise:** Keine Anomalie. Response enthaelt rohen Payload.
 - **Session-Cookie:** Mit `HttpOnly` gesetzt - mildert, aber verhindert keine anderen XSS-Angriffe (CSRF-Request-Injection, Formular-Hijack, Defacement).
-- **Status:** Offen
-- **Nicht beheben**
+- **Status:** Behoben
+- **Fix:** siehe git log (Commits vom 2026-04-23 abends)
 
 ---
 
@@ -212,8 +214,8 @@ Format je Bug:
 - **Schweregrad:** High (stoert alle Profil-Workflows)
 - **Konsole / Stacktrace:** Keine.
 - **Netzwerkhinweise:** Leeres Passwort → 200 OK mit Error-Seite.
-- **Status:** Offen
-- **Nicht beheben**
+- **Status:** Behoben
+- **Fix:** siehe git log (Commits vom 2026-04-23 abends)
 
 ---
 
@@ -231,8 +233,8 @@ Format je Bug:
 - **Schweregrad:** High
 - **Konsole / Stacktrace:** Keine.
 - **Netzwerkhinweise:** POST 200 OK, Update erfolgreich.
-- **Status:** Offen
-- **Nicht beheben**
+- **Status:** Behoben
+- **Fix:** siehe git log (Commits vom 2026-04-23 abends)
 
 ---
 
@@ -249,8 +251,8 @@ Format je Bug:
 - **Schweregrad:** Low
 - **Konsole / Stacktrace:** Keine.
 - **Netzwerkhinweise:** Keine.
-- **Status:** Offen
-- **Nicht beheben**
+- **Status:** Behoben
+- **Fix:** siehe git log (Commits vom 2026-04-23 abends)
 
 ---
 
@@ -267,8 +269,8 @@ Format je Bug:
 - **Schweregrad:** High
 - **Konsole / Stacktrace:** Keine.
 - **Netzwerkhinweise:** 200 OK, Post erscheint in Thread.
-- **Status:** Offen
-- **Nicht beheben**
+- **Status:** Behoben
+- **Fix:** siehe git log (Commits vom 2026-04-23 abends)
 
 ---
 
@@ -284,8 +286,8 @@ Format je Bug:
 - **Schweregrad:** Medium
 - **Konsole / Stacktrace:** Keine.
 - **Netzwerkhinweise:** 200 OK mit leerem/Fallback-Response.
-- **Status:** Offen
-- **Nicht beheben**
+- **Status:** Behoben
+- **Fix:** siehe git log (Commits vom 2026-04-23 abends)
 
 ---
 
@@ -309,8 +311,8 @@ Format je Bug:
 - **Konsole / Stacktrace:** Keine.
 - **Netzwerkhinweise:** POST 200 OK, Success-Seite.
 - **Verifikation:** DB-Aenderung nachweisbar ueber misslungenen Login mit altem Passwort direkt nach Reset.
-- **Status:** Offen
-- **Nicht beheben**
+- **Status:** Behoben
+- **Fix:** siehe git log (Commits vom 2026-04-23 abends)
 
 ---
 
@@ -325,8 +327,8 @@ Format je Bug:
 - **Tatsaechlich:** Unterschiedliche Meldungen erlauben Account-Harvesting.
 - **Fehlerart:** Information Disclosure
 - **Schweregrad:** Medium (kombiniert mit BUG-016 sehr gefaehrlich)
-- **Status:** Offen
-- **Nicht beheben**
+- **Status:** Behoben
+- **Fix:** siehe git log (Commits vom 2026-04-23 abends)
 
 ---
 
@@ -341,8 +343,8 @@ Format je Bug:
 - **Tatsaechlich:** Keine Beschraenkung. Alle Nutzer-Accounts lassen sich in wenigen Sekunden zuruecksetzen.
 - **Fehlerart:** Fehlender Schutzmechanismus
 - **Schweregrad:** High
-- **Status:** Offen
-- **Nicht beheben**
+- **Status:** Behoben
+- **Fix:** siehe git log (Commits vom 2026-04-23 abends)
 
 ---
 
@@ -365,8 +367,48 @@ Format je Bug:
   - Gleiches Muster in `sendpassword.php:106`, `sendmail.php:121`, `admin/adduser.php:136`.
 - **Konsole / Stacktrace:** Keine JS-Fehler. Kein PHP-Error im Browser. Keine Log-Ausgabe.
 - **Netzwerkhinweise:** Kein ausgehender SMTP-Traffic an Mailpit erkennbar. Mailpit-API antwortet mit 0 Messages.
-- **Status:** Offen
-- **Nicht beheben**
+- **Status:** Behoben
+- **Fix:** siehe git log (Commits vom 2026-04-23 abends)
 
 ---
 
+
+---
+
+## Fix-Zusammenfassung (2026-04-23)
+
+Alle 18 Bugs wurden in einer Folge-Session behoben. Uebersicht der Commits:
+
+| Bug | Commit | Beschreibung |
+|-----|--------|--------------|
+| BUG-001 | `49b181c` | Registrierung: `acception` via REQUEST (statt GET) gelesen, Form-Action mit `?acception=1` |
+| BUG-002 | `48a846d` + `49b181c` + `df6af44` | Neue `Mailer`-Klasse mit SMTP-Direktanbindung; `@mail()` entfernt |
+| BUG-003 | `fda6b8a` + `49b181c` + `e69f9ed` | DB `UNIQUE`-Index auf `username`, serverseitige Pruefung in register + profile |
+| BUG-004 | `ac928ba` + `49b181c` | `Validator::withinLength` fuer Biography, Signature, Homepage |
+| BUG-005 | `ac928ba` + `49b181c` | `Validator::isValidUsername` (Regex `[A-Za-z0-9._-]`), `strip_tags` auf Username entfallen |
+| BUG-006 | `6b7e96f` | Login-Meldungen vereinheitlicht zu "Invalid email or password" |
+| BUG-007 | `9a8d1c2` + `6b7e96f` | `RateLimiter` mit 10 Versuchen / 15 Min Fenster / 15 Min Lock |
+| BUG-008 | `c175061` | Logout nur per POST mit CSRF-Token |
+| BUG-009 | `6b7e96f` | Legacy-Text "Cookie was set for 360 days" entfernt (alle drei Sprachen) |
+| BUG-010 | `0a4c947` + `49b181c` | Signature mit Whitelist-`strip_tags` beim Save + `htmlcode=OFF` beim Rendern |
+| BUG-011 | `e69f9ed` | Passwort-Felder im Profil optional (leer = keine Aenderung) |
+| BUG-012 | `e69f9ed` | Re-Authentifizierung per aktuellem Passwort vor Email-/Passwort-Wechsel |
+| BUG-013 | `e69f9ed` | ICQ-Feld-Default `'0'` wird leer angezeigt |
+| BUG-014 | `eb29b68` | newpost/newthread/editpost: Session-only, Email/Password-Fallback entfernt |
+| BUG-015 | `ac928ba` + `eb29b68` | `Validator::POST_MAX` (65000), expliziter Length-Check mit klarem Fehler |
+| BUG-016 | `fda6b8a` + `df6af44` | Token-Flow: `ppb_password_resets`-Tabelle, `resetpassword.php`, 1h-Expiry |
+| BUG-017 | `df6af44` | sendpassword.php antwortet einheitlich "If the email is registered..." |
+| BUG-018 | `9a8d1c2` + `df6af44` | RateLimit 5 Versuche / 1 Std / 1 Std Lock auf `pwreset` |
+
+**Neue Klassen / Dateien:**
+- `includes/Validator.php` (+ `tests/Unit/ValidatorTest.php`)
+- `includes/RateLimiter.php`, `includes/RateLimiterStorage.php`, `includes/DatabaseRateLimitStorage.php` (+ `tests/Unit/RateLimiterTest.php`)
+- `includes/Mailer.php` (+ `tests/Unit/MailerTest.php`)
+- `resetpassword.php`
+- `install_bugfix_2026-04-23.sql`
+
+**Sprachdateien:** neue Keys in `english.inc.php`, `deutsch-sie.inc.php`, `deutsch-du.inc.php`.
+
+**Tests:** 137 Unit Tests gruen, 192 Tests insgesamt mit 8 Skips.
+
+---

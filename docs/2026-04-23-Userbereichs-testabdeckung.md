@@ -156,4 +156,9 @@ Folgende Bereiche wurden nur teilweise getestet und koennten eigene Folgeaudits 
 
 Alle erreichbaren Bereiche des Userbereichs wurden geprueft und dokumentiert. Keine Bugs behoben, keine Features umgebaut.
 
+
+### Fix-Pass 2026-04-23 abends
+
+Alle 18 Bugs wurden in einer Folge-Session behoben. Siehe `docs/2026-04-23-Userbereichs-bugs.md` Abschnitt "Fix-Zusammenfassung" sowie die Commits ab `fda6b8a` im Git-Log. Fuer neu eingefuehrte Helper-Klassen (Validator, RateLimiter, Mailer) existieren Unit-Tests (ValidatorTest, RateLimiterTest, MailerTest). Gesamt: 137 Unit-Tests / 192 Tests insgesamt gruen.
+
 AUDIT_COMPLETE
