@@ -2,7 +2,7 @@
 /**
  * PowerPHPBoard - Footer Include
  *
- * MIT License - Copyright (c) 2024 PowerScripts
+ * MIT License - Copyright (c) 2026 PowerScripts
  */
 
 ?>

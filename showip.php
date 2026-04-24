@@ -7,7 +7,7 @@ declare(strict_types=1);
  *
  * MIT License
  *
- * Copyright (c) 2024 PowerScripts
+ * Copyright (c) 2026 PowerScripts
  */
 
 use PowerPHPBoard\Database;

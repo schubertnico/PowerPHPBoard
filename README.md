@@ -536,7 +536,7 @@ Alle 18 dokumentierten Bugs behoben.
 MIT License
 
 Copyright (c) 2001-2009 Stefan "BFG" Kramer (PowerScripts)
-Copyright (c) 2024 Nico Schubert / PowerScripts
+Copyright (c) 2026 Nico Schubert / PowerScripts
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
