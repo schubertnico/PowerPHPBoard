@@ -96,10 +96,10 @@ final class Mailer
     private function expect($socket, string $expected): void
     {
         $line = fgets($socket, 1024);
-        if ($line === false || !str_starts_with((string) $line, $expected)) {
-            throw new RuntimeException('SMTP expected ' . $expected . ', got ' . (string) $line);
+        if ($line === false || !str_starts_with($line, $expected)) {
+            throw new RuntimeException('SMTP expected ' . $expected . ', got ' . ($line === false ? '' : $line));
         }
-        while (preg_match('/^' . preg_quote($expected, '/') . '-/', (string) $line) === 1) {
+        while (preg_match('/^' . preg_quote($expected, '/') . '-/', $line) === 1) {
             $line = fgets($socket, 1024);
             if ($line === false) {
                 throw new RuntimeException('SMTP unexpected close');
