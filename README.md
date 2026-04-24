@@ -1,10 +1,85 @@
 # PowerPHPBoard
 
-Ein sicheres, leichtgewichtiges PHP-Forum-System fuer PHP 8.4+.
+Ein sicheres, leichtgewichtiges PHP-Forum-System fuer **PHP 8.4+**.
+Urspruenglich entwickelt 2001-2009 von Stefan "BFG" Kramer, komplett modernisiert 2026.
 
-Urspruenglich entwickelt 2001-2009, komplett modernisiert fuer aktuelle PHP-Standards.
+- **Projekt-Website:** [https://www.powerscripts.org](https://www.powerscripts.org)
+- **Projektuebersicht:** [https://www.powerscripts.org/projects-3.html](https://www.powerscripts.org/projects-3.html)
+- **Repository:** [https://github.com/schubertnico/PowerPHPBoard](https://github.com/schubertnico/PowerPHPBoard)
 
-**Repository:** https://github.com/schubertnico/PowerPHPBoard
+---
+
+## Schnellstart (Docker, empfohlen)
+
+Du brauchst nur **Git**, **Composer** und **Docker Desktop** (oder docker compose v2).
+
+```bash
+# 1. Repository klonen
+git clone https://github.com/schubertnico/PowerPHPBoard.git
+cd PowerPHPBoard
+
+# 2. Dev-Dependencies fuer Tests/Tooling installieren
+composer install
+
+# 3. Container starten (Forum + MySQL + Mailpit + phpMyAdmin)
+cd .docker
+docker compose up -d --build
+cd ..
+
+# 4. Im Browser oeffnen
+#    http://localhost:8085  -> Forum
+```
+
+Beim ersten Start wird `install.sql` automatisch in die MySQL-DB geladen.
+Ein Admin-Account "Gott" wird angelegt (Passwort steht in `install.sql` - nach erstem Login sofort aendern!).
+
+| Service       | URL                            | Zweck                            |
+|---------------|--------------------------------|----------------------------------|
+| Forum         | http://localhost:8085          | Hauptanwendung                   |
+| phpMyAdmin    | http://localhost:8088          | DB-Verwaltung                    |
+| Mailpit (UI)  | http://localhost:8032          | E-Mails von Registrierung/Reset  |
+| Mailpit SMTP  | mailpit:1025 (intern)          | SMTP-Ziel der App                |
+| MySQL         | localhost:3315                 | Direkter DB-Zugriff (Dev)        |
+
+### Stoppen, Aktualisieren, Zuruecksetzen
+
+```bash
+# Container stoppen
+docker compose -f .docker/docker-compose.yml down
+
+# Neu bauen (z. B. nach PHP-Version-Upgrade)
+docker compose -f .docker/docker-compose.yml up -d --build
+
+# Komplett zuruecksetzen (alle Daten loeschen!)
+docker compose -f .docker/docker-compose.yml down -v
+```
+
+### Schnellstart ohne Docker
+
+```bash
+git clone https://github.com/schubertnico/PowerPHPBoard.git
+cd PowerPHPBoard
+composer install
+
+# MySQL-DB anlegen und Schema importieren
+mysql -u root -p -e "CREATE DATABASE PowerPHPBoard_v2 CHARACTER SET utf8mb4;"
+mysql -u root -p PowerPHPBoard_v2 < install.sql
+
+# config.inc.php anpassen (Zugangsdaten, SMTP)
+# Dann Webserver auf das Projekt-Verzeichnis zeigen lassen,
+# oder PHP-Builtin:
+php -S localhost:8085
+```
+
+### Bugfix-Migration einspielen (fuer bestehende Installationen)
+
+Wenn du eine aeltere Version updatest, fuehre zusaetzlich die Migration aus:
+
+```bash
+mysql -u <user> -p <dbname> < install_bugfix_2026-04-23.sql
+```
+
+Sie legt neue Tabellen fuer Password-Reset-Tokens und Rate-Limits an und setzt `UNIQUE` auf `username`.
 
 ---
 
@@ -12,97 +87,59 @@ Urspruenglich entwickelt 2001-2009, komplett modernisiert fuer aktuelle PHP-Stan
 
 1. [Features](#features)
 2. [Voraussetzungen](#voraussetzungen)
-3. [Installation](#installation)
-4. [Konfiguration](#konfiguration)
-5. [Projektstruktur](#projektstruktur)
-6. [Core-Klassen](#core-klassen)
-7. [Sicherheit](#sicherheit)
-8. [BBCode-Referenz](#bbcode-referenz)
-9. [Testing](#testing)
-10. [Entwicklung](#entwicklung)
-11. [API-Dokumentation](#api-dokumentation)
-12. [Changelog](#changelog)
-13. [Lizenz](#lizenz)
+3. [Konfiguration](#konfiguration)
+4. [Projektstruktur](#projektstruktur)
+5. [Core-Klassen](#core-klassen)
+6. [Sicherheit](#sicherheit)
+7. [BBCode-Referenz](#bbcode-referenz)
+8. [Testing](#testing)
+9. [Entwicklung](#entwicklung)
+10. [Changelog](#changelog)
+11. [Lizenz](#lizenz)
+12. [Kontakt](#kontakt)
 
 ---
 
 ## Features
 
 ### Forum-Funktionen
-- Foren mit Kategorien und Boards
-- Thread- und Post-Erstellung
-- Benutzerregistrierung und -profile
-- Moderatoren-System mit Berechtigungen
+- Foren mit Kategorien, Boards, Threads und Posts
+- Benutzerregistrierung, Profilverwaltung, Signaturen, Biography
+- Moderatoren pro Board, Admin-Rolle
 - Private Boards mit Passwortschutz
-- BBCode und Smilies
-- E-Mail-Benachrichtigungen
+- BBCode, Smilies, optional HTML
+- E-Mail-Versand (Registrierung, Passwort-Reset, User-zu-User)
+- Mehrsprachig: Deutsch (Sie/Du), Englisch
+
+### Sicherheit
+- **CSRF-Schutz** auf allen POST-Formularen
+- **Prepared Statements** (PDO) durchgaengig
+- **XSS-Praevention** (htmlspecialchars, Whitelist-strip_tags fuer Signaturen)
+- **Argon2id** Passwort-Hashing mit Legacy-Migration
+- **HttpOnly Session-Cookies**, SameSite=Strict, Secure-fertig
+- **Rate-Limiting** gegen Brute-Force (Login, Passwort-Reset)
+- **Token-basierter Passwort-Reset** (einmalige, zeitlich begrenzte Tokens)
+- **Unified Error Messages** (keine User-Enumeration)
+- **Username-UNIQUE** Constraint auf DB-Ebene
 
 ### Technische Features
-- **PHP 8.4**: Strict Types, Match Expressions, Named Arguments
-- **Sicherheit**: CSRF, Prepared Statements, XSS-Praevention, Argon2id
-- **Qualitaet**: PHPStan Level 8, 132 PHPUnit Tests
-- **CI/CD**: GitHub Actions fuer automatisierte Tests
-- **Logging**: Zentrales Error-Handling und Security-Logging
-- **Mehrsprachig**: Deutsch (Sie/Du), Englisch
+- PHP 8.4 Strict Types, Match Expressions, Named Arguments, readonly
+- PSR-4 Autoloading, modulare `includes/`-Klassen
+- 192 PHPUnit-Tests (137 Unit + 55 Feature)
+- PHPStan Level 8, Psalm, PHP-CS-Fixer, Rector, Infection
+- Docker-Compose Dev-Stack mit Mailpit und phpMyAdmin
+- GitHub Actions CI
 
 ---
 
 ## Voraussetzungen
 
-| Komponente | Version | Hinweis |
-|------------|---------|---------|
-| PHP | 8.4+ | Mit strict_types |
-| MySQL | 8.0+ | Oder MariaDB 10.3+ |
-| PDO | - | pdo_mysql Extension |
-| mbstring | - | PHP Extension |
-| Composer | 2.0+ | Fuer Dependencies |
-
----
-
-## Installation
-
-### Option 1: Docker (Empfohlen)
-
-```bash
-# Repository klonen
-git clone https://github.com/schubertnico/PowerPHPBoard.git
-cd PowerPHPBoard
-
-# Dependencies installieren
-composer install
-
-# Docker-Container starten
-cd .docker
-docker compose up -d --build
-```
-
-**Zugriff:**
-| Service | URL | Beschreibung |
-|---------|-----|--------------|
-| Forum | http://localhost:8085 | Hauptanwendung |
-| phpMyAdmin | http://localhost:8088 | Datenbank-Verwaltung |
-| Mailpit | http://localhost:8032 | E-Mail-Test-Interface |
-
-### Option 2: Manuelle Installation
-
-```bash
-# Repository klonen
-git clone https://github.com/schubertnico/PowerPHPBoard.git
-cd PowerPHPBoard
-
-# Dependencies installieren
-composer install
-
-# Konfiguration erstellen
-cp config.inc.php.example config.inc.php
-# Datenbankzugangsdaten in config.inc.php eintragen
-
-# Datenbank importieren
-mysql -u root -p PowerPHPBoard < database/install.sql
-
-# Entwicklungsserver starten
-php -S localhost:8085
-```
+| Komponente | Version  | Hinweis                                   |
+|------------|----------|-------------------------------------------|
+| PHP        | 8.4+     | mit `pdo_mysql`, `mbstring`, `openssl`    |
+| MySQL      | 8.0+     | oder MariaDB 10.5+                        |
+| Composer   | 2.0+     | Autoloader und Dev-Tooling                |
+| SMTP       | -        | z. B. Mailpit im Dev-Setup, produktiv SMTP-Relay |
 
 ---
 
@@ -110,15 +147,18 @@ php -S localhost:8085
 
 ### Environment-Variablen
 
-| Variable | Beschreibung | Standard |
-|----------|--------------|----------|
-| `PPB_DB_HOST` | Datenbank-Host | `localhost` |
-| `PPB_DB_USER` | Datenbank-Benutzer | `root` |
-| `PPB_DB_PASS` | Datenbank-Passwort | (leer) |
-| `PPB_DB_NAME` | Datenbank-Name | `PowerPHPBoard_v2` |
-| `PPB_DEBUG` | Debug-Modus | `false` |
+| Variable         | Beschreibung           | Standard                      |
+|------------------|------------------------|-------------------------------|
+| `PPB_DB_HOST`    | Datenbank-Host         | `localhost`                   |
+| `PPB_DB_USER`    | Datenbank-Benutzer     | `root`                        |
+| `PPB_DB_PASS`    | Datenbank-Passwort     | (leer)                        |
+| `PPB_DB_NAME`    | Datenbank-Name         | `PowerPHPBoard_v2`            |
+| `PPB_MAIL_HOST`  | SMTP-Host              | `mailpit`                     |
+| `PPB_MAIL_PORT`  | SMTP-Port              | `1025`                        |
+| `PPB_MAIL_FROM`  | Absender (Fallback)    | `noreply@powerphpboard.local` |
+| `PPB_DEBUG`      | Debug-Modus            | `false`                       |
 
-### config.inc.php
+### `config.inc.php`
 
 ```php
 <?php
@@ -131,12 +171,19 @@ $mysql = [
     'database' => getenv('PPB_DB_NAME') ?: 'PowerPHPBoard_v2',
 ];
 
-// Anwendungseinstellungen
-define('PPB_VERSION', '2.0.0');
+$mail = [
+    'host' => getenv('PPB_MAIL_HOST') ?: 'mailpit',
+    'port' => (int) (getenv('PPB_MAIL_PORT') ?: 1025),
+    'from' => getenv('PPB_MAIL_FROM') ?: 'noreply@powerphpboard.local',
+];
+
+define('PPB_VERSION', '2.1.0');
 define('PPB_SESSION_LIFETIME', 3600);
 define('PPB_CSRF_ENABLED', true);
-define('PPB_DEBUG', (bool)(getenv('PPB_DEBUG') ?: false));
+define('PPB_DEBUG', (bool) (getenv('PPB_DEBUG') ?: false));
 ```
+
+Nach Aenderungen am Config-Schema nicht vergessen, Zugangsdaten der Produktions-Instanz entsprechend zu setzen.
 
 ---
 
@@ -144,755 +191,323 @@ define('PPB_DEBUG', (bool)(getenv('PPB_DEBUG') ?: false));
 
 ```
 PowerPHPBoard/
-│
-├── .docker/                    # Docker-Konfiguration
-│   ├── Dockerfile              # PHP 8.4 Apache Image
-│   ├── docker-compose.yml      # Container-Orchestrierung
-│   └── apache.conf             # Apache-Konfiguration
-│
-├── .github/
-│   └── workflows/
-│       └── ci.yml              # GitHub Actions CI/CD
-│
-├── admin/                      # Admin-Panel
-│   ├── header.inc.php          # Admin-Header
-│   ├── index.php               # Admin-Dashboard
-│   ├── addboard.php            # Board erstellen
-│   ├── editboard.php           # Board bearbeiten
-│   ├── addboardcategory.php    # Kategorie erstellen
-│   ├── editboardcategory.php   # Kategorie bearbeiten
-│   ├── adduser.php             # Benutzer erstellen
-│   ├── edituser.php            # Benutzer bearbeiten
-│   └── general.php             # Allgemeine Einstellungen
-│
-├── includes/                   # Core-Klassen (PSR-4)
-│   ├── Database.php            # PDO Datenbank-Wrapper
-│   ├── Session.php             # Session-Verwaltung
-│   ├── Security.php            # Sicherheits-Utilities
-│   ├── CSRF.php                # CSRF-Schutz
-│   ├── TextFormatter.php       # BBCode/Smilies
-│   └── ErrorHandler.php        # Error-Handling & Logging
-│
-├── tests/                      # PHPUnit Tests
-│   ├── bootstrap.php           # Test-Bootstrap
-│   ├── Unit/                   # Unit Tests
-│   │   ├── SecurityTest.php    # 24 Tests
-│   │   ├── CSRFTest.php        # 13 Tests
-│   │   ├── SessionTest.php     # 14 Tests
-│   │   └── TextFormatterTest.php # 26 Tests
-│   └── Feature/                # Feature Tests
-│       ├── FeatureTestCase.php # Basis-Testklasse
-│       ├── LoginWorkflowTest.php    # 14 Tests
-│       ├── RegisterWorkflowTest.php # 21 Tests
-│       └── ProfileWorkflowTest.php  # 20 Tests
-│
-├── logs/                       # Log-Dateien
-│   ├── php-error.log           # PHP-Fehler
-│   └── security.log            # Security-Events
-│
-├── images/                     # Bilder und Smilies
-│   └── *.gif                   # Smilie-Grafiken
-│
-├── todos/                      # Projekt-TODOs
-│   └── workflow-absicherung-plan.md
-│
-├── config.inc.php              # Hauptkonfiguration
-├── header.inc.php              # Seiten-Header
-├── footer.inc.php              # Seiten-Footer
-├── functions.inc.php           # Legacy-Hilfsfunktionen
-│
-├── index.php                   # Startseite
-├── login.php                   # Login-Formular
-├── logout.php                  # Logout
-├── register.php                # Registrierung
-├── profile.php                 # Benutzerprofil
-├── board.php                   # Board-Ansicht
-├── thread.php                  # Thread-Ansicht
-├── newthread.php               # Neuer Thread
-├── newpost.php                 # Neuer Post
-├── editpost.php                # Post bearbeiten
-├── sendmail.php                # E-Mail senden
-├── sendpassword.php            # Passwort zuruecksetzen
-├── faq.php                     # FAQ-Seite
-├── memberlist.php              # Mitgliederliste
-├── search.php                  # Suche
-│
-├── english.inc.php             # Englische Sprache
-├── deutsch-sie.inc.php         # Deutsch (formell)
-├── deutsch-du.inc.php          # Deutsch (informell)
-│
-├── composer.json               # Composer-Konfiguration
-├── composer.lock               # Dependency-Lock
-├── phpstan.neon                # PHPStan Level 8
-├── phpunit.xml                 # PHPUnit-Konfiguration
-├── rector.php                  # Rector-Konfiguration
-├── LICENSE                     # MIT-Lizenz
-└── README.md                   # Diese Dokumentation
+├── .docker/                       # Dev-Stack (Apache+PHP, MySQL, Mailpit, phpMyAdmin)
+├── .github/workflows/             # CI
+├── admin/                         # Admin-Panel
+├── docs/                          # Audit-Berichte, Plaene, Dokumentation
+├── images/                        # Smilies, UI-Grafiken
+├── inc/                           # Legacy-Header/Footer-Templates
+├── includes/                      # Core-Klassen (PSR-4, Namespace PowerPHPBoard\)
+│   ├── CSRF.php                   # CSRF-Tokens
+│   ├── Database.php               # PDO-Wrapper (Singleton)
+│   ├── DatabaseRateLimitStorage.php
+│   ├── ErrorHandler.php           # Error + Security-Logging
+│   ├── Mailer.php                 # SMTP-Versand direkt zu Mailpit/SMTP-Relay
+│   ├── RateLimiter.php            # Fenster/Lock-basiertes Rate-Limit
+│   ├── RateLimiterStorage.php     # Interface fuer verschiedene Backends
+│   ├── Security.php               # escape, hashPassword, verifyPassword, isValidEmail ...
+│   ├── Session.php                # Session-Verwaltung (login/logout, regenerate)
+│   ├── TextFormatter.php          # BBCode + Smilies
+│   └── Validator.php              # Username-, Laengen-, Passwortregeln
+├── logs/                          # PHP- und Security-Logs (nicht versioniert)
+├── tests/
+│   ├── Unit/                      # 137 Unit-Tests
+│   └── Feature/                   # 55 Feature-/Integrations-Tests
+├── config.inc.php                 # Zentrale Konfiguration (DB, Mail, Konstanten)
+├── header.inc.php / footer.inc.php
+├── functions.inc.php              # Hilfsfunktionen (default_error, getrank, ...)
+├── index.php                      # Startseite, Boardlist
+├── login.php / logout.php
+├── register.php                   # Registrierung (CSRF, Validator, Mailer)
+├── profile.php                    # Profil-Edit (Re-Auth fuer sensible Aenderungen)
+├── sendpassword.php               # Reset-Link anfordern (Token-Flow)
+├── resetpassword.php              # Reset via Token einloesen
+├── showboard.php / showthread.php
+├── newthread.php / newpost.php / editpost.php  # Posting (nur Session)
+├── showprofile.php / showip.php / sendmail.php / statistics.php
+├── bbcode.php / smilies.php       # Referenz-Seiten
+├── english.inc.php                # Sprachdateien
+├── deutsch-sie.inc.php
+├── deutsch-du.inc.php
+├── install.sql                    # DB-Schema + Default-Daten
+├── install_bugfix_2026-04-23.sql  # Migration fuer bestehende Installationen
+├── composer.json / composer.lock
+└── phpunit.xml / phpstan.neon / psalm.xml / rector.php / infection.json5
 ```
 
 ---
 
 ## Core-Klassen
 
-### Database
-
-Singleton PDO-Wrapper mit Prepared Statement Support.
-
-**Namespace:** `PowerPHPBoard\Database`
+### `Database` (Singleton PDO-Wrapper)
 
 ```php
 use PowerPHPBoard\Database;
 
-// Instanz holen (Singleton)
-$db = Database::getInstance($mysql);
-
-// Einzelne Zeile abrufen
-$user = $db->fetchOne(
-    "SELECT * FROM ppb_users WHERE id = ?",
-    [$userId]
-);
-
-// Alle Zeilen abrufen
-$posts = $db->fetchAll(
-    "SELECT * FROM ppb_posts WHERE boardid = ? ORDER BY date DESC",
-    [$boardId]
-);
-
-// Query ausfuehren (INSERT, UPDATE, DELETE)
-$db->query(
-    "UPDATE ppb_users SET username = ? WHERE id = ?",
-    [$newName, $userId]
-);
-
-// Anzahl betroffener Zeilen
-$count = $db->execute(
-    "DELETE FROM ppb_posts WHERE userid = ?",
-    [$userId]
-);
-
-// Letzte Insert-ID
-$db->query("INSERT INTO ppb_users ...", [...]);
-$newId = $db->lastInsertId();
-
-// Transaktionen
+$db   = Database::getInstance($mysql);
+$user = $db->fetchOne('SELECT * FROM ppb_users WHERE id = ?', [$id]);
+$rows = $db->fetchAll('SELECT * FROM ppb_posts WHERE boardid = ?', [$boardId]);
+$db->query('UPDATE ppb_users SET username = ? WHERE id = ?', [$name, $id]);
 $db->beginTransaction();
-try {
-    $db->query("INSERT ...", [...]);
-    $db->query("UPDATE ...", [...]);
-    $db->commit();
-} catch (PDOException $e) {
-    $db->rollBack();
-    throw $e;
-}
+$db->commit();
+$db->rollBack();
 ```
 
-**Methoden:**
-
-| Methode | Parameter | Rueckgabe | Beschreibung |
-|---------|-----------|-----------|--------------|
-| `getInstance()` | `array $config` | `Database` | Singleton-Instanz |
-| `query()` | `string $sql, array $params` | `PDOStatement` | Query ausfuehren |
-| `fetchOne()` | `string $sql, array $params` | `?array` | Eine Zeile |
-| `fetchAll()` | `string $sql, array $params` | `array` | Alle Zeilen |
-| `execute()` | `string $sql, array $params` | `int` | Betroffene Zeilen |
-| `lastInsertId()` | - | `string` | Letzte Insert-ID |
-| `beginTransaction()` | - | `bool` | Transaktion starten |
-| `commit()` | - | `bool` | Transaktion bestaetigen |
-| `rollBack()` | - | `bool` | Transaktion zurueckrollen |
-
----
-
-### Session
-
-Sichere Session-Verwaltung mit Login/Logout-Funktionalitaet.
-
-**Namespace:** `PowerPHPBoard\Session`
-
-```php
-use PowerPHPBoard\Session;
-
-// Session starten (automatische Sicherheitskonfiguration)
-Session::start();
-
-// Benutzer einloggen
-Session::login($userId);
-// Setzt: $_SESSION['user_id'], $_SESSION['login_time']
-// Regeneriert Session-ID
-
-// Eingeloggt pruefen
-if (Session::isLoggedIn()) {
-    $userId = Session::getUserId();
-    echo "Eingeloggt als User #$userId";
-}
-
-// Session-Werte setzen/lesen
-Session::set('theme', 'dark');
-$theme = Session::get('theme', 'light');  // 'light' ist Default
-
-// Wert vorhanden?
-if (Session::has('theme')) {
-    // ...
-}
-
-// Wert entfernen
-Session::remove('theme');
-
-// Alle Session-Daten
-$allData = Session::all();
-
-// Ausloggen (Session zerstoeren)
-Session::logout();
-// Alias: Session::destroy();
-
-// Session-ID regenerieren
-Session::regenerate();
-```
-
-**Methoden:**
-
-| Methode | Parameter | Rueckgabe | Beschreibung |
-|---------|-----------|-----------|--------------|
-| `start()` | - | `void` | Session starten |
-| `login()` | `int $userId` | `void` | Benutzer einloggen |
-| `logout()` | - | `void` | Benutzer ausloggen |
-| `isLoggedIn()` | - | `bool` | Login-Status pruefen |
-| `getUserId()` | - | `?int` | User-ID oder null |
-| `get()` | `string $key, mixed $default` | `mixed` | Wert lesen |
-| `set()` | `string $key, mixed $value` | `void` | Wert setzen |
-| `has()` | `string $key` | `bool` | Wert vorhanden? |
-| `remove()` | `string $key` | `void` | Wert entfernen |
-| `all()` | - | `array` | Alle Session-Daten |
-| `regenerate()` | - | `void` | Session-ID erneuern |
-| `destroy()` | - | `void` | Session zerstoeren |
-
----
-
-### Security
-
-Sicherheits-Utilities fuer Eingabevalidierung und Passwort-Handling.
-
-**Namespace:** `PowerPHPBoard\Security`
+### `Security` (Escape, Hashing, Validierung)
 
 ```php
 use PowerPHPBoard\Security;
 
-// === XSS-Praevention ===
-
-// HTML-Entities escapen
-echo Security::escape($userInput);
-echo Security::e($userInput);  // Kurzform
-
-// === Passwort-Handling ===
-
-// Passwort hashen (Argon2id)
-$hash = Security::hashPassword($password);
-// Beispiel: $argon2id$v=19$m=65536,t=4,p=1$...
-
-// Passwort verifizieren
-if (Security::verifyPassword($password, $hash)) {
-    echo "Passwort korrekt";
-}
-
-// Legacy-Passwort erkennen (Base64)
-if (Security::isLegacyHash($hash)) {
-    echo "Altes Format, sollte migriert werden";
-}
-
-// Rehash noetig?
-if (Security::needsRehash($hash)) {
-    $newHash = Security::hashPassword($password);
-    // In Datenbank speichern
-}
-
-// === Eingabe-Handling ===
-
-// Integer aus Request
-$id = Security::getInt('id');                    // GET, default 0
-$page = Security::getInt('page', 'GET', 1);      // GET, default 1
-$userId = Security::getInt('user_id', 'POST');   // POST
-
-// String aus Request (getrimmt)
-$name = Security::getString('name');             // GET
-$email = Security::getString('email', 'POST');   // POST
-$search = Security::getString('q', 'GET', '');   // mit Default
-
-// === Validierung ===
-
-// E-Mail validieren
-if (Security::isValidEmail($email)) {
-    echo "Gueltige E-Mail";
-}
-
-// === Token-Generierung ===
-
-// Zufaelliger Token (32 Bytes = 64 Hex-Zeichen)
-$token = Security::generateToken();
-
-// Kuerzerer Token
-$shortToken = Security::generateToken(16);  // 32 Hex-Zeichen
-
-// === Client-IP ===
-
-$ip = Security::getClientIp();
-// Beruecksichtigt X-Forwarded-For, X-Real-IP
+Security::escape($input);                // htmlspecialchars wrapper
+Security::isValidEmail($email);          // RFC-konforme Pruefung
+Security::hashPassword($pw);             // Argon2id (mit bcrypt-Fallback)
+Security::verifyPassword($pw, $hash);    // stuetzt Legacy-Base64 (Migration)
+Security::needsRehash($hash);            // true = alter Hash, re-hashen
+Security::getString($key, 'POST');       // sicherer Zugriff auf $_POST / $_GET / $_REQUEST
+Security::getInt($key, 'REQUEST', 0);
 ```
 
-**Methoden:**
-
-| Methode | Parameter | Rueckgabe | Beschreibung |
-|---------|-----------|-----------|--------------|
-| `escape()` | `?string $str` | `string` | HTML-Entities escapen |
-| `e()` | `?string $str` | `string` | Alias fuer escape() |
-| `hashPassword()` | `string $password` | `string` | Argon2id Hash erstellen |
-| `verifyPassword()` | `string $password, string $hash` | `bool` | Passwort pruefen |
-| `isLegacyHash()` | `string $hash` | `bool` | Base64-Hash erkennen |
-| `needsRehash()` | `string $hash` | `bool` | Rehash noetig? |
-| `getInt()` | `string $key, string $method, int $default` | `int` | Integer aus Request |
-| `getString()` | `string $key, string $method, string $default` | `string` | String aus Request |
-| `isValidEmail()` | `string $email` | `bool` | E-Mail validieren |
-| `generateToken()` | `int $length` | `string` | Zufalls-Token |
-| `getClientIp()` | - | `string` | Client-IP-Adresse |
-
----
-
-### CSRF
-
-Cross-Site Request Forgery Schutz.
-
-**Namespace:** `PowerPHPBoard\CSRF`
+### `CSRF`
 
 ```php
 use PowerPHPBoard\CSRF;
 
-// === In Formularen ===
-
-// Hidden-Feld ausgeben
-echo '<form method="post">';
-echo CSRF::getTokenField();
-// Output: <input type="hidden" name="csrf_token" value="abc123...">
-echo '<button type="submit">Senden</button>';
-echo '</form>';
-
-// Oder manuell
-echo '<input type="hidden" name="' . CSRF::getTokenName() . '"
-       value="' . CSRF::generateToken() . '">';
-
-// === Bei Formular-Verarbeitung ===
-
-// Methode 1: Boolean-Pruefung
-if (!CSRF::validateFromPost()) {
-    die('CSRF-Token ungueltig');
-}
-
-// Methode 2: Automatisches Die
-CSRF::validateOrDie();
-// Bei Fehler: HTTP 403 + Fehlermeldung
-
-// Methode 3: Manueller Token
-$token = $_GET['token'] ?? '';
-if (!CSRF::validate($token)) {
-    die('Ungueltig');
-}
-
-// === Nach erfolgreicher Aktion ===
-
-// Token regenerieren (verhindert Replay-Attacken)
-CSRF::regenerate();
+echo CSRF::getTokenField();              // <input type="hidden" name="csrf_token" ...>
+if (!CSRF::validateFromPost()) { /* 400 */ }
+CSRF::regenerate();                      // nach Login/sensiblem Change
 ```
 
-**Methoden:**
+### `Session`
 
-| Methode | Parameter | Rueckgabe | Beschreibung |
-|---------|-----------|-----------|--------------|
-| `generateToken()` | - | `string` | Token generieren/abrufen |
-| `getTokenField()` | - | `string` | Hidden-Input HTML |
-| `getTokenName()` | - | `string` | Name des Token-Feldes |
-| `validate()` | `?string $token` | `bool` | Token validieren |
-| `validateFromPost()` | `bool $logFailure` | `bool` | POST-Token validieren |
-| `validateOrDie()` | `?string $token` | `void` | Validieren oder 403 |
-| `regenerate()` | - | `void` | Neuen Token generieren |
+```php
+use PowerPHPBoard\Session;
 
----
+Session::start();
+Session::login((int) $userId);
+if (Session::isLoggedIn()) { $uid = Session::getUserId(); }
+Session::set('theme', 'dark');
+Session::get('theme', 'light');
+Session::logout();
+```
 
-### TextFormatter
+### `Validator` (neu, 2026-04-24)
 
-BBCode-Parsing und Smilie-Ersetzung.
+```php
+use PowerPHPBoard\Validator;
 
-**Namespace:** `PowerPHPBoard\TextFormatter`
+Validator::isValidUsername('alice');       // [A-Za-z0-9._-], 2-50 Zeichen
+Validator::isStrongPassword('Passw0rd!');  // min. 8 Zeichen
+Validator::withinLength($bio, Validator::BIOGRAPHY_MAX); // 1000
+Validator::withinLength($sig, Validator::SIGNATURE_MAX); // 500
+Validator::withinLength($post, Validator::POST_MAX);     // 65000
+```
+
+### `RateLimiter` (neu, 2026-04-24)
+
+```php
+use PowerPHPBoard\{RateLimiter, DatabaseRateLimitStorage};
+
+$rl = new RateLimiter(
+    new DatabaseRateLimitStorage($db),
+    maxAttempts: 10,    // nach 10 Fehlversuchen ...
+    windowSeconds: 900, // ... innerhalb von 15 Minuten ...
+    lockSeconds: 900    // ... fuer 15 Minuten sperren.
+);
+$ident = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+
+if (!$rl->check('login', $ident)) { /* blockiert */ }
+$rl->recordFailure('login', $ident);
+$rl->recordSuccess('login', $ident);
+```
+
+Das Interface `RateLimiterStorage` erlaubt das Austauschen des Backends (z. B. Redis).
+
+### `Mailer` (neu, 2026-04-24)
+
+Minimalistischer SMTP-Client - verbindet sich direkt per `stream_socket_client` zu
+einem SMTP-Server (in Dev: Mailpit auf Port 1025). Keine externen Abhaengigkeiten.
+
+```php
+use PowerPHPBoard\Mailer;
+
+$mailer = new Mailer(
+    smtpHost: $mail['host'] ?? 'mailpit',
+    smtpPort: (int) ($mail['port'] ?? 1025),
+);
+
+$mailer->send(
+    to:      'alice@example.com',
+    from:    'noreply@powerphpboard.local',
+    subject: 'Willkommen!',
+    body:    "Hallo Alice,\n\ndein Account wurde angelegt."
+);
+```
+
+Versand schlaegt nicht stumm fehl - Fehler landen im `error_log`.
+
+### `TextFormatter` (BBCode + Smilies)
 
 ```php
 use PowerPHPBoard\TextFormatter;
 
-// === Post formatieren ===
-
-$html = TextFormatter::formatPost(
-    $text,      // Eingabetext
-    'ON',       // BBCode aktiviert (ON/OFF)
-    'ON',       // Smilies aktiviert (ON/OFF)
-    'OFF'       // HTML erlaubt (ON/OFF)
+echo TextFormatter::formatPost(
+    $text,
+    $settings['bbcode']   ?? 'ON',
+    $settings['smilies']  ?? 'ON',
+    $settings['htmlcode'] ?? 'OFF' // in Signaturen hart auf OFF erzwungen!
 );
-
-// === BBCode entfernen ===
-
-$plainText = TextFormatter::stripBBCode($text);
-// "[b]Hallo[/b] [url=...]Link[/url]" => "Hallo Link"
-
-// === Smilies abrufen ===
-
-$smilies = TextFormatter::getSmilies();
-// [
-//     ':)' => ['file' => 'smile.gif', 'width' => 19, 'height' => 19],
-//     ':(' => ['file' => 'frown.gif', 'width' => 19, 'height' => 19],
-//     ...
-// ]
 ```
-
-**Methoden:**
-
-| Methode | Parameter | Rueckgabe | Beschreibung |
-|---------|-----------|-----------|--------------|
-| `formatPost()` | `string, string, string, string` | `string` | Text formatieren |
-| `stripBBCode()` | `string $text` | `string` | BBCode entfernen |
-| `getSmilies()` | - | `array` | Verfuegbare Smilies |
-
----
-
-### ErrorHandler
-
-Zentrales Error-Handling und Security-Logging.
-
-**Namespace:** `PowerPHPBoard\ErrorHandler`
-
-```php
-use PowerPHPBoard\ErrorHandler;
-
-// === Initialisierung (in config.inc.php) ===
-
-ErrorHandler::init(
-    __DIR__ . '/logs/php-error.log',  // Log-Pfad
-    PPB_DEBUG                          // Debug-Modus
-);
-
-// === Security-Events loggen ===
-
-// Login-Versuche
-ErrorHandler::logFailedLogin($email, 'invalid_password');
-ErrorHandler::logFailedLogin($email, 'user_not_found');
-ErrorHandler::logFailedLogin($email, 'account_disabled');
-ErrorHandler::logSuccessfulLogin($userId, $email);
-
-// CSRF-Fehler
-ErrorHandler::logCsrfFailure('/profile.php');
-
-// Berechtigungsfehler
-ErrorHandler::logPermissionDenied('edit_post', $userId);
-ErrorHandler::logPermissionDenied('admin_access', $userId);
-
-// Verdaechtige Aktivitaet
-ErrorHandler::logSuspiciousActivity('SQL injection attempt', [
-    'input' => $suspiciousInput,
-    'page' => '/search.php'
-]);
-
-// Allgemeines Security-Event
-ErrorHandler::logSecurityEvent('RATE_LIMIT_EXCEEDED', [
-    'action' => 'login',
-    'count' => 10
-]);
-```
-
-**Log-Format:**
-
-```
-# logs/php-error.log
-[2024-01-10 21:30:45] ERROR: Division by zero in /var/www/index.php on line 42
-[2024-01-10 21:30:46] EXCEPTION: PDOException in /var/www/includes/Database.php on line 57
-
-# logs/security.log
-[2024-01-10 21:30:45] SECURITY [LOGIN_FAILED] User:guest IP:192.168.1.100 | {"email":"test@example.com","reason":"invalid_password"}
-[2024-01-10 21:30:46] SECURITY [LOGIN_SUCCESS] User:42 IP:192.168.1.100 | {"user_id":42,"email":"user@example.com"}
-[2024-01-10 21:30:47] SECURITY [CSRF_FAILURE] User:guest IP:192.168.1.100 | {"action":"/profile.php","request_uri":"/profile.php"}
-```
-
-**Methoden:**
-
-| Methode | Parameter | Rueckgabe | Beschreibung |
-|---------|-----------|-----------|--------------|
-| `init()` | `string $logPath, bool $debug` | `void` | Handler initialisieren |
-| `handleError()` | `int, string, string, int` | `bool` | PHP-Fehler behandeln |
-| `handleException()` | `Throwable $e` | `void` | Exception behandeln |
-| `handleShutdown()` | - | `void` | Fatale Fehler abfangen |
-| `logSecurityEvent()` | `string $event, array $context` | `void` | Security-Event loggen |
-| `logFailedLogin()` | `string $email, string $reason` | `void` | Fehlgeschlagener Login |
-| `logSuccessfulLogin()` | `int $userId, string $email` | `void` | Erfolgreicher Login |
-| `logCsrfFailure()` | `string $action` | `void` | CSRF-Fehler |
-| `logPermissionDenied()` | `string $action, int $userId` | `void` | Berechtigungsfehler |
-| `logSuspiciousActivity()` | `string $desc, array $data` | `void` | Verdaechtige Aktivitaet |
 
 ---
 
 ## Sicherheit
 
-### Implementierte Schutzmassnahmen
+Siehe [SECURITY.md](SECURITY.md) fuer Details. Kurzfassung:
 
-| Bedrohung | Schutzmassnahme | Implementierung |
-|-----------|-----------------|-----------------|
-| SQL Injection | Prepared Statements | `Database::query($sql, $params)` |
-| XSS | Output Escaping | `Security::escape($input)` |
-| CSRF | Token-Validierung | `CSRF::validateFromPost()` |
-| Session Hijacking | Session-Regeneration | `Session::regenerate()` |
-| Passwort-Leaks | Argon2id Hashing | `Security::hashPassword()` |
-| Brute Force | Security Logging | `ErrorHandler::logFailedLogin()` |
-
-### OWASP Top 10 Abdeckung
-
-| Risiko | Status | Details |
-|--------|--------|---------|
-| A01 Broken Access Control | Geschuetzt | Session-basierte Auth, Berechtigungspruefungen |
-| A02 Cryptographic Failures | Geschuetzt | Argon2id, keine Klartext-Passwoerter |
-| A03 Injection | Geschuetzt | PDO Prepared Statements |
-| A07 XSS | Geschuetzt | htmlspecialchars() mit ENT_QUOTES |
-| A08 Insecure Deserialization | N/A | Keine Serialisierung verwendet |
-
-### Sicherheits-Checkliste
-
-```
-[x] Alle Formulare mit CSRF-Token
-[x] Alle Datenbankabfragen mit Prepared Statements
-[x] Alle Ausgaben mit Security::escape()
-[x] Passwoerter mit Argon2id gehasht
-[x] Session-ID nach Login regeneriert
-[x] Sichere Cookie-Einstellungen
-[x] Keine Passwoerter in Cookies
-[x] Security-Events geloggt
-[x] Fehler nicht im Produktionsmodus angezeigt
-```
+- **Passwoerter**: Argon2id (mit Pfeffer durch globale Konstante, falls konfiguriert), automatische Migration aus altem Base64.
+- **CSRF**: Token pro Session, regeneriert bei Login und sensiblen Aenderungen.
+- **XSS**: `htmlspecialchars` + Whitelist-`strip_tags` fuer Signaturen, Post-Rendering
+  ueber `TextFormatter::formatPost`; Signaturen immer mit `htmlcode=OFF`.
+- **SQL-Injection**: Ausschliesslich Prepared Statements. Keine dynamischen Queries.
+- **Session**: HttpOnly + SameSite=Strict + strict_mode, Regenerate bei Login/Logout.
+- **Rate-Limits**: Login (10 / 15 min / 15 min Lock), Passwort-Reset (5 / 1 h / 1 h Lock).
+- **Passwort-Reset**: Token (32 Byte random, SHA-256 gehasht in DB), 1 h Gueltigkeit, einmalig einloesbar. Keine Preisgabe, ob eine Email existiert.
+- **Logout**: nur per POST mit CSRF-Token (keine GET-CSRF-Angriffe mehr).
 
 ---
 
 ## BBCode-Referenz
 
-### Textformatierung
+| Tag                            | Ergebnis                                    |
+|--------------------------------|---------------------------------------------|
+| `[b]fett[/b]`                  | **fett**                                    |
+| `[i]kursiv[/i]`                | *kursiv*                                    |
+| `[u]unterstrichen[/u]`         | <u>unterstrichen</u>                        |
+| `[url]https://...[/url]`       | Link                                        |
+| `[url=https://...]Text[/url]`  | Link mit Text                               |
+| `[img]https://.../img.png[/img]`| Bild                                       |
+| `[quote]Text[/quote]`          | Zitat                                       |
+| `[code]... [/code]`            | Code-Block                                  |
+| `[color=#ff0000]rot[/color]`   | Farbiger Text                               |
 
-| BBCode | Ergebnis | HTML |
-|--------|----------|------|
-| `[b]fett[/b]` | **fett** | `<b>fett</b>` |
-| `[i]kursiv[/i]` | *kursiv* | `<i>kursiv</i>` |
-| `[u]unterstrichen[/u]` | unterstrichen | `<u>unterstrichen</u>` |
-| `[s]durchgestrichen[/s]` | ~~durchgestrichen~~ | `<s>durchgestrichen</s>` |
+Smilies: `:)` `:P` `;)` `:D` `:(` `:o` `:cool:` `:eek:` `:mad:` `:confused:` `:rolleyes:`
 
-### Links und Medien
-
-| BBCode | Beschreibung |
-|--------|--------------|
-| `[url]https://...[/url]` | Einfacher Link |
-| `[url=https://...]Text[/url]` | Link mit Text |
-| `[img]https://...jpg[/img]` | Bild einbetten |
-| `[email]addr@domain.com[/email]` | E-Mail-Link |
-
-### Bloecke
-
-| BBCode | Beschreibung |
-|--------|--------------|
-| `[quote]Zitat[/quote]` | Zitat-Block |
-| `[code]Code[/code]` | Code-Block |
-| `[list][*]Item[/list]` | Aufzaehlung |
-
-### Formatierung
-
-| BBCode | Beschreibung |
-|--------|--------------|
-| `[color=red]Text[/color]` | Farbiger Text |
-| `[size=4]Text[/size]` | Textgroesse (1-7) |
-| `[center]Text[/center]` | Zentriert |
-
-### Smilies
-
-| Code | Bild | Beschreibung |
-|------|------|--------------|
-| `:)` | smile.gif | Laecheln |
-| `;)` | wink.gif | Zwinkern |
-| `:D` | biggrin.gif | Grinsen |
-| `:(` | frown.gif | Traurig |
-| `:o` | eek.gif | Ueberrascht |
-| `:p` | tongue.gif | Zunge |
-| `:mad:` | mad.gif | Wuetend |
-| `:rolleyes:` | rolleyes.gif | Augenrollen |
-| `:cool:` | cool.gif | Cool |
+Siehe auch `/bbcode.php` und `/smilies.php` im laufenden Forum.
 
 ---
 
 ## Testing
 
-### Testausfuehrung
-
 ```bash
-# Alle Tests ausfuehren
+# Alle Tests
 composer test
 
-# Nur Unit Tests
+# Nur Unit
 vendor/bin/phpunit --testsuite Unit
 
-# Nur Feature Tests
+# Nur Feature (braucht DB)
 vendor/bin/phpunit --testsuite Feature
 
-# Mit Coverage-Report
+# Coverage (Xdebug erforderlich)
 composer test-coverage
-# Oeffne coverage/index.html im Browser
-
-# Einzelne Testdatei
-vendor/bin/phpunit tests/Unit/SecurityTest.php
-
-# Einzelner Test
-vendor/bin/phpunit --filter testEscapePreventXSS
 ```
 
-### Test-Uebersicht
+Aktueller Stand: **192 Tests** (137 Unit + 55 Feature), **258 Assertions**, 8 Tests
+werden ohne verfuegbare DB automatisch geskipped.
 
-| Suite | Datei | Tests | Beschreibung |
-|-------|-------|-------|--------------|
-| Unit | SecurityTest.php | 24 | Escape, Hash, Validate |
-| Unit | CSRFTest.php | 13 | Token, Validation |
-| Unit | SessionTest.php | 14 | Login, Logout, Get/Set |
-| Unit | TextFormatterTest.php | 26 | BBCode, Smilies |
-| Feature | LoginWorkflowTest.php | 14 | Login-Prozess |
-| Feature | RegisterWorkflowTest.php | 21 | Registrierung |
-| Feature | ProfileWorkflowTest.php | 20 | Profil-Bearbeitung |
-| **Gesamt** | | **132** | |
+Statische Analyse:
 
-### Test-Kategorien
-
-**Unit Tests:** Testen isolierte Klassen und Methoden
-- Keine Datenbank erforderlich
-- Schnelle Ausfuehrung
-- 77 Tests, 124 Assertions
-
-**Feature Tests:** Testen komplette Workflows
-- Simulieren HTTP-Requests
-- Pruefen Validierung, CSRF, Session
-- 55 Tests, 80 Assertions
-- 8 Tests erfordern Datenbank (werden uebersprungen wenn nicht verfuegbar)
+```bash
+composer phpstan   # PHPStan Level 8
+composer psalm     # Psalm
+composer phpmd     # PHP Mess Detector
+composer cs-check  # PHP-CS-Fixer (dry-run)
+composer cs-fix    # PHP-CS-Fixer (apply)
+composer rector-dry
+composer qa        # alles in Folge
+```
 
 ---
 
 ## Entwicklung
 
-### Statische Analyse
+### Docker-Workflow
 
 ```bash
-# PHPStan (Level 8 - strikteste)
-composer phpstan
-
-# Oder direkt
-vendor/bin/phpstan analyse --memory-limit=512M
-```
-
-### Code-Modernisierung
-
-```bash
-# Rector Vorschau
-composer rector-dry
-
-# Rector ausfuehren
-composer rector
-```
-
-### Code-Stil
-
-```bash
-# PHP Syntax pruefen
-find . -name "*.php" -not -path "./vendor/*" -exec php -l {} \;
-```
-
-### Docker-Entwicklung
-
-```bash
-# Container starten
-cd .docker && docker compose up -d
-
-# Logs anzeigen
-docker compose logs -f web
-
-# In Container einloggen
-docker compose exec web bash
-
-# Container stoppen
-docker compose down
-
-# Neu bauen
-docker compose up -d --build
+cd .docker
+docker compose up -d            # starten
+docker compose logs -f web      # Logs beobachten
+docker compose exec web bash    # Shell im Container
+docker compose down             # stoppen (Daten bleiben)
+docker compose down -v          # stoppen + alle Daten loeschen
 ```
 
 ### Git-Workflow
 
 ```bash
-# Feature-Branch erstellen
-git checkout -b feature/new-feature
+# Branch fuer neue Arbeit
+git checkout -b feature/xyz
 
-# Aenderungen committen
-git add .
-git commit -m "Add new feature"
+# Lokal testen
+composer qa
 
-# Tests vor Push
-composer test
-composer phpstan
-
-# Push
-git push origin feature/new-feature
+# Pushen + PR
+git push -u origin feature/xyz
+gh pr create --title "..." --body "..."
 ```
 
----
+### PHP-CLI im Container
 
-## API-Dokumentation
-
-Siehe separate Dateien:
-- [INSTALLATION.md](docs/INSTALLATION.md) - Detaillierte Installationsanleitung
-- [SECURITY.md](SECURITY.md) - Sicherheitsrichtlinien
-- [CONTRIBUTING.md](CONTRIBUTING.md) - Beitragsrichtlinien
-- [docs/API.md](docs/API.md) - Vollstaendige API-Referenz
+```bash
+docker compose exec web php -v
+docker compose exec web php -l includes/Validator.php
+docker compose exec web composer test
+```
 
 ---
 
 ## Changelog
 
-### Version 2.0.0 (2026)
+### Version 2.1.0 - 2026-04-24 (Bugfix-Release)
 
-**Komplette Modernisierung fuer PHP 8.4**
+**Basierend auf dem Userbereich-Audit vom 2026-04-23 (siehe `docs/2026-04-23-Userbereichs-bugs.md`).**
+Alle 18 dokumentierten Bugs behoben.
 
 #### Neue Features
-- PHPUnit Test-Suite (132 Tests)
-- PHPStan Level 8 Compliance
+- `Validator`-Klasse (Username-Regex, Passwortregeln, Length-Checks)
+- `RateLimiter` + `DatabaseRateLimitStorage` (Login- und Reset-Bruteforce-Schutz)
+- `Mailer`-Klasse (SMTP direkt, ersetzt stummes `@mail()`)
+- `resetpassword.php` (Token-basierter Passwort-Reset)
+- `install_bugfix_2026-04-23.sql` (Migration fuer Username-UNIQUE, Tokens, Rate-Limits)
+
+#### Sicherheits-Fixes
+- Stored XSS via Signatur verhindert (Whitelist-`strip_tags` + `htmlcode=OFF` im Rendering)
+- Passwort-Reset ueberschreibt Passwoerter nicht mehr sofort - Token-Flow
+- Logout nur noch per POST mit CSRF-Token
+- Login/Reset liefern vereinheitlichte Fehlermeldungen (keine User-Enumeration)
+- Brute-Force-Schutz auf Login (10/15min) und Reset (5/1h)
+- Re-Authentifizierung per aktuellem Passwort bei Email-/Passwort-Wechsel
+- UNIQUE-Index auf `ppb_users.username`
+
+#### UX / Workflow
+- Registrierungsformular liest `acception` aus REQUEST (nicht mehr nur GET) - Registrierung funktioniert jetzt ohne Workaround
+- Profilseite: Passwortfelder optional (leer = keine Aenderung), ICQ-Default-`0` wird leer angezeigt
+- Posting: nur per Session (kein paralleler Email+Password-Auth-Pfad mehr)
+- Laengen-Checks mit klaren Fehlermeldungen (statt stummen PDO-Exceptions)
+- Login-Erfolgstext entfernt Legacy-"360-Tage-Cookie"-Hinweis
+
+### Version 2.0.0 - 2026-01 (PHP 8.4 Migration)
+- Komplette Modernisierung auf PHP 8.4
+- PHPUnit-Testsuite eingefuehrt
+- PHPStan Level 8, Psalm, PHP-CS-Fixer, Rector, Infection
 - GitHub Actions CI/CD
-- Zentrales Error-Handling
-- Security-Event-Logging
+- Zentrales Error-Handling, Security-Event-Logging
 - PSR-4 Autoloading
+- Session-basierte Authentifizierung statt Cookie mit Passwort
 
-#### Sicherheit
-- CSRF-Schutz fuer alle Formulare
-- PDO Prepared Statements
-- Argon2id Passwort-Hashing
-- XSS-Praevention
-- Session-Sicherheit
-
-#### Code-Qualitaet
-- Strict Types in allen Dateien
-- Match Expressions
-- Typed Properties
-- Return Type Declarations
-- Null-safe Operator
-
-#### Entfernt
-- `mysql_*` Funktionen
-- `ereg*` Funktionen
-- Base64 Passwort-Speicherung
-- Cookie-basierte Authentifizierung
-
-### Version 1.x (2001-2009)
-
-- Urspruengliche Entwicklung
-- PHP 4/5 kompatibel
-- MySQL-Funktionen
-- Basis-Forum-Funktionalitaet
+### Version 1.x - 2001-2009
+- Urspruengliche Entwicklung von Stefan "BFG" Kramer
+- PHP 4/5, `mysql_*`-Funktionen, Basis-Forum
 
 ---
 
@@ -900,8 +515,8 @@ Siehe separate Dateien:
 
 MIT License
 
-Copyright (c) 2001-2009 Stefan 'BFG' Kramer (PowerScripts)
-Copyright (c) 2026 Nico Schubert
+Copyright (c) 2001-2009 Stefan "BFG" Kramer (PowerScripts)
+Copyright (c) 2024 Nico Schubert / PowerScripts
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -923,14 +538,21 @@ SOFTWARE.
 
 ---
 
-## Autoren
+## Kontakt
 
-- **Stefan 'BFG' Kramer** - Urspruengliche Entwicklung (2001-2009)
-- **Nico Schubert** - PHP 8.4 Migration (2026)
+**SchubertMedia**
+Inhaber: Nico Schubert
+Stauffenbergallee 57
+D-99085 Erfurt
 
----
+- Telefon: +49 (0) 3612 3002247 (Mo.-Fr. 9-12 und 13-18 Uhr)
+- Telefax: +49 (0) 3612 3004636
+- E-Mail: [info@schubertmedia.de](mailto:info@schubertmedia.de)
 
-## Support
+Projekte:
+- [https://www.powerscripts.org](https://www.powerscripts.org) - PowerScripts Hauptseite
+- [https://www.powerscripts.org/projects-3.html](https://www.powerscripts.org/projects-3.html) - Alle Projekte
+- [https://github.com/schubertnico/PowerPHPBoard](https://github.com/schubertnico/PowerPHPBoard) - Quellcode
 
-- **Issues:** https://github.com/schubertnico/PowerPHPBoard/issues
-- **Website:** https://powerscripts.org
+Bug-Reports und Feature-Requests bitte ueber die GitHub-Issues:
+[https://github.com/schubertnico/PowerPHPBoard/issues](https://github.com/schubertnico/PowerPHPBoard/issues)

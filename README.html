@@ -8,7 +8,7 @@
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
             line-height: 1.6;
-            max-width: 900px;
+            max-width: 960px;
             margin: 0 auto;
             padding: 20px;
             background: #f5f5f5;
@@ -16,12 +16,14 @@
         }
         h1, h2, h3 { color: #2c3e50; }
         h1 { border-bottom: 3px solid #3498db; padding-bottom: 10px; }
-        h2 { border-bottom: 1px solid #bdc3c7; padding-bottom: 5px; margin-top: 30px; }
+        h2 { border-bottom: 1px solid #bdc3c7; padding-bottom: 5px; margin-top: 35px; }
+        h3 { margin-top: 25px; }
         code {
             background: #ecf0f1;
             padding: 2px 6px;
             border-radius: 3px;
             font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.95em;
         }
         pre {
             background: #2c3e50;
@@ -29,23 +31,51 @@
             padding: 15px;
             border-radius: 5px;
             overflow-x: auto;
+            font-size: 0.9em;
         }
-        pre code { background: none; color: inherit; }
+        pre code { background: none; color: inherit; padding: 0; }
         table {
             width: 100%;
             border-collapse: collapse;
             margin: 15px 0;
+            background: white;
         }
         th, td {
             border: 1px solid #bdc3c7;
             padding: 10px;
             text-align: left;
+            vertical-align: top;
         }
         th { background: #3498db; color: white; }
         tr:nth-child(even) { background: #ecf0f1; }
-        ul { padding-left: 20px; }
+        ul { padding-left: 22px; }
         li { margin: 5px 0; }
         a { color: #3498db; }
+        a:hover { color: #2980b9; }
+        .quickstart {
+            background: #eaf6ff;
+            border-left: 5px solid #3498db;
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 0 5px 5px 0;
+        }
+        .quickstart h2 { margin-top: 0; border: 0; }
+        .warning {
+            background: #fff3cd;
+            border-left: 5px solid #ffc107;
+            padding: 12px 18px;
+            border-radius: 0 5px 5px 0;
+            margin: 15px 0;
+        }
+        .contact {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            border-radius: 5px;
+            margin-top: 40px;
+        }
+        .contact a { color: #3498db; }
+        .contact h2 { color: #ecf0f1; border: 0; margin-top: 0; }
         .badge {
             display: inline-block;
             background: #27ae60;
@@ -53,157 +83,457 @@
             padding: 3px 8px;
             border-radius: 3px;
             font-size: 12px;
+            margin-right: 5px;
         }
-        .warning { background: #e74c3c; }
-        .info { background: #3498db; }
+        .badge.info { background: #3498db; }
+        .badge.warn { background: #e67e22; }
+        hr { border: 0; border-top: 1px solid #bdc3c7; margin: 30px 0; }
+        .footer { text-align: center; color: #7f8c8d; font-size: 0.9em; margin-top: 40px; }
     </style>
 </head>
 <body>
 
 <h1>PowerPHPBoard</h1>
 
-<p>Ein einfaches PHP-Forum-System, ursprünglich entwickelt 2001-2009, jetzt modernisiert für PHP 8.4.</p>
+<p>Ein sicheres, leichtgewichtiges PHP-Forum-System fuer <strong>PHP 8.4+</strong>.<br>
+Urspruenglich entwickelt 2001-2009 von Stefan "BFG" Kramer, komplett modernisiert 2026.</p>
 
-<p><strong>Repository:</strong> <a href="https://github.com/schubertnico/PowerPHPBoard">https://github.com/schubertnico/PowerPHPBoard</a></p>
+<p>
+  <span class="badge">PHP 8.4</span>
+  <span class="badge info">192 Tests</span>
+  <span class="badge info">PSR-4</span>
+  <span class="badge">MIT</span>
+</p>
+
+<ul>
+    <li><strong>Projekt-Website:</strong> <a href="https://www.powerscripts.org">https://www.powerscripts.org</a></li>
+    <li><strong>Projektuebersicht:</strong> <a href="https://www.powerscripts.org/projects-3.html">https://www.powerscripts.org/projects-3.html</a></li>
+    <li><strong>Repository:</strong> <a href="https://github.com/schubertnico/PowerPHPBoard">https://github.com/schubertnico/PowerPHPBoard</a></li>
+</ul>
+
+<div class="quickstart">
+<h2>Schnellstart (Docker, empfohlen)</h2>
+
+<p>Du brauchst nur <strong>Git</strong>, <strong>Composer</strong> und <strong>Docker Desktop</strong> (bzw. docker compose v2).</p>
+
+<pre><code># 1. Repository klonen
+git clone https://github.com/schubertnico/PowerPHPBoard.git
+cd PowerPHPBoard
+
+# 2. Dev-Dependencies fuer Tests/Tooling installieren
+composer install
+
+# 3. Container starten (Forum + MySQL + Mailpit + phpMyAdmin)
+cd .docker
+docker compose up -d --build
+cd ..
+
+# 4. Im Browser oeffnen
+#    http://localhost:8085  -&gt; Forum</code></pre>
+
+<p>Beim ersten Start wird <code>install.sql</code> automatisch importiert. Ein Admin-Account "Gott" wird angelegt -
+Passwort steht in <code>install.sql</code> und <strong>nach dem ersten Login sofort aendern</strong>.</p>
+
+<table>
+<tr><th>Service</th><th>URL</th><th>Zweck</th></tr>
+<tr><td>Forum</td><td><a href="http://localhost:8085">http://localhost:8085</a></td><td>Hauptanwendung</td></tr>
+<tr><td>phpMyAdmin</td><td><a href="http://localhost:8088">http://localhost:8088</a></td><td>DB-Verwaltung</td></tr>
+<tr><td>Mailpit (UI)</td><td><a href="http://localhost:8032">http://localhost:8032</a></td><td>E-Mails testen</td></tr>
+<tr><td>MySQL</td><td><code>localhost:3315</code></td><td>Direkter DB-Zugriff</td></tr>
+<tr><td>SMTP (intern)</td><td><code>mailpit:1025</code></td><td>SMTP-Ziel der App</td></tr>
+</table>
+</div>
+
+<h3>Stoppen, Aktualisieren, Zuruecksetzen</h3>
+
+<pre><code># Container stoppen
+docker compose -f .docker/docker-compose.yml down
+
+# Neu bauen (z. B. nach PHP-Version-Upgrade)
+docker compose -f .docker/docker-compose.yml up -d --build
+
+# Komplett zuruecksetzen (alle Daten loeschen!)
+docker compose -f .docker/docker-compose.yml down -v</code></pre>
+
+<h3>Schnellstart ohne Docker</h3>
+
+<pre><code>git clone https://github.com/schubertnico/PowerPHPBoard.git
+cd PowerPHPBoard
+composer install
+
+# MySQL-DB anlegen und Schema importieren
+mysql -u root -p -e "CREATE DATABASE PowerPHPBoard_v2 CHARACTER SET utf8mb4;"
+mysql -u root -p PowerPHPBoard_v2 &lt; install.sql
+
+# config.inc.php anpassen (Zugangsdaten, SMTP)
+# Webserver auf Projektverzeichnis zeigen lassen oder:
+php -S localhost:8085</code></pre>
+
+<div class="warning">
+<strong>Migration fuer bestehende Installationen:</strong> Nach dem Pull der aktuellen Version
+zusaetzlich <code>mysql -u &lt;user&gt; -p &lt;dbname&gt; &lt; install_bugfix_2026-04-23.sql</code> ausfuehren.
+Diese Migration legt Tabellen fuer Password-Reset-Tokens und Rate-Limits an und setzt UNIQUE auf username.
+</div>
+
+<hr>
 
 <h2>Features</h2>
+
+<h3>Forum-Funktionen</h3>
 <ul>
-    <li>Foren mit Kategorien und Boards</li>
-    <li>Benutzerregistrierung und -verwaltung</li>
-    <li>BBCode und Smilies</li>
-    <li>Moderatoren-System</li>
-    <li>Admin-Panel</li>
-    <li>Mehrsprachig (Deutsch, Englisch)</li>
+    <li>Foren mit Kategorien, Boards, Threads und Posts</li>
+    <li>Benutzerregistrierung, Profilverwaltung, Signaturen, Biography</li>
+    <li>Moderatoren pro Board, Admin-Rolle</li>
+    <li>Private Boards mit Passwortschutz</li>
+    <li>BBCode, Smilies, optional HTML</li>
+    <li>E-Mail-Versand (Registrierung, Passwort-Reset, User-zu-User)</li>
+    <li>Mehrsprachig: Deutsch (Sie/Du), Englisch</li>
 </ul>
+
+<h3>Sicherheit</h3>
+<ul>
+    <li>CSRF-Schutz auf allen POST-Formularen</li>
+    <li>Prepared Statements (PDO) durchgaengig</li>
+    <li>XSS-Praevention (htmlspecialchars, Whitelist-strip_tags fuer Signaturen)</li>
+    <li>Argon2id Passwort-Hashing mit Legacy-Migration</li>
+    <li>HttpOnly Session-Cookies, SameSite=Strict</li>
+    <li>Rate-Limiting gegen Brute-Force (Login, Passwort-Reset)</li>
+    <li>Token-basierter Passwort-Reset (einmalige, zeitlich begrenzte Tokens)</li>
+    <li>Unified Error Messages (keine User-Enumeration)</li>
+    <li>Username-UNIQUE Constraint auf DB-Ebene</li>
+</ul>
+
+<h3>Technische Features</h3>
+<ul>
+    <li>PHP 8.4 Strict Types, Match Expressions, Named Arguments, readonly</li>
+    <li>PSR-4 Autoloading, modulare <code>includes/</code>-Klassen</li>
+    <li>192 PHPUnit-Tests (137 Unit + 55 Feature), 258 Assertions</li>
+    <li>PHPStan Level 8, Psalm, PHP-CS-Fixer, Rector, Infection</li>
+    <li>Docker-Compose Dev-Stack mit Mailpit und phpMyAdmin</li>
+    <li>GitHub Actions CI</li>
+</ul>
+
+<hr>
 
 <h2>Voraussetzungen</h2>
-<ul>
-    <li><span class="badge">PHP 8.4+</span></li>
-    <li><span class="badge info">MySQL 8.0+</span></li>
-    <li>Docker &amp; Docker Compose (empfohlen)</li>
-</ul>
 
-<h2>Installation mit Docker</h2>
-
-<h3>1. Repository klonen</h3>
-<pre><code>git clone https://github.com/schubertnico/PowerPHPBoard.git
-cd PowerPHPBoard</code></pre>
-
-<h3>2. Container starten</h3>
-<pre><code>cd .docker
-docker compose up -d --build</code></pre>
-
-<h3>3. Im Browser öffnen</h3>
-<ul>
-    <li><strong>Forum:</strong> <a href="http://localhost:8085">http://localhost:8085</a></li>
-    <li><strong>phpMyAdmin:</strong> <a href="http://localhost:8088">http://localhost:8088</a></li>
-    <li><strong>Mailpit (E-Mail-Test):</strong> <a href="http://localhost:8032">http://localhost:8032</a></li>
-</ul>
-
-<h3>Docker-Ports</h3>
 <table>
-    <tr><th>Service</th><th>Port</th><th>Beschreibung</th></tr>
-    <tr><td>Web</td><td>8085</td><td>Apache/PHP 8.4</td></tr>
-    <tr><td>MySQL</td><td>3315</td><td>Datenbank</td></tr>
-    <tr><td>phpMyAdmin</td><td>8088</td><td>Datenbank-Verwaltung</td></tr>
-    <tr><td>Mailpit</td><td>8032</td><td>E-Mail-Test-Interface</td></tr>
-    <tr><td>Mailpit</td><td>1032</td><td>SMTP für E-Mails</td></tr>
+<tr><th>Komponente</th><th>Version</th><th>Hinweis</th></tr>
+<tr><td>PHP</td><td>8.4+</td><td>mit <code>pdo_mysql</code>, <code>mbstring</code>, <code>openssl</code></td></tr>
+<tr><td>MySQL</td><td>8.0+</td><td>oder MariaDB 10.5+</td></tr>
+<tr><td>Composer</td><td>2.0+</td><td>Autoloader und Dev-Tooling</td></tr>
+<tr><td>SMTP</td><td>-</td><td>z. B. Mailpit in Dev, produktiv SMTP-Relay</td></tr>
 </table>
 
-<h2>So prüfst du, ob es läuft</h2>
-<pre><code># Container-Status prüfen
-docker compose ps
+<hr>
 
-# Logs anzeigen
-docker compose logs web
+<h2>Konfiguration</h2>
 
-# PHP-Fehler-Log
-tail -f logs/php-error.log</code></pre>
+<h3>Environment-Variablen</h3>
 
-<h2>Manuelle Installation</h2>
-<ol>
-    <li>Dateien auf Webserver kopieren</li>
-    <li><code>config.inc.php</code> anpassen (Datenbank-Zugangsdaten)</li>
-    <li><code>install.sql</code> in MySQL importieren</li>
-    <li>Im Browser öffnen</li>
-</ol>
+<table>
+<tr><th>Variable</th><th>Beschreibung</th><th>Standard</th></tr>
+<tr><td><code>PPB_DB_HOST</code></td><td>Datenbank-Host</td><td><code>localhost</code></td></tr>
+<tr><td><code>PPB_DB_USER</code></td><td>Datenbank-Benutzer</td><td><code>root</code></td></tr>
+<tr><td><code>PPB_DB_PASS</code></td><td>Datenbank-Passwort</td><td>(leer)</td></tr>
+<tr><td><code>PPB_DB_NAME</code></td><td>Datenbank-Name</td><td><code>PowerPHPBoard_v2</code></td></tr>
+<tr><td><code>PPB_MAIL_HOST</code></td><td>SMTP-Host</td><td><code>mailpit</code></td></tr>
+<tr><td><code>PPB_MAIL_PORT</code></td><td>SMTP-Port</td><td><code>1025</code></td></tr>
+<tr><td><code>PPB_MAIL_FROM</code></td><td>Absender (Fallback)</td><td><code>noreply@powerphpboard.local</code></td></tr>
+<tr><td><code>PPB_DEBUG</code></td><td>Debug-Modus</td><td><code>false</code></td></tr>
+</table>
+
+<h3>config.inc.php</h3>
+
+<pre><code>&lt;?php
+declare(strict_types=1);
+
+$mysql = [
+    'server'   =&gt; getenv('PPB_DB_HOST') ?: 'localhost',
+    'user'     =&gt; getenv('PPB_DB_USER') ?: 'root',
+    'password' =&gt; getenv('PPB_DB_PASS') ?: '',
+    'database' =&gt; getenv('PPB_DB_NAME') ?: 'PowerPHPBoard_v2',
+];
+
+$mail = [
+    'host' =&gt; getenv('PPB_MAIL_HOST') ?: 'mailpit',
+    'port' =&gt; (int) (getenv('PPB_MAIL_PORT') ?: 1025),
+    'from' =&gt; getenv('PPB_MAIL_FROM') ?: 'noreply@powerphpboard.local',
+];
+
+define('PPB_VERSION', '2.1.0');
+define('PPB_SESSION_LIFETIME', 3600);
+define('PPB_CSRF_ENABLED', true);
+define('PPB_DEBUG', (bool) (getenv('PPB_DEBUG') ?: false));
+</code></pre>
+
+<hr>
+
+<h2>Core-Klassen</h2>
+
+<p>Alle Klassen leben im Namespace <code>PowerPHPBoard\</code> (PSR-4, Autoload via <code>composer.json</code>).</p>
+
+<h3>Database</h3>
+<pre><code>use PowerPHPBoard\Database;
+
+$db   = Database::getInstance($mysql);
+$user = $db-&gt;fetchOne('SELECT * FROM ppb_users WHERE id = ?', [$id]);
+$rows = $db-&gt;fetchAll('SELECT * FROM ppb_posts WHERE boardid = ?', [$boardId]);
+$db-&gt;query('UPDATE ppb_users SET username = ? WHERE id = ?', [$name, $id]);
+$db-&gt;beginTransaction(); $db-&gt;commit(); $db-&gt;rollBack();</code></pre>
+
+<h3>Security</h3>
+<pre><code>use PowerPHPBoard\Security;
+
+Security::escape($input);
+Security::isValidEmail($email);
+Security::hashPassword($pw);
+Security::verifyPassword($pw, $hash);
+Security::needsRehash($hash);
+Security::getString($key, 'POST');
+Security::getInt($key, 'REQUEST', 0);</code></pre>
+
+<h3>CSRF</h3>
+<pre><code>use PowerPHPBoard\CSRF;
+
+echo CSRF::getTokenField();
+if (!CSRF::validateFromPost()) { /* 400 */ }
+CSRF::regenerate();</code></pre>
+
+<h3>Session</h3>
+<pre><code>use PowerPHPBoard\Session;
+
+Session::start();
+Session::login((int) $userId);
+if (Session::isLoggedIn()) { $uid = Session::getUserId(); }
+Session::set('theme', 'dark');
+Session::get('theme', 'light');
+Session::logout();</code></pre>
+
+<h3>Validator <span class="badge info">neu 2026-04-24</span></h3>
+<pre><code>use PowerPHPBoard\Validator;
+
+Validator::isValidUsername('alice');           // [A-Za-z0-9._-], 2-50 Zeichen
+Validator::isStrongPassword('Passw0rd!');      // min. 8 Zeichen
+Validator::withinLength($bio, Validator::BIOGRAPHY_MAX);
+Validator::withinLength($sig, Validator::SIGNATURE_MAX);
+Validator::withinLength($post, Validator::POST_MAX);</code></pre>
+
+<h3>RateLimiter <span class="badge info">neu 2026-04-24</span></h3>
+<pre><code>use PowerPHPBoard\{RateLimiter, DatabaseRateLimitStorage};
+
+$rl = new RateLimiter(
+    new DatabaseRateLimitStorage($db),
+    maxAttempts: 10,
+    windowSeconds: 900,
+    lockSeconds: 900
+);
+$ident = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+
+if (!$rl-&gt;check('login', $ident)) { /* blockiert */ }
+$rl-&gt;recordFailure('login', $ident);
+$rl-&gt;recordSuccess('login', $ident);</code></pre>
+
+<h3>Mailer <span class="badge info">neu 2026-04-24</span></h3>
+<pre><code>use PowerPHPBoard\Mailer;
+
+$mailer = new Mailer(
+    smtpHost: $mail['host'] ?? 'mailpit',
+    smtpPort: (int) ($mail['port'] ?? 1025),
+);
+
+$mailer-&gt;send(
+    to:      'alice@example.com',
+    from:    'noreply@powerphpboard.local',
+    subject: 'Willkommen!',
+    body:    "Hallo Alice,\n\ndein Account wurde angelegt."
+);</code></pre>
+
+<h3>TextFormatter</h3>
+<pre><code>use PowerPHPBoard\TextFormatter;
+
+echo TextFormatter::formatPost(
+    $text,
+    $settings['bbcode']   ?? 'ON',
+    $settings['smilies']  ?? 'ON',
+    $settings['htmlcode'] ?? 'OFF'
+);</code></pre>
+
+<hr>
+
+<h2>BBCode-Referenz</h2>
+
+<table>
+<tr><th>Tag</th><th>Ergebnis</th></tr>
+<tr><td><code>[b]fett[/b]</code></td><td><strong>fett</strong></td></tr>
+<tr><td><code>[i]kursiv[/i]</code></td><td><em>kursiv</em></td></tr>
+<tr><td><code>[u]unterstrichen[/u]</code></td><td><u>unterstrichen</u></td></tr>
+<tr><td><code>[url]https://...[/url]</code></td><td>Link</td></tr>
+<tr><td><code>[url=https://...]Text[/url]</code></td><td>Link mit Text</td></tr>
+<tr><td><code>[img]https://.../img.png[/img]</code></td><td>Bild</td></tr>
+<tr><td><code>[quote]Text[/quote]</code></td><td>Zitat</td></tr>
+<tr><td><code>[code]... [/code]</code></td><td>Code-Block</td></tr>
+<tr><td><code>[color=#ff0000]rot[/color]</code></td><td>Farbiger Text</td></tr>
+</table>
+
+<p>Smilies: <code>:)</code> <code>:P</code> <code>;)</code> <code>:D</code> <code>:(</code>
+<code>:o</code> <code>:cool:</code> <code>:eek:</code> <code>:mad:</code>
+<code>:confused:</code> <code>:rolleyes:</code></p>
+
+<hr>
+
+<h2>Testing</h2>
+
+<pre><code># Alle Tests
+composer test
+
+# Nur Unit
+vendor/bin/phpunit --testsuite Unit
+
+# Nur Feature (braucht DB)
+vendor/bin/phpunit --testsuite Feature
+
+# Coverage (Xdebug erforderlich)
+composer test-coverage</code></pre>
+
+<p>Aktueller Stand: <strong>192 Tests</strong> (137 Unit + 55 Feature), <strong>258 Assertions</strong>,
+8 Tests werden ohne verfuegbare DB automatisch geskipped.</p>
+
+<h3>Statische Analyse</h3>
+
+<pre><code>composer phpstan    # PHPStan Level 8
+composer psalm      # Psalm
+composer phpmd      # PHP Mess Detector
+composer cs-check   # PHP-CS-Fixer dry-run
+composer cs-fix     # PHP-CS-Fixer apply
+composer rector-dry # Rector dry-run
+composer qa         # alles in Folge</code></pre>
+
+<hr>
 
 <h2>Entwicklung</h2>
 
-<h3>Composer-Installation</h3>
-<pre><code>composer install</code></pre>
+<h3>Docker-Workflow</h3>
+<pre><code>cd .docker
+docker compose up -d            # starten
+docker compose logs -f web      # Logs beobachten
+docker compose exec web bash    # Shell im Container
+docker compose down             # stoppen (Daten bleiben)
+docker compose down -v          # stoppen + alle Daten loeschen</code></pre>
 
-<h3>PHPStan (Statische Analyse)</h3>
-<pre><code>composer run phpstan</code></pre>
+<h3>Git-Workflow</h3>
+<pre><code>git checkout -b feature/xyz
+composer qa
+git push -u origin feature/xyz
+gh pr create --title "..." --body "..."</code></pre>
 
-<h3>Rector (Code-Modernisierung)</h3>
-<pre><code># Vorschau der Änderungen
-composer run rector-dry
+<hr>
 
-# Änderungen anwenden
-composer run rector</code></pre>
+<h2>Changelog</h2>
+
+<h3>Version 2.1.0 - 2026-04-24 (Bugfix-Release)</h3>
+
+<p>Basierend auf dem Userbereich-Audit vom 2026-04-23 (siehe <code>docs/2026-04-23-Userbereichs-bugs.md</code>).
+Alle 18 dokumentierten Bugs behoben.</p>
+
+<h4>Neue Features</h4>
+<ul>
+    <li><code>Validator</code>-Klasse (Username-Regex, Passwortregeln, Length-Checks)</li>
+    <li><code>RateLimiter</code> + <code>DatabaseRateLimitStorage</code> (Bruteforce-Schutz)</li>
+    <li><code>Mailer</code>-Klasse (SMTP direkt, ersetzt stummes <code>@mail()</code>)</li>
+    <li><code>resetpassword.php</code> (Token-basierter Passwort-Reset)</li>
+    <li><code>install_bugfix_2026-04-23.sql</code> (Migration)</li>
+</ul>
+
+<h4>Sicherheits-Fixes</h4>
+<ul>
+    <li>Stored XSS via Signatur verhindert (Whitelist-strip_tags + htmlcode=OFF im Rendering)</li>
+    <li>Passwort-Reset ueberschreibt Passwoerter nicht mehr sofort - Token-Flow</li>
+    <li>Logout nur noch per POST mit CSRF-Token</li>
+    <li>Login/Reset liefern vereinheitlichte Fehlermeldungen (keine User-Enumeration)</li>
+    <li>Brute-Force-Schutz auf Login (10/15min) und Reset (5/1h)</li>
+    <li>Re-Authentifizierung per aktuellem Passwort bei Email-/Passwort-Wechsel</li>
+    <li>UNIQUE-Index auf <code>ppb_users.username</code></li>
+</ul>
+
+<h4>UX / Workflow</h4>
+<ul>
+    <li>Registrierung liest <code>acception</code> aus REQUEST statt nur GET - funktioniert jetzt ohne Workaround</li>
+    <li>Profil: Passwortfelder optional (leer = keine Aenderung), ICQ-Default <code>0</code> wird leer angezeigt</li>
+    <li>Posting: nur per Session (kein paralleler Email+Password-Pfad mehr)</li>
+    <li>Laengen-Checks mit klaren Fehlermeldungen</li>
+    <li>Login-Erfolgstext entfernt Legacy-"360-Tage-Cookie"-Hinweis</li>
+</ul>
+
+<h3>Version 2.0.0 - 2026-01 (PHP 8.4 Migration)</h3>
+<ul>
+    <li>Komplette Modernisierung auf PHP 8.4</li>
+    <li>PHPUnit-Testsuite eingefuehrt</li>
+    <li>PHPStan Level 8, Psalm, PHP-CS-Fixer, Rector, Infection</li>
+    <li>GitHub Actions CI/CD</li>
+    <li>Zentrales Error-Handling, Security-Event-Logging</li>
+    <li>PSR-4 Autoloading</li>
+    <li>Session-basierte Authentifizierung statt Cookie mit Passwort</li>
+</ul>
+
+<h3>Version 1.x - 2001-2009</h3>
+<ul>
+    <li>Urspruengliche Entwicklung von Stefan "BFG" Kramer</li>
+    <li>PHP 4/5, <code>mysql_*</code>-Funktionen, Basis-Forum</li>
+</ul>
+
+<hr>
 
 <h2>Lizenz</h2>
-<p><span class="badge">MIT License</span> - siehe <a href="LICENSE">LICENSE</a></p>
 
-<h2>Änderungen / Migration auf PHP 8.4</h2>
+<p><strong>MIT License</strong></p>
 
-<h3>Sicherheitsfixes</h3>
+<p>Copyright (c) 2001-2009 Stefan "BFG" Kramer (PowerScripts)<br>
+Copyright (c) 2024 Nico Schubert / PowerScripts</p>
+
+<p>Permission is hereby granted, free of charge, to any person obtaining a copy of this software
+and associated documentation files (the "Software"), to deal in the Software without restriction,
+including without limitation the rights to use, copy, modify, merge, publish, distribute,
+sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:</p>
+
+<p>The above copyright notice and this permission notice shall be included in all copies or
+substantial portions of the Software.</p>
+
+<p>THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</p>
+
+<div class="contact">
+<h2>Kontakt</h2>
+
+<p><strong>SchubertMedia</strong><br>
+Inhaber: Nico Schubert<br>
+Stauffenbergallee 57<br>
+D-99085 Erfurt</p>
+
 <ul>
-    <li><strong>SQL Injection:</strong> Alle Datenbankabfragen verwenden jetzt PDO mit Prepared Statements</li>
-    <li><strong>XSS:</strong> Alle Ausgaben werden mit <code>htmlspecialchars()</code> escaped</li>
-    <li><strong>Passwort-Hashing:</strong> Base64 ersetzt durch Argon2id (<code>password_hash()</code>)</li>
-    <li><strong>Session-Sicherheit:</strong> Keine Passwörter mehr in Cookies, sichere Session-Konfiguration</li>
-    <li><strong>CSRF-Schutz:</strong> Token-Validierung für alle Formulare</li>
-    <li><strong>Credentials:</strong> Datenbank-Zugangsdaten über Environment-Variablen</li>
+    <li>Telefon: +49 (0) 3612 3002247 <em>(Mo.-Fr. 9-12 und 13-18 Uhr)</em></li>
+    <li>Telefax: +49 (0) 3612 3004636</li>
+    <li>E-Mail: <a href="mailto:info@schubertmedia.de">info@schubertmedia.de</a></li>
 </ul>
 
-<h3>PHP 8.4 Änderungen</h3>
+<p><strong>Projekte:</strong></p>
 <ul>
-    <li><code>declare(strict_types=1)</code> in allen Dateien</li>
-    <li><code>mysql_*</code> Funktionen → PDO mit Prepared Statements</li>
-    <li><code>eregi_replace()</code> → <code>preg_replace()</code> mit 'i' Modifier</li>
-    <li><code>eregi()</code> → <code>preg_match()</code> mit 'i' Modifier</li>
-    <li><code>split()</code> → <code>explode()</code></li>
-    <li><code>match</code> Expression statt if/elseif-Ketten</li>
-    <li>Typed Properties und Return Types</li>
+    <li><a href="https://www.powerscripts.org">https://www.powerscripts.org</a> - PowerScripts Hauptseite</li>
+    <li><a href="https://www.powerscripts.org/projects-3.html">https://www.powerscripts.org/projects-3.html</a> - Alle Projekte</li>
+    <li><a href="https://github.com/schubertnico/PowerPHPBoard">https://github.com/schubertnico/PowerPHPBoard</a> - Quellcode</li>
 </ul>
 
-<h3>Neue Dateien</h3>
-<ul>
-    <li><code>.docker/</code> - Docker-Konfiguration für PHP 8.4</li>
-    <li><code>includes/Database.php</code> - PDO Datenbank-Klasse</li>
-    <li><code>includes/Session.php</code> - Sichere Session-Verwaltung</li>
-    <li><code>includes/CSRF.php</code> - CSRF-Token-Schutz</li>
-    <li><code>includes/Security.php</code> - Sicherheits-Hilfsfunktionen</li>
-    <li><code>includes/TextFormatter.php</code> - BBCode/Smilies-Verarbeitung</li>
-    <li><code>composer.json</code> - Composer-Konfiguration</li>
-    <li><code>phpstan.neon</code> - PHPStan-Konfiguration</li>
-    <li><code>rector.php</code> - Rector-Konfiguration</li>
-    <li><code>LICENSE</code> - MIT-Lizenz</li>
-    <li><code>README.md</code> - Markdown-Dokumentation</li>
-    <li><code>README.html</code> - Diese HTML-Dokumentation</li>
-</ul>
+<p>Bug-Reports und Feature-Requests bitte ueber die GitHub-Issues:<br>
+<a href="https://github.com/schubertnico/PowerPHPBoard/issues">https://github.com/schubertnico/PowerPHPBoard/issues</a></p>
+</div>
 
-<h3>Migrierte Dateien</h3>
-<p>Alle PHP-Dateien wurden auf PHP 8.4 migriert:</p>
-<ul>
-    <li><code>config.inc.php</code> - Environment-Variablen, Autoload</li>
-    <li><code>header.inc.php</code> - PDO, Session, Security</li>
-    <li><code>footer.inc.php</code> - PDO Updates</li>
-    <li><code>functions.inc.php</code> - match Expression, PDO</li>
-    <li><code>login.php</code> - CSRF, Session, Password Verification</li>
-    <li><code>logout.php</code> - Session-basiertes Logout</li>
-    <li><code>register.php</code> - CSRF, Password Hashing, Prepared Statements</li>
-    <li><code>index.php</code> - PDO, Security Escaping</li>
-    <li>Alle weiteren Dateien</li>
-</ul>
-
-<h2>Ursprüngliche Autoren</h2>
-<ul>
-    <li>Stefan 'BFG' Kramer (PowerScripts, 2001-2009)</li>
-    <li>Nico Schubert (PHP 8.4 Migration, 2024)</li>
-</ul>
+<div class="footer">
+&copy; 2001-2026 PowerScripts / SchubertMedia &ndash; MIT License
+</div>
 
 </body>
 </html>
