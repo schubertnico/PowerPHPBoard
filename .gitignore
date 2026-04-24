@@ -1,81 +1,151 @@
-# Dependencies
+# =====================================================================
+#  PowerPHPBoard - .gitignore
+# ---------------------------------------------------------------------
+#  Ausschluesse vom Repository. Fuer Deploy-Ausschluesse (was nicht auf
+#  den Live-Server darf, aber im Repo bleiben soll) siehe .gitattributes
+#  (`export-ignore`) und README "Deployment".
+# =====================================================================
+
+# ---------- Dependencies ----------
 /vendor/
+node_modules/
 
-# IDE
-/.idea/
-*.swp
-*.swo
-.vscode/
-*.sublime-project
-*.sublime-workspace
-
-# Logs
-/logs/*.log
-!/logs/.gitkeep
-
-# OS
-.DS_Store
-Thumbs.db
-Desktop.ini
-._*
-
-# Environment
+# ---------- Konfiguration mit Geheimnissen ----------
+# WICHTIG: config.inc.php ist historisch getrackt (Template-Werte).
+# Eine lokale Kopie fuer echte Zugangsdaten heisst typischerweise:
+config.inc.local.php
+config.local.php
+config.inc.production.php
+config.production.php
+*.env
 .env
 .env.local
 .env.*.local
-config.inc.php
+.env.production
+secrets.php
+*.secret
+*.pem
+*.key
+*.p12
+*.pfx
+auth.json
 
-# Cache
+# ---------- IDE & Editor ----------
+/.idea/
+/.vscode/
+/.vs/
+/.fleet/
+/nbproject/
+*.iml
+*.ipr
+*.iws
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+.project
+.buildpath
+.settings/
+*.code-workspace
+
+# ---------- Logs & Runtime-Artefakte ----------
+*.log
+/logs/*
+!/logs/.gitkeep
+/tmp/
+/var/
+/cache/
+/sessions/
+
+# ---------- OS-Artefakte ----------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+nul
+
+# ---------- PHP / Composer / Analyse-Tools ----------
+composer.phar
+auth.json
+# composer.lock: BLEIBT im Repo (reproduzierbare Installation)
+*.phar
 *.cache
 /.phpunit.cache/
 /.psalm-cache/
+/.psalm/
 /.php-cs-fixer.cache
-
-# Coverage
-/coverage/
-
-# Infection (Mutation Testing)
-infection.log
-infection.html
-infection-summary.log
-infection-log.txt
-
-# PHPUnit
+/.phpstan.cache/
+/.phpunit.result.cache
 .phpunit.result.cache
-clover.xml
+/.rector-cache/
+/rector-output/
+phpstan-baseline.neon
+psalm-baseline.xml
+.phpbench.local.json
+
+# ---------- Tests / Coverage / Reports ----------
+/coverage/
 coverage.xml
+clover.xml
 junit.xml
-
-# Composer
-composer.phar
-composer.lock
-
-# Build artifacts
+testdox.txt
+testdox.html
 /build/
 /dist/
+/reports/
+infection.log
+infection.html
+infection.log.txt
+infection-summary.log
+infection-log.txt
+/infection-cache/
 
-# Temporary files
+# ---------- Setup-Skripte (Security-Risk - sollen nicht auf Live) ----------
+create-admin.php
+/install.php
+
+# ---------- Tool-Ausgaben / Temporaer ----------
 *.tmp
 *.temp
 *.bak
+*.backup
 *.orig
+*.rej
 *~
+core
+core.*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
 
-# PHP
-*.phar
+# ---------- Uploads / Nutzer-Daten (falls spaeter genutzt) ----------
+/uploads/
+/userfiles/
+/public/uploads/
+/avatars/
 
-# Setup scripts (security risk)
-create-admin.php
-install.php
+# ---------- Docker / Volumes ----------
+docker-compose.override.yml
+/docker-data/
+/.docker-data/
 
-# Claude Code
+# ---------- Claude Code / KI-Tools ----------
 /.claude/
+CLAUDE.local.md
+.aider*
+/.aidigestignore
 
-# Rector
-/rector-output/
-
-# PHPStan
-phpstan-baseline.neon
-
-# Windows NUL device artifact
-nul
+# ---------- Diverses ----------
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.rar
+*.7z
+/releases/
