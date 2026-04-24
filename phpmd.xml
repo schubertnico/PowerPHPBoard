@@ -1,0 +1,102 @@
+<?xml version="1.0"?>
+<ruleset name="PowerPHPBoard Rules"
+         xmlns="http://pmd.sf.net/ruleset/1.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sf.net/ruleset/1.0.0 http://pmd.sf.net/ruleset_xml_schema.xsd"
+         xsi:noNamespaceSchemaLocation="http://pmd.sf.net/ruleset_xml_schema.xsd">
+
+    <description>
+        PHPMD Regeln fuer PowerPHPBoard
+    </description>
+
+    <!-- Clean Code Rules -->
+    <rule ref="rulesets/cleancode.xml">
+        <!-- Static access ist OK fuer unsere Utility-Klassen -->
+        <exclude name="StaticAccess"/>
+        <!-- Else-Expression ist manchmal klarer -->
+        <exclude name="ElseExpression"/>
+        <!-- Boolean flags sind OK bei Utility-Methoden wie init(), validate() -->
+        <exclude name="BooleanArgumentFlag"/>
+    </rule>
+
+    <!-- Code Size Rules -->
+    <rule ref="rulesets/codesize.xml">
+        <!-- Angepasste Limits -->
+        <exclude name="TooManyPublicMethods"/>
+        <exclude name="ExcessiveClassComplexity"/>
+    </rule>
+
+    <!-- Eigene Limits fuer Methoden -->
+    <rule ref="rulesets/codesize.xml/CyclomaticComplexity">
+        <properties>
+            <property name="reportLevel" value="15"/>
+        </properties>
+    </rule>
+
+    <rule ref="rulesets/codesize.xml/NPathComplexity">
+        <properties>
+            <property name="minimum" value="300"/>
+        </properties>
+    </rule>
+
+    <rule ref="rulesets/codesize.xml/ExcessiveMethodLength">
+        <properties>
+            <property name="minimum" value="100"/>
+        </properties>
+    </rule>
+
+    <rule ref="rulesets/codesize.xml/ExcessiveClassLength">
+        <properties>
+            <property name="minimum" value="500"/>
+        </properties>
+    </rule>
+
+    <rule ref="rulesets/codesize.xml/ExcessiveParameterList">
+        <properties>
+            <property name="minimum" value="8"/>
+        </properties>
+    </rule>
+
+    <!-- Controversial Rules -->
+    <rule ref="rulesets/controversial.xml">
+        <!-- Superglobals sind in Legacy-Code notwendig -->
+        <exclude name="Superglobals"/>
+        <!-- CamelCase nicht erzwingen fuer Legacy-Kompatibilitaet -->
+        <exclude name="CamelCaseVariableName"/>
+        <exclude name="CamelCaseParameterName"/>
+        <exclude name="CamelCasePropertyName"/>
+        <exclude name="CamelCaseMethodName"/>
+    </rule>
+
+    <!-- Design Rules -->
+    <rule ref="rulesets/design.xml">
+        <!-- Exit ist in manchen Faellen gewollt -->
+        <exclude name="ExitExpression"/>
+        <!-- Eval wird nicht verwendet, aber Warnung ist zu streng -->
+        <exclude name="EvalExpression"/>
+    </rule>
+
+    <!-- Angepasstes Coupling -->
+    <rule ref="rulesets/design.xml/CouplingBetweenObjects">
+        <properties>
+            <property name="maximum" value="20"/>
+        </properties>
+    </rule>
+
+    <!-- Naming Rules -->
+    <rule ref="rulesets/naming.xml">
+        <!-- Kurze Variablen wie $i, $db sind OK -->
+        <exclude name="ShortVariable"/>
+        <!-- Lange Variablen sind OK wenn beschreibend -->
+        <exclude name="LongVariable"/>
+        <!-- Kurze Methodennamen wie get(), set() sind OK -->
+        <exclude name="ShortMethodName"/>
+    </rule>
+
+    <!-- Unused Code Rules -->
+    <rule ref="rulesets/unusedcode.xml">
+        <!-- Unused parameters koennen bei Interface-Implementierung vorkommen -->
+        <exclude name="UnusedFormalParameter"/>
+    </rule>
+
+</ruleset>

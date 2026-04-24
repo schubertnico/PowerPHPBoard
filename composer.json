@@ -1,0 +1,57 @@
+{
+    "name": "powerscripts/powerphpboard",
+    "description": "PowerPHPBoard - A simple PHP forum system",
+    "type": "project",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Nico Schubert",
+            "email": "info@powerscripts.org"
+        }
+    ],
+    "require": {
+        "php": ">=8.4"
+    },
+    "require-dev": {
+        "friendsofphp/php-cs-fixer": "^3.64",
+        "infection/infection": "^0.29",
+        "phpmd/phpmd": "^2.15",
+        "phpstan/phpstan": "^2.0",
+        "phpunit/phpunit": "^11.0",
+        "rector/rector": "^2.0",
+        "vimeo/psalm": "^6.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "PowerPHPBoard\\": "includes/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "PowerPHPBoard\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "phpstan": "phpstan analyse --memory-limit=512M",
+        "psalm": "psalm --no-cache",
+        "phpmd": "phpmd . text phpmd.xml --exclude vendor,tests,.docker,logs,tools",
+        "cs-check": "php-cs-fixer fix --dry-run --diff",
+        "cs-fix": "php-cs-fixer fix",
+        "rector": "rector process",
+        "rector-dry": "rector process --dry-run",
+        "test": "phpunit",
+        "test-coverage": "phpunit --coverage-html coverage",
+        "infection": "infection --threads=4",
+        "analyse": ["@phpstan", "@psalm", "@phpmd"],
+        "qa": ["@phpstan", "@psalm", "@phpmd", "@cs-check", "@test"]
+    },
+    "config": {
+        "sort-packages": true,
+        "platform": {
+            "php": "8.4"
+        },
+        "allow-plugins": {
+            "infection/extension-installer": true
+        }
+    }
+}

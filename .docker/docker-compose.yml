@@ -1,0 +1,79 @@
+name: powerphpboard
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: powerphpboard_web
+    ports:
+      - "8085:80"
+    volumes:
+      - ..:/var/www/html
+      - ../logs:/var/log/php
+    environment:
+      - PPB_DB_HOST=db
+      - PPB_DB_USER=powerphpboard
+      - PPB_DB_PASS=powerphpboard_secret
+      - PPB_DB_NAME=powerphpboard
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - powerphpboard_network
+    restart: unless-stopped
+
+  db:
+    image: mysql:8.0
+    container_name: powerphpboard_db
+    ports:
+      - "3315:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root_secret
+      MYSQL_DATABASE: powerphpboard
+      MYSQL_USER: powerphpboard
+      MYSQL_PASSWORD: powerphpboard_secret
+    volumes:
+      - powerphpboard_mysql_data:/var/lib/mysql
+      - ../install.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_secret"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - powerphpboard_network
+    restart: unless-stopped
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: powerphpboard_mailpit
+    ports:
+      - "1032:1025"
+      - "8032:8025"
+    networks:
+      - powerphpboard_network
+    restart: unless-stopped
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: powerphpboard_phpmyadmin
+    ports:
+      - "8088:80"
+    environment:
+      PMA_HOST: db
+      PMA_USER: root
+      PMA_PASSWORD: root_secret
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - powerphpboard_network
+    restart: unless-stopped
+
+networks:
+  powerphpboard_network:
+    driver: bridge
+
+volumes:
+  powerphpboard_mysql_data:

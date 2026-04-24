@@ -1,0 +1,81 @@
+# Dependencies
+/vendor/
+
+# IDE
+/.idea/
+*.swp
+*.swo
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Logs
+/logs/*.log
+!/logs/.gitkeep
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+._*
+
+# Environment
+.env
+.env.local
+.env.*.local
+config.inc.php
+
+# Cache
+*.cache
+/.phpunit.cache/
+/.psalm-cache/
+/.php-cs-fixer.cache
+
+# Coverage
+/coverage/
+
+# Infection (Mutation Testing)
+infection.log
+infection.html
+infection-summary.log
+infection-log.txt
+
+# PHPUnit
+.phpunit.result.cache
+clover.xml
+coverage.xml
+junit.xml
+
+# Composer
+composer.phar
+composer.lock
+
+# Build artifacts
+/build/
+/dist/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.orig
+*~
+
+# PHP
+*.phar
+
+# Setup scripts (security risk)
+create-admin.php
+install.php
+
+# Claude Code
+/.claude/
+
+# Rector
+/rector-output/
+
+# PHPStan
+phpstan-baseline.neon
+
+# Windows NUL device artifact
+nul
