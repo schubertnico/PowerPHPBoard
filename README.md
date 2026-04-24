@@ -81,6 +81,26 @@ mysql -u <user> -p <dbname> < install_bugfix_2026-04-23.sql
 
 Sie legt neue Tabellen fuer Password-Reset-Tokens und Rate-Limits an und setzt `UNIQUE` auf `username`.
 
+### Deploy-Paket fuer den Live-Server
+
+Die `.gitattributes` ist so konfiguriert, dass Dev-Artefakte (Tests, Docker, CI,
+Dokumentation, statische Analyse-Configs, Setup-Skripte) beim `git archive`
+automatisch ausgeschlossen werden. Ein sauberes Deploy-Paket erstellst du mit:
+
+```bash
+# Tarball fuer den Live-Server bauen (ohne Tests, Docker, Docs, CI ...)
+git archive --format=tar.gz --prefix=powerphpboard/ HEAD > deploy.tar.gz
+
+# Oder direkt ins Zielverzeichnis packen
+git archive --format=tar HEAD | tar -C /var/www/html -xf -
+
+# Auf dem Live-Server: nur Produktions-Dependencies installieren
+composer install --no-dev --optimize-autoloader
+```
+
+Bei einem "dummen" Upload (FTP/SFTP) bitte die in `.gitattributes` mit
+`export-ignore` markierten Verzeichnisse manuell NICHT mit hochladen.
+
 ---
 
 ## Inhaltsverzeichnis
