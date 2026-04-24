@@ -1,0 +1,13 @@
+# =====================================================================
+#  PowerPHPBoard - includes/.htaccess
+# ---------------------------------------------------------------------
+#  Core-PHP-Klassen duerfen niemals direkt per HTTP aufgerufen werden.
+#  Sie werden ausschliesslich via require_once geladen.
+# =====================================================================
+Require all denied
+
+# Fallback fuer aeltere Apache 2.2 Deployments
+<IfModule !mod_authz_core.c>
+    Order deny,allow
+    Deny from all
+</IfModule>

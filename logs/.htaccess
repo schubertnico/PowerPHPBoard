@@ -1,0 +1,12 @@
+# =====================================================================
+#  PowerPHPBoard - logs/.htaccess
+# ---------------------------------------------------------------------
+#  Log-Verzeichnis darf unter keinen Umstaenden per HTTP erreichbar
+#  sein. Enthaelt unter anderem Security-Events mit IP-Adressen.
+# =====================================================================
+Require all denied
+
+<IfModule !mod_authz_core.c>
+    Order deny,allow
+    Deny from all
+</IfModule>

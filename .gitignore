@@ -52,6 +52,7 @@ auth.json
 *.log
 /logs/*
 !/logs/.gitkeep
+!/logs/.htaccess
 /tmp/
 /var/
 /cache/

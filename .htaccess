@@ -1,0 +1,142 @@
+# =====================================================================
+#  PowerPHPBoard - Root .htaccess
+# ---------------------------------------------------------------------
+#  Zweck:
+#   1. Schutz sensibler Dateien (config, includes, .env, .git, ...)
+#   2. Security-Header setzen
+#   3. Verzeichnis-Listing deaktivieren
+#   4. Session-Cookies haerten
+#  Getestet mit Apache 2.4 + mod_rewrite + mod_headers.
+#  Auf nginx siehe README (aequivalente location-Blocks).
+# =====================================================================
+
+# ---------------------------------------------------------------------
+#  Grundsicherung
+# ---------------------------------------------------------------------
+
+# Directory-Listing aus
+Options -Indexes
+# Symlinks erlaubt, aber nur sichere (verhindert Mount-Escape)
+Options +SymLinksIfOwnerMatch
+
+# Standard-Startseite
+DirectoryIndex index.php index.html
+
+# PHP-Server-Signatur minimieren (serverseitig zusaetzlich expose_php=Off)
+ServerSignature Off
+
+# ---------------------------------------------------------------------
+#  Sensible Dateien blockieren
+# ---------------------------------------------------------------------
+
+# Dotfiles komplett (.env, .git, .htaccess selbst, .gitignore, ...)
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+
+# Include-/Config-/Setup-/Doku-/Build-Dateien
+<FilesMatch "(?i)\.(inc|inc\.php|tpl|ppb|log|sql|md|neon|json5?|lock|yml|yaml|toml|sh|ini|dist|bak|backup|orig|rej|tmp|temp|swp|old|save|phar|conf)$">
+    Require all denied
+</FilesMatch>
+
+# Explizite Schutzliste fuer kritische Dateien im Root
+<FilesMatch "^(config\.inc\.php|config\.inc\.local\.php|config\.production\.php|header\.inc\.php|footer\.inc\.php|functions\.inc\.php|english\.inc\.php|deutsch-du\.inc\.php|deutsch-sie\.inc\.php|install\.sql|install_bugfix.*\.sql|create-admin\.php|install\.php|composer\.json|composer\.lock|phpstan\.neon|phpstan-baseline\.neon|psalm\.xml|phpmd\.xml|phpunit\.xml|rector\.php|infection\.json5|\.php-cs-fixer\.php|\.php-cs-fixer\.dist\.php|README\.md|README\.html|CONTRIBUTING\.md|SECURITY\.md|INSTALLATION\.md|LICENSE|Dockerfile|docker-compose\.yml)$">
+    Require all denied
+</FilesMatch>
+
+# Editor-Reste
+<FilesMatch "~$">
+    Require all denied
+</FilesMatch>
+
+# ---------------------------------------------------------------------
+#  Sensible Verzeichnisse - zusaetzlich per Redirect abschirmen,
+#  falls der Webserver Fallback-URLs durchreicht (fuer shared Hosts).
+# ---------------------------------------------------------------------
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # .git-Directory komplett blocken
+    RewriteRule ^\.git(/|$) - [F,L]
+
+    # includes/, inc/, tests/, docs/, todos/, logs/, vendor/,
+    # .docker/, .github/, .idea/, .vscode/
+    RewriteRule ^(includes|inc|tests|docs|todos|logs|vendor|node_modules|\.docker|\.github|\.idea|\.vscode)/ - [F,L]
+
+    # composer-Artefakte und interne Tools
+    RewriteRule ^(composer\.(json|lock|phar)|auth\.json)$ - [F,L]
+</IfModule>
+
+# ---------------------------------------------------------------------
+#  Security-Header (mod_headers)
+# ---------------------------------------------------------------------
+<IfModule mod_headers.c>
+    # Kein MIME-Sniffing
+    Header always set X-Content-Type-Options "nosniff"
+    # Clickjacking-Schutz
+    Header always set X-Frame-Options "SAMEORIGIN"
+    # Referrer minimieren
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    # Permissions-Policy minimal
+    Header always set Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=()"
+    # Kein Cross-Domain-Policy-File erwarten
+    Header always set X-Permitted-Cross-Domain-Policies "none"
+
+    # HSTS: nur aktivieren, wenn HTTPS sicher verfuegbar ist und
+    # du dir der Laufzeit sicher bist. Standardmaessig auskommentiert.
+    # Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+
+    # Content-Security-Policy (restriktiv, aber mit inline-styles die
+    # aus dem Legacy-Template noch kommen koennen). Bei Problemen mit
+    # dem bestehenden Layout ggf. lockerer setzen.
+    # Header always set Content-Security-Policy "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self'; frame-ancestors 'self'; form-action 'self'; base-uri 'self'"
+
+    # Server-Header verschleiern
+    Header unset Server
+    Header unset X-Powered-By
+</IfModule>
+
+# ---------------------------------------------------------------------
+#  Session-Cookie haerten
+# ---------------------------------------------------------------------
+<IfModule mod_php.c>
+    php_flag session.cookie_httponly On
+    php_flag session.use_strict_mode On
+    php_value session.cookie_samesite "Strict"
+    # Aktivieren, sobald HTTPS erzwungen ist:
+    # php_flag session.cookie_secure On
+    php_flag expose_php Off
+</IfModule>
+
+# ---------------------------------------------------------------------
+#  HTTPS erzwingen (aktivieren, wenn TLS aktiv)
+# ---------------------------------------------------------------------
+# <IfModule mod_rewrite.c>
+#     RewriteEngine On
+#     RewriteCond %{HTTPS} !=on
+#     RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+# </IfModule>
+
+# ---------------------------------------------------------------------
+#  Kompression & Caching
+# ---------------------------------------------------------------------
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css
+    AddOutputFilterByType DEFLATE application/javascript application/json
+    AddOutputFilterByType DEFLATE image/svg+xml
+</IfModule>
+
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/gif "access plus 7 days"
+    ExpiresByType image/png "access plus 7 days"
+    ExpiresByType image/jpeg "access plus 7 days"
+    ExpiresByType image/svg+xml "access plus 7 days"
+    ExpiresByType text/css "access plus 1 day"
+    ExpiresByType application/javascript "access plus 1 day"
+</IfModule>
+
+# ---------------------------------------------------------------------
+#  Limits (konservativ gesetzt)
+# ---------------------------------------------------------------------
+LimitRequestBody 12582912

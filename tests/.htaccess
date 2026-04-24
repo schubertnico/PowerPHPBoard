@@ -1,0 +1,13 @@
+# =====================================================================
+#  PowerPHPBoard - tests/.htaccess
+# ---------------------------------------------------------------------
+#  Testdateien gehoeren niemals auf einen Live-Server. Falls dieses
+#  Verzeichnis doch versehentlich hochgeladen wurde: vollstaendig
+#  sperren.
+# =====================================================================
+Require all denied
+
+<IfModule !mod_authz_core.c>
+    Order deny,allow
+    Deny from all
+</IfModule>
