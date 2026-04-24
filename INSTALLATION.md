@@ -1,6 +1,7 @@
 # Installationsanleitung
 
-Diese Anleitung beschreibt die vollstaendige Installation von PowerPHPBoard.
+Diese Anleitung beschreibt die vollstaendige Installation von **PowerPHPBoard 2.1.0**.
+Fuer eine Kurzfassung siehe [README.md](README.md) Abschnitt "Schnellstart".
 
 ---
 
@@ -9,13 +10,15 @@ Diese Anleitung beschreibt die vollstaendige Installation von PowerPHPBoard.
 1. [Systemanforderungen](#systemanforderungen)
 2. [Schnellinstallation](#schnellinstallation)
 3. [Docker Installation](#docker-installation)
-4. [Manuelle Installation](#manuelle-installation)
+4. [Manuelle Installation auf Live-Server](#manuelle-installation-auf-live-server)
 5. [Webserver-Konfiguration](#webserver-konfiguration)
 6. [Datenbank einrichten](#datenbank-einrichten)
 7. [Konfiguration](#konfiguration)
-8. [Erste Schritte](#erste-schritte)
-9. [Upgrade von v1.x](#upgrade-von-v1x)
-10. [Fehlerbehebung](#fehlerbehebung)
+8. [E-Mail-Versand (SMTP)](#e-mail-versand-smtp)
+9. [Erste Schritte](#erste-schritte)
+10. [Upgrade](#upgrade)
+11. [Sicherheits-Checkliste](#sicherheits-checkliste)
+12. [Fehlerbehebung](#fehlerbehebung)
 
 ---
 
@@ -25,80 +28,89 @@ Diese Anleitung beschreibt die vollstaendige Installation von PowerPHPBoard.
 
 | Komponente | Version |
 |-----------|---------|
-| PHP | 8.3+ |
-| MySQL | 8.0+ |
-| Speicher | 64 MB RAM |
-| Festplatte | 50 MB |
+| PHP       | 8.4+    |
+| MySQL     | 8.0+ oder MariaDB 10.5+ |
+| Speicher  | 128 MB RAM |
+| Festplatte | 100 MB + Datenbank |
 
 ### Empfohlen
 
 | Komponente | Version |
 |-----------|---------|
-| PHP | 8.4 |
-| MySQL | 8.0+ oder MariaDB 10.6+ |
-| Speicher | 256 MB RAM |
-| Festplatte | 100 MB |
+| PHP       | 8.4 neueste Minor-Version |
+| MySQL     | 8.0+ oder MariaDB 10.6+ |
+| Speicher  | 256 MB RAM |
+| Festplatte | 500 MB + Datenbank |
+| Webserver | Apache 2.4 mit mod_rewrite, mod_headers, mod_expires, mod_deflate |
 
 ### Erforderliche PHP-Erweiterungen
 
-```
-php-pdo          # Datenbank-Abstraktion
-php-pdo_mysql    # MySQL-Treiber
-php-mbstring     # Multibyte-Strings
-php-json         # JSON-Verarbeitung (Standard in PHP 8)
-php-session      # Session-Verwaltung (Standard)
-```
-
-### Optionale PHP-Erweiterungen
-
-```
-php-gd           # Bildverarbeitung (Avatare)
-php-curl         # HTTP-Anfragen
-php-intl         # Internationalisierung
-php-opcache      # Performance-Optimierung
+```text
+pdo           Datenbank-Abstraktion
+pdo_mysql     MySQL-Treiber
+mbstring      Multibyte-Strings (UTF-8)
+json          JSON (Standard in PHP 8+)
+openssl       Fuer password_hash + CSRF
+session       Session-Verwaltung (Standard)
+filter        Input-Validierung (Standard)
 ```
 
-### PHP-Einstellungen (php.ini)
+### Optional
+
+```text
+opcache       Performance-Optimierung (dringend empfohlen fuer Produktion)
+gd            Spaetere Avatar-Verarbeitung
+curl          HTTP-Anfragen (z. B. Webhooks)
+zip           Zip-Archive
+intl          Internationalisierung
+```
+
+### Empfohlene PHP-Einstellungen (`php.ini`)
 
 ```ini
-; Empfohlene Einstellungen
+; Ausfuehrung
 memory_limit = 128M
 max_execution_time = 30
-post_max_size = 16M
-upload_max_filesize = 8M
+post_max_size = 12M
+upload_max_filesize = 10M
+
+; Sicherheit
+expose_php = Off
+allow_url_fopen = Off
+allow_url_include = Off
+display_errors = Off           ; Off in Produktion, On nur in Dev
+display_startup_errors = Off
+log_errors = On
+error_log = /var/log/php/php-error.log
+
+; Sessions
 session.cookie_httponly = 1
-session.cookie_secure = 1       ; Bei HTTPS
-session.cookie_samesite = Lax
+session.cookie_secure = 1      ; nur bei HTTPS!
+session.use_strict_mode = 1
+session.cookie_samesite = Strict
+
+; Zeitzone
+date.timezone = Europe/Berlin
+
+; Encoding
+default_charset = "UTF-8"
 ```
 
 ---
 
 ## Schnellinstallation
 
-Fuer erfahrene Benutzer:
+Fuer erfahrene Nutzer mit Docker:
 
 ```bash
-# 1. Repository klonen
 git clone https://github.com/schubertnico/PowerPHPBoard.git
 cd PowerPHPBoard
-
-# 2. Abhaengigkeiten installieren
-composer install --no-dev
-
-# 3. Konfiguration erstellen
-cp config.inc.php.example config.inc.php
-# --> config.inc.php bearbeiten
-
-# 4. Datenbank importieren
-mysql -u root -p powerphpboard < install/install.sql
-
-# 5. Berechtigungen setzen (Linux/macOS)
-chmod 755 logs/
-chmod 644 config.inc.php
-
-# 6. Im Browser oeffnen
-# http://localhost/PowerPHPBoard/
+composer install
+cd .docker && docker compose up -d --build && cd ..
+# http://localhost:8085
 ```
+
+Fuer Produktion ohne Docker siehe [Manuelle Installation auf Live-Server](#manuelle-installation-auf-live-server).
 
 ---
 
@@ -107,7 +119,9 @@ chmod 644 config.inc.php
 ### Voraussetzungen
 
 - Docker 20.10+
-- Docker Compose 2.0+
+- Docker Compose v2 (`docker compose ...`, nicht mehr `docker-compose`)
+- Composer 2.0+ (lokal, fuer Dev-Dependencies)
+- Git
 
 ### Schritte
 
@@ -118,639 +132,703 @@ git clone https://github.com/schubertnico/PowerPHPBoard.git
 cd PowerPHPBoard
 ```
 
-**2. Docker-Umgebung starten:**
+**2. Dev-Dependencies installieren (fuer Tests, Analyse):**
 
 ```bash
-docker-compose up -d
+composer install
 ```
 
-**3. Container pruefen:**
+**3. Container starten:**
 
 ```bash
-docker-compose ps
+cd .docker
+docker compose up -d --build
 ```
 
-Erwartete Ausgabe:
-```
-NAME                    STATUS
-powerphpboard-php       Up
-powerphpboard-mysql     Up
-powerphpboard-nginx     Up (optional)
+**4. Container-Status pruefen:**
+
+```bash
+docker compose ps
 ```
 
-**4. Im Browser oeffnen:**
+Erwartete Container:
 
-```
-http://localhost:8085
-```
-
-### Docker-Compose Konfiguration
-
-Die Datei `docker-compose.yml` befindet sich in `.docker/`:
-
-```yaml
-name: powerphpboard
-
-services:
-  web:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    ports:
-      - "8085:80"
-    volumes:
-      - ..:/var/www/html
-    environment:
-      - PPB_DB_HOST=db
-      - PPB_DB_USER=powerphpboard
-      - PPB_DB_PASS=powerphpboard_secret
-      - PPB_DB_NAME=powerphpboard
-    depends_on:
-      db:
-        condition: service_healthy
-
-  db:
-    image: mysql:8.0
-    ports:
-      - "3315:3306"
-    environment:
-      MYSQL_ROOT_PASSWORD: root_secret
-      MYSQL_DATABASE: powerphpboard
-      MYSQL_USER: powerphpboard
-      MYSQL_PASSWORD: powerphpboard_secret
-    volumes:
-      - powerphpboard_mysql_data:/var/lib/mysql
-      - ../install.sql:/docker-entrypoint-initdb.d/init.sql:ro
-
-  phpmyadmin:
-    image: phpmyadmin:latest
-    ports:
-      - "8088:80"
-    environment:
-      PMA_HOST: db
-      PMA_USER: root
-      PMA_PASSWORD: root_secret
-
-  mailpit:
-    image: axllent/mailpit:latest
-    ports:
-      - "1032:1025"
-      - "8032:8025"
-
-volumes:
-  powerphpboard_mysql_data:
+```text
+powerphpboard_web         Up (healthy)   0.0.0.0:8085->80/tcp
+powerphpboard_db          Up (healthy)   0.0.0.0:3315->3306/tcp
+powerphpboard_mailpit     Up             0.0.0.0:1032->1025/tcp, 0.0.0.0:8032->8025/tcp
+powerphpboard_phpmyadmin  Up             0.0.0.0:8088->80/tcp
 ```
 
 ### Verfuegbare Services
 
-| Service | Port | URL |
-|---------|------|-----|
-| Forum | 8085 | http://localhost:8085 |
-| phpMyAdmin | 8088 | http://localhost:8088 |
-| Mailpit UI | 8032 | http://localhost:8032 |
-| MySQL | 3315 | localhost:3315 |
+| Service     | URL                            | Zweck                         |
+|-------------|--------------------------------|-------------------------------|
+| Forum       | http://localhost:8085          | Hauptanwendung                |
+| phpMyAdmin  | http://localhost:8088          | DB-Verwaltung                 |
+| Mailpit UI  | http://localhost:8032          | E-Mails testen                |
+| SMTP intern | `mailpit:1025` (Docker-Netz)   | SMTP-Ziel der App             |
+| MySQL       | `localhost:3315`               | Direkter DB-Zugriff (Dev)     |
 
 ### Nuetzliche Docker-Befehle
 
 ```bash
-# In .docker Verzeichnis wechseln
 cd .docker
 
-# Container starten
-docker-compose up -d
+# starten / stoppen
+docker compose up -d
+docker compose down
 
-# Container stoppen
-docker-compose down
+# Logs verfolgen
+docker compose logs -f web
 
-# Logs anzeigen
-docker-compose logs -f web
-
-# In Web-Container einloggen
-docker-compose exec web bash
+# In Container einloggen
+docker compose exec web bash
 
 # MySQL-Konsole
-docker-compose exec db mysql -u powerphpboard -ppowerphpboard_secret powerphpboard
+docker compose exec db mysql -u powerphpboard -ppowerphpboard_secret powerphpboard
 
-# Neustart nach Aenderungen
-docker-compose restart web
+# Neu bauen nach Aenderungen an Dockerfile/php.ini
+docker compose up -d --build
+
+# Komplett zuruecksetzen (loescht auch alle Daten!)
+docker compose down -v
 ```
+
+Beim ersten Start wird `install.sql` automatisch in die DB geladen und ein Admin-Account
+angelegt (siehe [Erste Schritte](#erste-schritte)).
 
 ---
 
-## Manuelle Installation
+## Manuelle Installation auf Live-Server
 
-### 1. Dateien herunterladen
+### 1. Dateien bereitstellen
 
-**Option A: Git Clone**
-```bash
-git clone https://github.com/schubertnico/PowerPHPBoard.git
-cd PowerPHPBoard
-```
-
-**Option B: ZIP-Download**
-```bash
-wget https://github.com/schubertnico/PowerPHPBoard/archive/main.zip
-unzip main.zip
-mv PowerPHPBoard-main PowerPHPBoard
-cd PowerPHPBoard
-```
-
-### 2. Composer-Abhaengigkeiten
+**Option A: Sauberes Deploy-Paket via `git archive`** (empfohlen, schliesst Dev-Artefakte aus):
 
 ```bash
-# Fuer Produktion (ohne Dev-Tools)
-composer install --no-dev --optimize-autoloader
+git clone https://github.com/schubertnico/PowerPHPBoard.git /tmp/ppb-src
+cd /tmp/ppb-src
+git archive --format=tar.gz --prefix=powerphpboard/ HEAD > /tmp/deploy.tar.gz
 
-# Fuer Entwicklung (mit Tests und Analyse-Tools)
-composer install
+# Auf dem Live-Server entpacken
+tar -xzf /tmp/deploy.tar.gz -C /var/www
+mv /var/www/powerphpboard /var/www/forum   # oder Ziel nach Wahl
 ```
 
-### 3. Verzeichnisstruktur pruefen
+Das Archiv enthaelt **nur** Live-relevante Dateien - Tests, Docker-Configs, Docs und
+Analyse-Configs sind via `.gitattributes export-ignore` ausgeschlossen.
 
-Nach der Installation sollte folgende Struktur vorhanden sein:
+**Option B: Git-Clone + manuelles Aufraeumen:**
 
-```
-PowerPHPBoard/
-├── admin/                 # Admin-Bereich
-├── images/                # Bilder und Icons
-│   ├── avatars/           # Benutzer-Avatare
-│   ├── smilies/           # Smilie-Grafiken
-│   └── icons/             # Thread-Icons
-├── includes/              # Core-Klassen
-├── install/               # Installationsskripte
-│   ├── install.sql        # Datenbank-Schema
-│   └── upgrade_v1_to_v2.sql  # Upgrade-Script
-├── lang/                  # Sprachdateien
-├── logs/                  # Log-Dateien
-├── templates/             # HTML-Templates
-├── tests/                 # PHPUnit Tests
-├── vendor/                # Composer-Pakete
-├── config.inc.php         # Konfiguration
-├── composer.json          # Composer-Konfiguration
-└── index.php              # Einstiegspunkt
-```
-
-### 4. Berechtigungen setzen
-
-**Linux/macOS:**
 ```bash
-# Verzeichnisse
-chmod 755 logs/
-chmod 755 images/avatars/
-
-# Konfiguration (nach Bearbeitung)
-chmod 644 config.inc.php
-
-# Owner setzen (Apache/Nginx)
-chown -R www-data:www-data logs/
-chown -R www-data:www-data images/avatars/
+cd /var/www
+git clone https://github.com/schubertnico/PowerPHPBoard.git forum
+cd forum
+rm -rf tests docs todos .docker .github phpunit.xml phpstan.neon psalm.xml \
+       phpmd.xml rector.php infection.json5 .php-cs-fixer.php \
+       create-admin.php install_bugfix_*.sql
 ```
 
-**Windows:**
-- Sicherstellen, dass der Webserver Schreibzugriff auf `logs/` hat
-- IIS: IUSR-Benutzer Schreibrechte geben
+### 2. Produktions-Dependencies installieren
+
+```bash
+cd /var/www/forum
+composer install --no-dev --optimize-autoloader --classmap-authoritative
+```
+
+Ergebnis: `vendor/`-Verzeichnis nur mit Produktions-Paketen.
+
+### 3. Berechtigungen
+
+```bash
+# Ownership fuer Apache/Nginx (Debian/Ubuntu: www-data)
+chown -R www-data:www-data /var/www/forum
+
+# Verzeichnisse: 750, Dateien: 640
+find /var/www/forum -type d -exec chmod 750 {} \;
+find /var/www/forum -type f -exec chmod 640 {} \;
+
+# Log-Verzeichnis muss beschreibbar sein
+chmod 770 /var/www/forum/logs
+
+# Nur Webserver darf config.inc.php lesen
+chmod 640 /var/www/forum/config.inc.php
+```
+
+### 4. `.htaccess` nicht entfernen
+
+Das Repository enthaelt **sieben** `.htaccess`-Dateien (Root, includes/, inc/, logs/,
+docs/, todos/, tests/). Die Root-`.htaccess` ist essenziell fuer:
+
+- Blockieren sensibler Dateien (config.inc.php, *.sql, includes/, logs/ ...)
+- Security-Header (X-Frame-Options, Referrer-Policy, ...)
+- Directory-Listing aus
+
+Achte darauf, dass dein FTP/Deploy-Tool versteckte Dateien (dotfiles) uebertraegt!
 
 ---
 
 ## Webserver-Konfiguration
 
-### Apache
+### Apache (empfohlen)
 
-**1. DocumentRoot setzen:**
+**Virtual Host:**
 
 ```apache
 <VirtualHost *:80>
     ServerName forum.example.com
-    DocumentRoot /var/www/PowerPHPBoard
+    DocumentRoot /var/www/forum
 
-    <Directory /var/www/PowerPHPBoard>
+    <Directory /var/www/forum>
+        Options -Indexes +FollowSymLinks
         AllowOverride All
         Require all granted
     </Directory>
 
-    ErrorLog ${APACHE_LOG_DIR}/powerphpboard_error.log
-    CustomLog ${APACHE_LOG_DIR}/powerphpboard_access.log combined
+    ErrorLog  ${APACHE_LOG_DIR}/forum_error.log
+    CustomLog ${APACHE_LOG_DIR}/forum_access.log combined
+
+    # Server-Version nicht preisgeben
+    ServerSignature Off
 </VirtualHost>
 ```
 
-**2. mod_rewrite aktivieren:**
+**Wichtig:** `AllowOverride All` ist Pflicht, sonst werden die mitgelieferten
+`.htaccess`-Dateien ignoriert und der Schutz greift nicht!
+
+**Module aktivieren:**
 
 ```bash
-a2enmod rewrite
+a2enmod rewrite headers expires deflate
 systemctl restart apache2
 ```
 
-**3. .htaccess (optional, fuer schoene URLs):**
-
-```apache
-RewriteEngine On
-RewriteBase /
-
-# Direkter Zugriff auf Dateien erlauben
-RewriteCond %{REQUEST_FILENAME} -f [OR]
-RewriteCond %{REQUEST_FILENAME} -d
-RewriteRule ^ - [L]
-
-# Alle anderen Anfragen an index.php
-RewriteRule ^(.*)$ index.php?route=$1 [QSA,L]
-```
+**Empfohlen:** `ServerTokens Prod` in `/etc/apache2/conf-enabled/security.conf`.
 
 ### Nginx
+
+Nginx respektiert keine `.htaccess`-Dateien. Die aequivalenten Regeln muessen
+direkt in die `server {}`-Sektion:
 
 ```nginx
 server {
     listen 80;
     server_name forum.example.com;
-    root /var/www/PowerPHPBoard;
+    root /var/www/forum;
     index index.php;
 
-    # Logs
-    access_log /var/log/nginx/powerphpboard_access.log;
-    error_log /var/log/nginx/powerphpboard_error.log;
+    access_log /var/log/nginx/forum_access.log;
+    error_log  /var/log/nginx/forum_error.log;
 
-    # PHP-Verarbeitung
+    charset utf-8;
+
+    # Directory-Listing aus
+    autoindex off;
+
+    # Security-Header
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=()" always;
+    add_header X-Permitted-Cross-Domain-Policies "none" always;
+
+    # Dotfiles komplett blockieren
+    location ~ /\. { deny all; return 404; }
+
+    # Sensible Verzeichnisse
+    location ~ ^/(includes|inc|tests|docs|todos|logs|vendor|node_modules)/ {
+        deny all; return 404;
+    }
+
+    # Sensible Dateien (Root-Ebene)
+    location ~ ^/(config\.inc\.php|config\.inc\.local\.php|header\.inc\.php|footer\.inc\.php|functions\.inc\.php|english\.inc\.php|deutsch-(du|sie)\.inc\.php|install\.sql|install_bugfix.*\.sql|create-admin\.php|composer\.(json|lock)|phpstan\.neon|psalm\.xml|phpmd\.xml|phpunit\.xml|rector\.php|infection\.json5|\.php-cs-fixer\.php|README\.(md|html)|CONTRIBUTING\.md|SECURITY\.md|INSTALLATION\.md|LICENSE|Dockerfile|docker-compose\.yml)$ {
+        deny all; return 404;
+    }
+
+    # Backup-/Editor-Endungen
+    location ~ \.(bak|backup|orig|tmp|swp|old|save|log|sql|md|neon|yml|yaml|ini|dist|phar|conf)$ {
+        deny all; return 404;
+    }
+
+    # Statische Assets cachen
+    location ~* \.(css|js|gif|png|jpg|jpeg|ico|svg|woff2?)$ {
+        expires 7d;
+        add_header Cache-Control "public, immutable";
+        access_log off;
+    }
+
+    # PHP-Handling (PHP-FPM)
     location ~ \.php$ {
         fastcgi_pass unix:/var/run/php/php8.4-fpm.sock;
         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
         include fastcgi_params;
+        fastcgi_read_timeout 60;
     }
 
-    # Statische Dateien cachen
-    location ~* \.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2)$ {
-        expires 30d;
-        add_header Cache-Control "public, immutable";
-    }
-
-    # Sensible Dateien blockieren
-    location ~ /\. {
-        deny all;
-    }
-
-    location ~ /(config\.inc\.php|composer\.(json|lock)|\.git) {
-        deny all;
-    }
-
-    # Logs-Verzeichnis blockieren
-    location /logs/ {
-        deny all;
-    }
+    # Max. Upload-Groesse
+    client_max_body_size 12m;
 }
 ```
 
-### HTTPS einrichten (empfohlen)
-
-**Mit Let's Encrypt:**
+### HTTPS via Let's Encrypt
 
 ```bash
-# Certbot installieren (Ubuntu/Debian)
-apt install certbot python3-certbot-nginx
-
-# Zertifikat erstellen
-certbot --nginx -d forum.example.com
-
-# Automatische Erneuerung
+# Debian/Ubuntu
+apt install certbot python3-certbot-apache    # oder -nginx
+certbot --apache -d forum.example.com         # oder --nginx
 certbot renew --dry-run
 ```
+
+Nach HTTPS-Umstellung: In `.htaccess` den HTTPS-Redirect-Block aktivieren
+(auskommentierter Abschnitt "HTTPS erzwingen") und `session.cookie_secure = On`
+in `php.ini` setzen.
 
 ---
 
 ## Datenbank einrichten
 
-### 1. Datenbank erstellen
-
-**MySQL/MariaDB:**
+### 1. Datenbank + Nutzer anlegen
 
 ```sql
--- Als root-Benutzer
-CREATE DATABASE powerphpboard CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE PowerPHPBoard_v2
+    CHARACTER SET utf8mb4
+    COLLATE utf8mb4_unicode_ci;
 
--- Benutzer erstellen
-CREATE USER 'ppb_user'@'localhost' IDENTIFIED BY 'sicheres_passwort_hier';
-
--- Rechte vergeben
-GRANT ALL PRIVILEGES ON powerphpboard.* TO 'ppb_user'@'localhost';
+CREATE USER 'ppb_user'@'localhost' IDENTIFIED BY 'BITTE_SICHERES_PASSWORT';
+GRANT ALL PRIVILEGES ON PowerPHPBoard_v2.* TO 'ppb_user'@'localhost';
 FLUSH PRIVILEGES;
 ```
 
 ### 2. Schema importieren
 
 ```bash
-# Ueber Kommandozeile
-mysql -u ppb_user -p powerphpboard < install/install.sql
-
-# Oder in MySQL-Konsole
-mysql -u ppb_user -p
-USE powerphpboard;
-SOURCE install/install.sql;
+mysql -u ppb_user -p PowerPHPBoard_v2 < install.sql
 ```
 
-### 3. Datenbank-Schema (Uebersicht)
+Damit sind alle Tabellen inklusive Rate-Limit- und Password-Reset-Tokens angelegt.
 
-| Tabelle | Beschreibung |
-|---------|--------------|
-| `ppb_users` | Benutzerkonten |
-| `ppb_boards` | Foren und Kategorien |
-| `ppb_posts` | Threads und Beitraege |
-| `ppb_config` | Board-Konfiguration |
-| `ppb_sessions` | Aktive Sessions |
+### 3. Schema-Uebersicht
+
+| Tabelle                | Beschreibung                                       |
+|------------------------|----------------------------------------------------|
+| `ppb_users`            | Benutzerkonten (username UNIQUE, status enum)      |
+| `ppb_boards`           | Foren, Kategorien, Moderatoren, Board-Passwort     |
+| `ppb_posts`            | Threads und Beitraege (Spalte `type`)              |
+| `ppb_config`           | Board-Konfiguration (Title, Farben, Sprache, ...)  |
+| `ppb_visits`           | Session-/Private-Board-Besuchsdaten                |
+| `ppb_password_resets`  | Einmal-Tokens fuer Passwort-Reset (SHA256 gehasht) |
+| `ppb_rate_limits`      | Brute-Force-Zaehler fuer Login und Reset           |
+
+**Wichtige Constraints:**
+- `ppb_users.username` ist `UNIQUE` (seit 2.1.0).
+- `ppb_rate_limits(action, identifier)` ist `UNIQUE` (Upsert-Logik).
+
+### 4. Admin-Konto
+
+`install.sql` legt automatisch den Admin-User **"Gott"** mit Legacy-Passwort-Hash an.
+Dieser wird beim ersten Login automatisch auf Argon2id migriert.
+
+**Sofort nach Installation:**
+
+1. Mit "Gott" + Initial-Passwort einloggen.
+2. Profil oeffnen, Passwort **und** E-Mail aendern.
+3. Alternativ einen eigenen Admin anlegen und "Gott" ueber phpMyAdmin loeschen.
 
 ---
 
 ## Konfiguration
 
-### config.inc.php erstellen
+### `config.inc.php`
 
-```bash
-cp config.inc.php.example config.inc.php
-```
-
-### Konfiguration bearbeiten
+Die `config.inc.php` ist im Repository bereits vorhanden und wird via Environment-
+Variablen parametriert. Struktur:
 
 ```php
 <?php
-// config.inc.php
+declare(strict_types=1);
 
-// ============================================
-// DATENBANK-KONFIGURATION
-// ============================================
-define('PPB_DB_HOST', 'localhost');      // Datenbank-Host
-define('PPB_DB_NAME', 'powerphpboard');  // Datenbank-Name
-define('PPB_DB_USER', 'ppb_user');       // Datenbank-Benutzer
-define('PPB_DB_PASS', 'passwort');       // Datenbank-Passwort
-define('PPB_DB_PREFIX', 'ppb_');         // Tabellen-Prefix
+$mysql = [
+    'server'   => getenv('PPB_DB_HOST') ?: 'localhost',
+    'user'     => getenv('PPB_DB_USER') ?: 'root',
+    'password' => getenv('PPB_DB_PASS') ?: '',
+    'database' => getenv('PPB_DB_NAME') ?: 'PowerPHPBoard_v2',
+];
 
-// ============================================
-// BOARD-KONFIGURATION
-// ============================================
-define('PPB_BOARD_NAME', 'Mein Forum');  // Board-Name
-define('PPB_BOARD_URL', 'https://forum.example.com'); // Board-URL
+$mail = [
+    'host' => getenv('PPB_MAIL_HOST') ?: 'mailpit',
+    'port' => (int) (getenv('PPB_MAIL_PORT') ?: 1025),
+    'from' => getenv('PPB_MAIL_FROM') ?: 'noreply@powerphpboard.local',
+];
 
-// ============================================
-// SESSION-KONFIGURATION
-// ============================================
-define('PPB_SESSION_LIFETIME', 3600);    // Session-Dauer (Sekunden)
-define('PPB_SESSION_NAME', 'PPBSESSID'); // Session-Cookie-Name
-
-// ============================================
-// SICHERHEIT
-// ============================================
-define('PPB_DEBUG', false);              // Debug-Modus (NIEMALS true in Produktion!)
-
-// ============================================
-// PFADE
-// ============================================
-define('PPB_ROOT', __DIR__);             // Installations-Verzeichnis
-define('PPB_LOG_PATH', PPB_ROOT . '/logs'); // Log-Verzeichnis
+define('PPB_VERSION', '2.1.0');
+define('PPB_SESSION_LIFETIME', 3600);
+define('PPB_CSRF_ENABLED', true);
+define('PPB_DEBUG', (bool) (getenv('PPB_DEBUG') ?: false));
 ```
 
-### Umgebungsvariablen (Alternative)
+Zur Konfiguration stehen zwei Wege offen:
 
-Fuer Docker oder Shared Hosting:
+#### Variante A: Environment-Variablen im Webserver
+
+**Apache (`.htaccess` oder VirtualHost):**
+```apache
+SetEnv PPB_DB_HOST db.internal
+SetEnv PPB_DB_USER forum_user
+SetEnv PPB_DB_PASS "GEHEIMES_PASSWORT"
+SetEnv PPB_DB_NAME forum_prod
+SetEnv PPB_MAIL_HOST smtp.example.com
+SetEnv PPB_MAIL_PORT 587
+SetEnv PPB_MAIL_FROM noreply@example.com
+```
+
+**Nginx (Umgebung ueber PHP-FPM-Pool-Config):**
+
+In `/etc/php/8.4/fpm/pool.d/forum.conf`:
+```ini
+env[PPB_DB_HOST]  = db.internal
+env[PPB_DB_USER]  = forum_user
+env[PPB_DB_PASS]  = GEHEIMES_PASSWORT
+env[PPB_DB_NAME]  = forum_prod
+env[PPB_MAIL_HOST] = smtp.example.com
+env[PPB_MAIL_PORT] = 587
+env[PPB_MAIL_FROM] = noreply@example.com
+```
+
+#### Variante B: `config.local.inc.php` nebenbei (nicht versioniert)
+
+Lege eine `config.local.inc.php` im Projekt-Root an, die NICHT committed wird
+(siehe `.gitignore`):
 
 ```php
 <?php
-// config.inc.php mit Umgebungsvariablen
-
-define('PPB_DB_HOST', getenv('PPB_DB_HOST') ?: 'localhost');
-define('PPB_DB_NAME', getenv('PPB_DB_NAME') ?: 'powerphpboard');
-define('PPB_DB_USER', getenv('PPB_DB_USER') ?: 'ppb_user');
-define('PPB_DB_PASS', getenv('PPB_DB_PASS') ?: '');
-define('PPB_DEBUG', (bool)(getenv('PPB_DEBUG') ?: false));
+putenv('PPB_DB_HOST=db.internal');
+putenv('PPB_DB_USER=forum_user');
+putenv('PPB_DB_PASS=GEHEIMES_PASSWORT');
+putenv('PPB_DB_NAME=forum_prod');
 ```
+
+Und binde sie am Anfang der `config.inc.php` ein:
+
+```php
+if (file_exists(__DIR__ . '/config.local.inc.php')) {
+    require_once __DIR__ . '/config.local.inc.php';
+}
+```
+
+### Board-Einstellungen
+
+Nach der Installation im Admin-Panel unter "General Settings" setzen:
+
+- **boardtitle**: Name des Forums
+- **boardurl**: Vollstaendige URL (fuer Links in E-Mails)
+- **adminemail**: Absender-Adresse (Fallback: `$mail['from']`)
+- **language**: `English`, `Deutsch-Sie` oder `Deutsch-Du`
+- **htmlcode**: `ON` oder `OFF` (Achtung: auf `OFF` ist sicherer)
+- **bbcode**, **smilies**: `ON`/`OFF`
+
+---
+
+## E-Mail-Versand (SMTP)
+
+PowerPHPBoard sendet E-Mails bei:
+
+- Registrierung (Willkommens-Mail)
+- Passwort-Reset (Token-Link)
+- User-zu-User (Sendmail-Formular)
+
+Die Versand-Klasse ist `PowerPHPBoard\Mailer` - ein minimalistischer SMTP-Client
+(kein PHP `mail()`!). Entsprechend muessen SMTP-Zugangsdaten konfiguriert sein.
+
+### Dev: Mailpit (Docker-Setup)
+
+Bereits vorkonfiguriert in `docker-compose.yml`. Mails landen in der Mailpit-UI
+auf http://localhost:8032 und werden nicht wirklich versendet.
+
+### Produktion: echter SMTP-Relay
+
+Beispiel: SMTP ohne Auth (interner Relay):
+```text
+PPB_MAIL_HOST = smtp.example.com
+PPB_MAIL_PORT = 25
+PPB_MAIL_FROM = noreply@example.com
+```
+
+Der mitgelieferte `Mailer` unterstuetzt **Plain-SMTP** ohne TLS/AUTH. Bei
+Relay-Systemen mit IP-Whitelist reicht das. Fuer oeffentliche SMTP-Server
+(z. B. SendGrid, Mailgun, Amazon SES) musst du entweder:
+
+1. einen lokalen Relay (Postfix als Smart-Host) vorschalten, oder
+2. den `Mailer` um STARTTLS+AUTH erweitern.
+
+### Kein SMTP verfuegbar?
+
+Wenn Mailversand nicht konfiguriert ist, schlaegt der `Mailer` intern stumm fehl
+(Log-Eintrag). Registrierung und Passwort-Reset funktionieren weiterhin, aber
+der Nutzer bekommt keine Mail.
 
 ---
 
 ## Erste Schritte
 
-### 1. Installation ueberpruefen
+### 1. Installation pruefen
 
-Oeffnen Sie das Forum im Browser:
-```
-http://forum.example.com/
-```
-
-Sie sollten die leere Forum-Startseite sehen.
-
-### 2. Admin-Konto erstellen
-
-**Option A: Ueber SQL**
-
-```sql
-INSERT INTO ppb_users (
-    username, email, password, is_admin, registered
-) VALUES (
-    'admin',
-    'admin@example.com',
-    -- Argon2id-Hash fuer 'admin123' (Passwort sofort aendern!)
-    '$argon2id$v=19$m=65536,t=4,p=1$...',
-    1,
-    NOW()
-);
+Browser oeffnen:
+```text
+http://localhost:8085/          (Docker)
+http://forum.example.com/       (Produktion)
 ```
 
-**Option B: Registrierung + SQL-Update**
+Du solltest die leere Boardlist mit dem Standard-Theme sehen.
 
-1. Registrieren Sie sich normal
-2. Setzen Sie Admin-Rechte:
-   ```sql
-   UPDATE ppb_users SET is_admin = 1 WHERE email = 'ihre@email.com';
-   ```
+### 2. Als Admin einloggen
+
+Der initial angelegte Admin heisst **"Gott"**. Login-Email und Initial-Passwort
+findest du in `install.sql` (Zeile mit `INSERT INTO ppb_users`). **Passwort sofort
+aendern!**
 
 ### 3. Erstes Board erstellen
 
-1. Einloggen als Admin
-2. "Admin" im Menu klicken
-3. "Board erstellen" waehlen
-4. Name und Beschreibung eingeben
+1. Als Admin eingeloggt auf `/admin/` gehen.
+2. "Board hinzufuegen" auswaehlen.
+3. Kategorie, Name, Beschreibung eingeben.
+4. Speichern.
 
-### 4. Konfiguration anpassen
+### 4. Konfiguration pruefen
 
-Im Admin-Bereich unter "Einstellungen":
+Im Admin unter "General Settings":
 
-- Board-Name und Beschreibung
-- E-Mail-Einstellungen
-- Registrierungsoptionen
-- Beitrags-Optionen
+- `boardurl` auf die tatsaechliche URL setzen (wichtig fuer Passwort-Reset-Links!)
+- `adminemail` auf eine existierende Adresse setzen.
+- `language` auf bevorzugte Sprache setzen.
+
+### 5. Testregistrierung
+
+1. Ausloggen.
+2. Auf "Register" klicken, Boardregeln akzeptieren.
+3. Formular ausfuellen, abschicken.
+4. Mailpit (Docker) bzw. echten Posteingang pruefen - Willkommensmail muss eintreffen.
+5. Login testen.
 
 ---
 
-## Upgrade von v1.x
+## Upgrade
 
-### Backup erstellen
+### Von v2.0.x nach 2.1.0 (Bugfix-Release)
 
-**WICHTIG: Vor jedem Upgrade ein Backup erstellen!**
-
-```bash
-# Datenbank-Backup
-mysqldump -u root -p powerphpboard > backup_$(date +%Y%m%d).sql
-
-# Datei-Backup
-tar -czvf powerphpboard_backup_$(date +%Y%m%d).tar.gz PowerPHPBoard/
-```
-
-### Upgrade-Schritte
-
-**1. Neue Dateien herunterladen:**
+**Backup erstellen:**
 
 ```bash
-cd /var/www
-mv PowerPHPBoard PowerPHPBoard_old
-git clone https://github.com/schubertnico/PowerPHPBoard.git
+# Datenbank
+mysqldump -u ppb_user -p PowerPHPBoard_v2 > backup_$(date +%Y%m%d).sql
+
+# Dateien
+tar -czf backup_files_$(date +%Y%m%d).tar.gz /var/www/forum
 ```
 
-**2. Konfiguration uebernehmen:**
+**Dateien aktualisieren:**
 
 ```bash
-cp PowerPHPBoard_old/config.inc.php PowerPHPBoard/config.inc.php
+cd /var/www/forum
+git pull origin main
+composer install --no-dev --optimize-autoloader --classmap-authoritative
 ```
 
-**3. Uploads uebernehmen:**
+**DB-Migration einspielen:**
 
 ```bash
-cp -r PowerPHPBoard_old/images/avatars/* PowerPHPBoard/images/avatars/
+mysql -u ppb_user -p PowerPHPBoard_v2 < install_bugfix_2026-04-23.sql
 ```
 
-**4. Datenbank migrieren:**
+Die Migration legt an:
 
-```bash
-mysql -u ppb_user -p powerphpboard < install/upgrade_v1_to_v2.sql
-```
+- `UNIQUE INDEX idx_users_username_unique` auf `ppb_users(username)`
+  - Falls **doppelte Usernames** existieren: vor der Migration bereinigen
+    (siehe Kommentar in `install_bugfix_2026-04-23.sql`)
+- `ppb_password_resets` (Tokens fuer Reset-Flow)
+- `ppb_rate_limits` (Brute-Force-Zaehler)
 
-**5. Composer-Abhaengigkeiten:**
+**Nach dem Upgrade:**
 
-```bash
-cd PowerPHPBoard
-composer install --no-dev
-```
+- Alle aktiven Sessions bleiben gueltig.
+- Nutzer mit alten Base64-Passwoertern werden beim ersten Login automatisch auf Argon2id migriert.
+- Mindestpasswortlaenge ist jetzt 8 Zeichen (vorher 6) - bestehende Passwoerter sind nicht betroffen.
 
-**6. Passwort-Migration:**
+### Von v1.x auf 2.1.0 (grosser Sprung)
 
-Bei v1.x wurden Passwoerter Base64-kodiert gespeichert.
-PowerPHPBoard 2.0 migriert diese automatisch bei Login zu Argon2id.
+**Wichtig:** Zwischen v1 und v2 wurde das DB-Schema teilweise umgebaut.
+Empfohlen: Daten exportieren, Version 2 **frisch** installieren, dann Daten
+selektiv reimportieren. Die alte `upgrade_v1_to_v2.sql` ist **nicht Bestandteil**
+des 2.1.0-Releases - kontaktiere bei Bedarf [Support](#support).
 
-Benutzer muessen sich einmal einloggen, um die Migration durchzufuehren.
+---
+
+## Sicherheits-Checkliste
+
+Vor dem Go-Live abhaken:
+
+- [ ] `PPB_DEBUG=false` bzw. nicht gesetzt
+- [ ] `display_errors = Off` in `php.ini`
+- [ ] `expose_php = Off`
+- [ ] HTTPS aktiv, HTTP redirectet 301 zu HTTPS
+- [ ] `session.cookie_secure = On` (nur bei HTTPS)
+- [ ] `ServerTokens Prod`, `ServerSignature Off`
+- [ ] `AllowOverride All` in Apache, damit `.htaccess` greift
+- [ ] `.htaccess`-Dateien vollstaendig uebertragen (Root, includes/, inc/, logs/, docs/, todos/, tests/)
+- [ ] Test: `curl -I https://forum.example.com/config.inc.php` → HTTP 403
+- [ ] Test: `curl -I https://forum.example.com/includes/Security.php` → HTTP 403
+- [ ] Test: `curl -I https://forum.example.com/.git/HEAD` → HTTP 403
+- [ ] Test: `curl -I https://forum.example.com/install.sql` → HTTP 403
+- [ ] Test: Security-Header via `curl -I https://.../` sichtbar (X-Frame-Options, X-Content-Type-Options, Referrer-Policy)
+- [ ] Admin-Passwort des Initial-Accounts **geaendert**
+- [ ] Admin-Email auf existierende Adresse gesetzt
+- [ ] SMTP getestet (Passwort-Reset-Mail kommt an)
+- [ ] Rate-Limit getestet (10x falsches Login loest Lock aus)
+- [ ] DB-Backup-Strategie eingerichtet (mindestens taeglich)
+- [ ] `create-admin.php` und `install_bugfix_*.sql` **geloescht** oder unerreichbar
+- [ ] `logs/`-Verzeichnis ist ausserhalb des DocumentRoot oder per `.htaccess` gesperrt
+- [ ] Composer installiert nur Prod-Dependencies (`--no-dev`)
+- [ ] `vendor/`, `tests/`, `docs/`, `.docker/`, `.github/` sind per `.htaccess` und/oder Webserver-Config gesperrt
 
 ---
 
 ## Fehlerbehebung
 
-### Haeufige Probleme
-
-#### "Class not found" Fehler
+### "Class not found" Fehler
 
 ```bash
-# Composer-Autoloader neu generieren
 composer dump-autoload
+# bzw.
+composer install --no-dev --optimize-autoloader
 ```
 
-#### "Permission denied" bei Logs
+Falls nur eine der neuen Klassen fehlt (`Validator`, `RateLimiter`, `Mailer`):
+`config.inc.php` muss sie laden - pruefen, ob die `require_once`-Zeilen im
+oberen Abschnitt stehen.
+
+### `.htaccess` wirkt nicht
+
+Apache: `AllowOverride None` ist der Default! Setze in der VHost-Config:
+
+```apache
+<Directory /var/www/forum>
+    AllowOverride All
+</Directory>
+```
+
+und lade Apache neu. Ohne `AllowOverride All` sind alle `.htaccess`-Schutzregeln
+wirkungslos und sensible Dateien **waeren oeffentlich erreichbar**.
+
+Nginx: `.htaccess` wird generell nicht unterstuetzt. Aequivalente Regeln muessen
+in `server { ... }` (siehe [Webserver-Konfiguration](#webserver-konfiguration)).
+
+### "Permission denied" bei Logs
 
 ```bash
-# Linux/macOS
-chmod 755 logs/
-chown www-data:www-data logs/
-
-# Pruefen
-ls -la logs/
+chmod 770 /var/www/forum/logs
+chown www-data:www-data /var/www/forum/logs
+ls -la /var/www/forum/logs
 ```
 
-#### "Connection refused" zur Datenbank
+### "Connection refused" zur Datenbank
 
-1. MySQL-Service pruefen:
+1. MySQL-Service laeuft?
    ```bash
    systemctl status mysql
    ```
-
-2. Zugangsdaten in `config.inc.php` pruefen
-
-3. MySQL-Benutzerrechte pruefen:
+2. `PPB_DB_HOST`/`-USER`/`-PASS`/`-NAME` korrekt gesetzt?
+3. Rechte pruefen:
    ```sql
    SHOW GRANTS FOR 'ppb_user'@'localhost';
    ```
 
-#### Weisse Seite (Blank Page)
+### Weisse Seite / HTTP 500
 
-1. PHP-Fehler aktivieren:
-   ```php
-   // Temporaer in config.inc.php
-   ini_set('display_errors', 1);
-   error_reporting(E_ALL);
-   ```
-
-2. Error-Log pruefen:
+1. PHP-Error-Log pruefen:
    ```bash
-   tail -f logs/php-error.log
+   tail -f /var/www/forum/logs/php-error.log
    tail -f /var/log/apache2/error.log
    ```
+2. Temporaer `PPB_DEBUG=true` setzen, neu laden, Ausgabe analysieren, danach
+   zurueck auf `false`.
 
-#### Session-Probleme
+### Rate-Limit schiesst zu frueh / Accounts werden gesperrt
 
-1. Session-Verzeichnis pruefen:
+```sql
+-- Manuell Zaehler fuer eine IP zuruecksetzen
+DELETE FROM ppb_rate_limits WHERE identifier = '1.2.3.4';
+
+-- Alle Zaehler loeschen
+TRUNCATE TABLE ppb_rate_limits;
+```
+
+Limits anpassen direkt im Code (`login.php`, `sendpassword.php`) via
+`RateLimiter(new DatabaseRateLimitStorage($db), maxAttempts: ..., windowSeconds: ..., lockSeconds: ...)`.
+
+### Passwort-Reset-Mail kommt nicht an
+
+1. Mailpit (Dev) oder SMTP-Log (Prod) pruefen - ist die Verbindung zum SMTP-Host hergestellt?
+2. `logs/php-error.log` nach `[Mailer]`-Zeilen durchsuchen.
+3. `boardurl` in `ppb_config` muss gesetzt sein, sonst wird eine lokale URL aus
+   `$_SERVER['HTTP_HOST']` gebaut (funktioniert hinter Reverse-Proxies evtl. nicht).
+4. Token-Gueltigkeit ist 1 Stunde - danach Status "Invalid or expired".
+
+### Session-Probleme
+
+1. Cookie im Browser vorhanden? (`PHPSESSID` oder konfigurierter Name)
+2. `session.save_path` beschreibbar?
    ```bash
-   php -r "echo session_save_path();"
-   ls -la /var/lib/php/sessions/
+   php -r "echo session_save_path() . PHP_EOL;"
    ```
-
-2. Cookie-Einstellungen pruefen:
-   - Browser: Cookies aktiviert?
-   - HTTPS: Secure-Flag korrekt?
+3. Bei HTTPS und `session.cookie_secure=On` werden Cookies ueber HTTP nicht gesendet.
 
 ### Diagnose-Tools
 
-**PHP-Info anzeigen:**
-
-```php
-<?php
-// phpinfo.php (nach Diagnose loeschen!)
-phpinfo();
-```
-
-**Datenbank-Verbindung testen:**
-
-```php
-<?php
-// db_test.php (nach Diagnose loeschen!)
-require_once 'config.inc.php';
-
-try {
-    $pdo = new PDO(
-        'mysql:host=' . PPB_DB_HOST . ';dbname=' . PPB_DB_NAME,
-        PPB_DB_USER,
-        PPB_DB_PASS
-    );
-    echo "Verbindung erfolgreich!";
-} catch (PDOException $e) {
-    echo "Fehler: " . $e->getMessage();
-}
-```
-
-**Erweiterungen pruefen:**
+**DB-Verbindung testen** (temporaer!):
 
 ```bash
-php -m | grep -E "pdo|mysql|mbstring|json"
+docker compose exec web php -r "
+require '/var/www/html/config.inc.php';
+try {
+    \$pdo = new PDO(
+        'mysql:host=' . \$mysql['server'] . ';dbname=' . \$mysql['database'],
+        \$mysql['user'], \$mysql['password']
+    );
+    echo 'DB OK' . PHP_EOL;
+} catch (PDOException \$e) {
+    echo 'DB FAIL: ' . \$e->getMessage() . PHP_EOL;
+}
+"
 ```
 
-### Support
+**SMTP testen**:
 
-- **GitHub Issues:** Bug-Reports und Feature-Requests
-- **E-Mail:** support@powerscripts.org
-- **Dokumentation:** [README.md](README.md)
+```bash
+docker compose exec web php -r "
+require '/var/www/html/includes/Security.php';
+require '/var/www/html/includes/Mailer.php';
+\$m = new PowerPHPBoard\Mailer('mailpit', 1025);
+var_dump(\$m->send('test@example.com', 'noreply@local.test', 'Test', 'Hallo'));
+"
+```
 
----
+**Erweiterungen pruefen**:
 
-## Checkliste nach Installation
-
-- [ ] Datenbank-Verbindung funktioniert
-- [ ] Keine PHP-Fehler in den Logs
-- [ ] Admin-Konto erstellt
-- [ ] Erstes Board erstellt
-- [ ] HTTPS aktiviert
-- [ ] Debug-Modus deaktiviert (`PPB_DEBUG = false`)
-- [ ] Installationsverzeichnis geschuetzt oder entfernt
-- [ ] Backup-Strategie eingerichtet
-- [ ] Monitoring eingerichtet (optional)
+```bash
+php -m | grep -iE "pdo_mysql|mbstring|openssl|session|filter"
+```
 
 ---
 
-Stand: Januar 2026
-Version: 2.0
+## Support
+
+- **GitHub Issues:** [https://github.com/schubertnico/PowerPHPBoard/issues](https://github.com/schubertnico/PowerPHPBoard/issues)
+- **Projekt-Website:** [https://www.powerscripts.org](https://www.powerscripts.org)
+- **E-Mail:** info@schubertmedia.de
+- **README:** [README.md](README.md) fuer Schnellstart und Architekturueberblick
+- **Security-Policy:** [SECURITY.md](SECURITY.md)
+
+---
+
+**Stand:** 2026-04-24
+**Version:** 2.1.0
