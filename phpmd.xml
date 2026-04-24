@@ -17,6 +17,9 @@
         <exclude name="ElseExpression"/>
         <!-- Boolean flags sind OK bei Utility-Methoden wie init(), validate() -->
         <exclude name="BooleanArgumentFlag"/>
+        <!-- Error-Suppression (@) bewusst eingesetzt in Mailer (SMTP-Connect-
+             Fehler) und ErrorHandler (Logging-Failures im Test-/Shared-Setup). -->
+        <exclude name="ErrorControlOperator"/>
     </rule>
 
     <!-- Code Size Rules -->

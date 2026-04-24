@@ -54,7 +54,7 @@ if ($token !== '' && strlen($token) <= 128) {
 $errorText = null;
 $done = false;
 
-if ($tokenValid && $_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($tokenValid && $reset !== null && $_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!CSRF::validateFromPost()) {
         $errorText = 'Security token invalid. Please try again.';
     } else {
@@ -66,8 +66,8 @@ if ($tokenValid && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $errorText = $lang_pwdtooshort ?? 'Password must be at least 8 characters';
         } else {
             $hash = Security::hashPassword($p1);
-            $db->query('UPDATE ppb_users SET password = ? WHERE id = ?', [$hash, $reset['userid']]);
-            $db->query('UPDATE ppb_password_resets SET used_at = ? WHERE id = ?', [$now, $reset['id']]);
+            $db->query('UPDATE ppb_users SET password = ? WHERE id = ?', [$hash, (int) $reset['userid']]);
+            $db->query('UPDATE ppb_password_resets SET used_at = ? WHERE id = ?', [$now, (int) $reset['id']]);
             $done = true;
             CSRF::regenerate();
         }

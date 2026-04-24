@@ -21,7 +21,7 @@ final class MailerTest extends TestCase
 
         $this->assertStringContainsString("From: board@example.com\r\n", $msg);
         $this->assertStringContainsString("To: alice@example.com\r\n", $msg);
-        $this->assertStringContainsString("Subject: =?UTF-8?B?", $msg);
+        $this->assertStringContainsString('Subject: =?UTF-8?B?', $msg);
         $this->assertStringContainsString("MIME-Version: 1.0\r\n", $msg);
         $this->assertStringContainsString("Content-Type: text/plain; charset=UTF-8\r\n", $msg);
         $this->assertStringEndsWith("Hallo\r\nZeile 2\r\n", $msg);

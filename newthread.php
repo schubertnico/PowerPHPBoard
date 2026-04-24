@@ -164,36 +164,36 @@ if (($board['status'] ?? '') === 'Closed') {
                     $user = $ppbuser;
                 }
 
-                if (isset($user) && is_array($user)) {
-                        // Create thread
-                        $title = trim($title);
-                        $text = trim($text);
-                        $now = time();
-                        $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+                if ($user !== null) {
+                    // Create thread
+                    $title = trim($title);
+                    $text = trim($text);
+                    $now = time();
+                    $ip = $_SERVER['REMOTE_ADDR'] ?? '';
 
-                        // Validate icon
-                        $validIcons = ['icon1.gif', 'icon2.gif', 'icon3.gif', 'icon4.gif', 'icon5.gif', 'icon6.gif', 'icon7.gif',
-                                       'icon8.gif', 'icon9.gif', 'icon10.gif', 'icon11.gif', 'icon12.gif', 'icon13.gif', 'icon14.gif', ''];
-                        if (!in_array($icon, $validIcons, true)) {
-                            $icon = '';
-                        }
+                    // Validate icon
+                    $validIcons = ['icon1.gif', 'icon2.gif', 'icon3.gif', 'icon4.gif', 'icon5.gif', 'icon6.gif', 'icon7.gif',
+                                   'icon8.gif', 'icon9.gif', 'icon10.gif', 'icon11.gif', 'icon12.gif', 'icon13.gif', 'icon14.gif', ''];
+                    if (!in_array($icon, $validIcons, true)) {
+                        $icon = '';
+                    }
 
-                        $db->query(
-                            "INSERT INTO ppb_posts (boardid, type, time, author, title, text, icon, views, ip, lastreply, lastauthor)
+                    $db->query(
+                        "INSERT INTO ppb_posts (boardid, type, time, author, title, text, icon, views, ip, lastreply, lastauthor)
                              VALUES (?, 'Thread', ?, ?, ?, ?, ?, 0, ?, ?, ?)",
-                            [$board['id'], $now, $user['id'], $title, $text, $icon, $ip, $now, $user['id']]
-                        );
+                        [$board['id'], $now, $user['id'], $title, $text, $icon, $ip, $now, $user['id']]
+                    );
 
-                        // Update board last change
-                        $db->query(
-                            'UPDATE ppb_boards SET lastchange = ?, lastauthor = ? WHERE id = ?',
-                            [$now, $user['id'], $board['id']]
-                        );
+                    // Update board last change
+                    $db->query(
+                        'UPDATE ppb_boards SET lastchange = ?, lastauthor = ? WHERE id = ?',
+                        [$now, $user['id'], $board['id']]
+                    );
 
-                        // Regenerate CSRF token
-                        CSRF::regenerate();
+                    // Regenerate CSRF token
+                    CSRF::regenerate();
 
-                        echo '
+                    echo '
                         <tr><td bgcolor="' . Security::escape($settings['tablebg3'] ?? '#cccccc') . '">
                         <b>' . ($lang_statusmessage ?? 'Status') . '</b>
                         </td></tr>

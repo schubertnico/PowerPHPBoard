@@ -180,35 +180,35 @@ if (($board['status'] ?? '') === 'Closed' || ($thread['status'] ?? '') === 'Clos
                     $user = $ppbuser;
                 }
 
-                if (isset($user) && is_array($user)) {
-                        // Create post
-                        $text = trim($text);
-                        $now = time();
-                        $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+                if ($user !== null) {
+                    // Create post
+                    $text = trim($text);
+                    $now = time();
+                    $ip = $_SERVER['REMOTE_ADDR'] ?? '';
 
-                        $db->query(
-                            "INSERT INTO ppb_posts (boardid, threadid, type, time, author, text, ip) VALUES (?, ?, 'Post', ?, ?, ?, ?)",
-                            [$board['id'], $thread['id'], $now, $user['id'], $text, $ip]
-                        );
+                    $db->query(
+                        "INSERT INTO ppb_posts (boardid, threadid, type, time, author, text, ip) VALUES (?, ?, 'Post', ?, ?, ?, ?)",
+                        [$board['id'], $thread['id'], $now, $user['id'], $text, $ip]
+                    );
 
-                        $newPostId = $db->lastInsertId();
+                    $newPostId = $db->lastInsertId();
 
-                        // Update board last change
-                        $db->query(
-                            'UPDATE ppb_boards SET lastchange = ?, lastauthor = ? WHERE id = ?',
-                            [$now, $user['id'], $board['id']]
-                        );
+                    // Update board last change
+                    $db->query(
+                        'UPDATE ppb_boards SET lastchange = ?, lastauthor = ? WHERE id = ?',
+                        [$now, $user['id'], $board['id']]
+                    );
 
-                        // Update thread last reply
-                        $db->query(
-                            'UPDATE ppb_posts SET lastreply = ?, lastauthor = ? WHERE id = ?',
-                            [$now, $user['id'], $thread['id']]
-                        );
+                    // Update thread last reply
+                    $db->query(
+                        'UPDATE ppb_posts SET lastreply = ?, lastauthor = ? WHERE id = ?',
+                        [$now, $user['id'], $thread['id']]
+                    );
 
-                        // Regenerate CSRF token
-                        CSRF::regenerate();
+                    // Regenerate CSRF token
+                    CSRF::regenerate();
 
-                        echo '
+                    echo '
                         <tr><td bgcolor="' . Security::escape($settings['tablebg3'] ?? '#cccccc') . '">
                         <b>' . ($lang_statusmessage ?? 'Status') . '</b>
                         </td></tr>

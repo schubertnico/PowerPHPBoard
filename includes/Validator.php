@@ -15,11 +15,17 @@ namespace PowerPHPBoard;
 final class Validator
 {
     public const USERNAME_MIN = 2;
+
     public const USERNAME_MAX = 50;
+
     public const PASSWORD_MIN = 8;
+
     public const POST_MAX = 65000;
+
     public const BIOGRAPHY_MAX = 1000;
+
     public const SIGNATURE_MAX = 500;
+
     public const HOMEPAGE_MAX = 150;
 
     public static function isValidUsername(string $username): bool

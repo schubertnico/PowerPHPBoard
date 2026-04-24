@@ -10,6 +10,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use PowerPHPBoard\ErrorHandler;
 use ReflectionClass;
+use RuntimeException;
 
 /**
  * Unit tests for ErrorHandler class
@@ -24,7 +25,7 @@ class ErrorHandlerTest extends TestCase
     {
         parent::setUp();
         $this->logDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'ppb_test_logs_' . uniqid();
-        mkdir($this->logDir, 0755, true);
+        mkdir($this->logDir, 0o755, true);
         $_SESSION = [];
         $_SERVER['REMOTE_ADDR'] = '127.0.0.1';
         $_SERVER['REQUEST_URI'] = '/test';
@@ -197,7 +198,7 @@ class ErrorHandlerTest extends TestCase
         $this->initHandler(false);
 
         ob_start();
-        ErrorHandler::handleException(new \RuntimeException('Test exception'));
+        ErrorHandler::handleException(new RuntimeException('Test exception'));
         $output = ob_get_clean();
 
         $content = file_get_contents($this->getLogPath());
@@ -216,7 +217,7 @@ class ErrorHandlerTest extends TestCase
         $this->initHandler(true);
 
         ob_start();
-        ErrorHandler::handleException(new \RuntimeException('Detailed error info'));
+        ErrorHandler::handleException(new RuntimeException('Detailed error info'));
         $output = ob_get_clean();
 
         $this->assertStringContainsString('Detailed error info', $output);
