@@ -216,6 +216,14 @@ class ErrorHandler
      */
     private static function writeLog(string $message, string $type = 'error'): void
     {
+        // Safety-Net: wenn ErrorHandler::init() nie aufgerufen wurde,
+        // ist $logPath leer. dirname('') ist "", dadurch entstuende
+        // "/security.log" (absoluter Root-Pfad) und file_put_contents
+        // scheitert mit Permission denied + Warning.
+        if (self::$logPath === '') {
+            return;
+        }
+
         $logFile = match ($type) {
             'security' => dirname(self::$logPath) . '/security.log',
             default => self::$logPath,
@@ -223,12 +231,12 @@ class ErrorHandler
 
         // Ensure log directory exists
         $logDir = dirname($logFile);
-        if (!is_dir($logDir)) {
-            mkdir($logDir, 0o755, true);
+        if (!is_dir($logDir) && !@mkdir($logDir, 0o755, true) && !is_dir($logDir)) {
+            return;
         }
 
-        // Append to log file
-        file_put_contents($logFile, $message . PHP_EOL, FILE_APPEND | LOCK_EX);
+        // Append to log file (Fehler leise verwerfen, sonst Warning-Cascade)
+        @file_put_contents($logFile, $message . PHP_EOL, FILE_APPEND | LOCK_EX);
     }
 
     /**
