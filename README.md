@@ -1,8 +1,8 @@
 # PowerPHPBoard
 
 [![PHP](https://img.shields.io/badge/PHP-8.4-blue?style=flat-square)](https://www.php.net/)
-[![tests](https://img.shields.io/badge/tests-184%20passing-brightgreen?style=flat-square)](#testing)
-[![coverage](https://img.shields.io/badge/coverage-73%25-yellowgreen?style=flat-square)](#testing)
+[![tests](https://img.shields.io/badge/tests-190%20passing-brightgreen?style=flat-square)](#testing)
+[![coverage](https://img.shields.io/badge/coverage-82%25-brightgreen?style=flat-square)](#testing)
 [![license](https://img.shields.io/badge/license-MIT-yellow?style=flat-square)](LICENSE)
 
 Ein sicheres, leichtgewichtiges PHP-Forum-System fuer **PHP 8.4+**.
