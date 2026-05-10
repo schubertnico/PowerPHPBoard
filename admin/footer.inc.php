@@ -1,36 +1,32 @@
-<?php
-
-declare(strict_types=1);
-
+<?php declare(strict_types=1);
 /**
  * PowerPHPBoard - Admin Footer
  *
- * MIT License
- *
- * Copyright (c) 2026 PowerScripts
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * MIT License - Copyright (c) 2026 PowerScripts
  */
 ?>
-</td></tr>
-</table>
-
-<table border="0" width="95%" cellpadding="0" cellspacing="0">
-<tr><td align="center" colspan="2"><br>
-<small><a href="http://www.powerscripts.org">PowerPHPBoard &copy; Copyright 2001-2002 by PowerScripts</a></small>
-</td></tr>
-</table>
+</main>
+<footer class="bg-dark text-light py-3 mt-auto">
+  <div class="container-xl text-center">
+    <small>
+      PowerPHPBoard &copy; 2001-2026
+      <a class="link-light" href="https://www.powerscripts.org" target="_blank" rel="noopener">PowerScripts</a>
+    </small>
+  </div>
+</footer>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+<script>
+(function () {
+  document.querySelectorAll('form.needs-validation').forEach(function (form) {
+    form.addEventListener('submit', function (event) {
+      if (!form.checkValidity()) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      form.classList.add('was-validated');
+    }, false);
+  });
+})();
+</script>
 </body>
 </html>

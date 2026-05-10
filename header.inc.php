@@ -5,23 +5,7 @@ declare(strict_types=1);
 /**
  * PowerPHPBoard - Main Header Include
  *
- * MIT License
- *
- * Copyright (c) 2026 PowerScripts
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * MIT License - Copyright (c) 2026 PowerScripts
  */
 
 use PowerPHPBoard\Database;
@@ -53,7 +37,12 @@ $current = Security::getInt('current');
 try {
     $db = Database::getInstance($mysql);
 } catch (PDOException $e) {
-    echo '<center><b>Couldn\'t connect to database server!</b></center>';
+    echo '<!doctype html><html lang="de"><head><meta charset="UTF-8"><title>Database error</title>'
+        . '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"></head>'
+        . '<body class="bg-body-tertiary"><div class="container py-5"><div class="alert alert-danger" role="alert">'
+        . '<h1 class="h4 alert-heading">Datenbankfehler</h1>'
+        . '<p class="mb-0">Es konnte keine Verbindung zum Datenbankserver hergestellt werden.</p>'
+        . '</div></div></body></html>';
     exit;
 }
 
@@ -104,7 +93,6 @@ if ($boardid > 0) {
     );
     if ($board !== null) {
         $catid = (int) $board['catid'];
-        // Override design settings from board
         foreach (['header', 'footer', 'bordercolor', 'tablebg1', 'tablebg2', 'tablebg3', 'newthread', 'newpost'] as $key) {
             if (!empty($board[$key])) {
                 $settings[$key] = $board[$key];
@@ -141,7 +129,19 @@ if (Session::isLoggedIn()) {
 // Include functions
 require_once __DIR__ . '/functions.inc.php';
 
-// Include header template
+// Build navigation query string for shared links
+$navQuery = http_build_query(['catid' => $catid, 'boardid' => $boardid]);
+
+// Page title
+$pageTitle = $settings['boardtitle'] ?? 'PowerPHPBoard';
+$pageSubtitle = '';
+if (!empty($board['title'])) {
+    $pageSubtitle = (string) $board['title'];
+} elseif (!empty($bcat['title'])) {
+    $pageSubtitle = (string) $bcat['title'];
+}
+
+// Include header template (HTML5 doctype, head, opening body)
 $headerFile = $settings['header'] ?? '';
 if ($headerFile !== '' && file_exists(__DIR__ . '/inc/' . $headerFile)) {
     include __DIR__ . '/inc/' . $headerFile;
@@ -149,121 +149,177 @@ if ($headerFile !== '' && file_exists(__DIR__ . '/inc/' . $headerFile)) {
     include __DIR__ . '/inc/header.ppb';
 }
 ?>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark" aria-label="Hauptnavigation">
+  <div class="container-xl">
+    <a class="navbar-brand fw-semibold" href="index.php">
+      <i class="bi bi-chat-square-text-fill" aria-hidden="true"></i>
+      <?php echo Security::escape($settings['boardtitle'] ?? 'PowerPHPBoard'); ?>
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+            data-bs-target="#ppbNav" aria-controls="ppbNav" aria-expanded="false"
+            aria-label="Navigation umschalten">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="ppbNav">
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        <li class="nav-item">
+          <a class="nav-link" href="index.php"><i class="bi bi-house-door" aria-hidden="true"></i> Home</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="statistics.php?<?php echo Security::escape($navQuery); ?>">
+            <i class="bi bi-bar-chart" aria-hidden="true"></i>
+            <?php echo $lang_statistics ?? 'Statistics'; ?>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="bbcode.php"><i class="bi bi-code-slash" aria-hidden="true"></i> BBCode</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="smilies.php"><i class="bi bi-emoji-smile" aria-hidden="true"></i> Smilies</a>
+        </li>
+      </ul>
+      <ul class="navbar-nav align-items-lg-center">
+        <?php if ($loggedin === 'YES'): ?>
+          <li class="nav-item nav-link mb-0">
+            <i class="bi bi-person-check" aria-hidden="true"></i>
+            <?php echo $lang_loggedinas ?? 'Logged in as'; ?>
+            <strong><?php echo Security::escape($ppbuser['username'] ?? ''); ?></strong>
+          </li>
+          <?php if (($ppbuser['status'] ?? '') === 'Administrator'): ?>
+            <li class="nav-item">
+              <a class="nav-link link-warning" href="admin/" title="Adminbereich">
+                <i class="bi bi-shield-lock-fill" aria-hidden="true"></i>
+                Adminbereich
+              </a>
+            </li>
+          <?php endif; ?>
+          <li class="nav-item">
+            <a class="nav-link" href="profile.php?<?php echo Security::escape($navQuery); ?>">
+              <i class="bi bi-person-gear" aria-hidden="true"></i>
+              <?php echo $lang_profile ?? 'Profile'; ?>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="logout.php?<?php echo Security::escape($navQuery); ?>">
+              <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
+              <?php echo $lang_logout ?? 'Logout'; ?>
+            </a>
+          </li>
+        <?php else: ?>
+          <li class="nav-item">
+            <a class="nav-link" href="login.php?<?php echo Security::escape($navQuery); ?>">
+              <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
+              <?php echo $lang_login ?? 'Login'; ?>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="register.php?<?php echo Security::escape($navQuery); ?>">
+              <i class="bi bi-person-plus" aria-hidden="true"></i>
+              <?php echo $lang_register ?? 'Register'; ?>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="profile.php?<?php echo Security::escape($navQuery); ?>">
+              <i class="bi bi-person" aria-hidden="true"></i>
+              <?php echo $lang_profile ?? 'Profile'; ?>
+            </a>
+          </li>
+        <?php endif; ?>
+      </ul>
+    </div>
+  </div>
+</nav>
 
-<center>
-<table border="0" width="95%" cellpadding="0" cellspacing="0">
+<main class="container-xl py-4 flex-grow-1" role="main">
 
-<tr><td width="50%">
-  <table border="0" cellpadding="0" cellspacing="0" width="100%">
-  <tr><td width="20" height="15" valign="middle">
-  <img src="images/dir1.gif" width="17" height="15" border="0" alt="">
-  </td><td width="*" valign="middle">
-  <a href="index.php"><?php echo Security::escape($settings['boardtitle'] ?? 'PowerPHPBoard'); ?></a>
-  </td></tr>
-  </table>
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="index.php"><?php echo Security::escape($settings['boardtitle'] ?? 'PowerPHPBoard'); ?></a></li>
 <?php
-if (!empty($bcat['title'])) {
-    echo '
-      <table border="0" cellpadding="0" cellspacing="0" width="100%">
-      <tr><td width="37" height="15" valign="middle">
-      <img src="images/dir2.gif" width="34" height="15" border="0" alt="">
-      </td><td width="*" valign="middle">
-      <a href="index.php?catid=' . $catid . '">' . Security::escape($bcat['title']) . '</a>
-      </td></tr>
-      </table>
-    ';
-}
-if (!empty($board['title'])) {
-    echo '
-      <table border="0" cellpadding="0" cellspacing="0" width="100%">
-      <tr><td width="54" height="15" valign="middle">
-      <img src="images/dir3.gif" width="51" height="15" border="0" alt="">
-      </td><td width="*" valign="middle">
-      <a href="showboard.php?boardid=' . (int) $board['id'] . '">' . Security::escape($board['title']) . '</a>
-      </td></tr>
-      </table>
-    ';
-}
-if (!empty($thread['title'])) {
-    echo '
-      <table border="0" cellpadding="0" cellspacing="0" width="100%">
-      <tr><td width="70" height="15" valign="middle">
-      <img src="images/dir4.gif" width="67" height="15" border="0" alt="">
-      </td><td width="*" valign="middle">
-      <a href="showthread.php?threadid=' . (int) $thread['id'] . '">' . Security::escape($thread['title']) . '</a>
-      </td></tr>
-      </table>
-    ';
-}
+if (!empty($bcat['title'])):
+    $catLink = 'index.php?catid=' . (int) ($bcat['id'] ?? $catid);
+    $isLast = empty($board['title']) && empty($thread['title']);
 ?>
-<br>
+    <li class="breadcrumb-item<?php echo $isLast ? ' active' : ''; ?>"<?php echo $isLast ? ' aria-current="page"' : ''; ?>>
+      <?php if ($isLast): ?>
+        <?php echo Security::escape((string) $bcat['title']); ?>
+      <?php else: ?>
+        <a href="<?php echo Security::escape($catLink); ?>"><?php echo Security::escape((string) $bcat['title']); ?></a>
+      <?php endif; ?>
+    </li>
+<?php endif; ?>
 <?php
-if (!empty($board['title'])) {
-    echo '<b class="big">' . Security::escape($board['title']) . '</b><br>
-      <small>( ' . ($lang_moderatedby ?? 'Moderated by');
-
-    if (!empty($board['mods'])) {
-        // Use explode() instead of deprecated split()
-        $mods = explode(',', (string) $board['mods']);
-        $first = true;
-        foreach ($mods as $modEmail) {
-            $modEmail = trim($modEmail);
-            if ($modEmail === '') {
-                continue;
-            }
-            $mod = $db->fetchOne('SELECT id, username FROM ppb_users WHERE email = ?', [$modEmail]);
-            if ($mod !== null) {
-                if (!$first) {
-                    echo ', ';
-                }
-                echo '<a href="showprofile.php?userid=' . (int) $mod['id'] . '&catid=' . $catid . '&boardid=' . $boardid . '">' . Security::escape($mod['username']) . '</a>';
-                $first = false;
-            }
-        }
-    }
-    echo ')</small>';
-}
+if (!empty($board['title'])):
+    $boardLink = 'showboard.php?boardid=' . (int) $board['id'];
+    $isLast = empty($thread['title']);
 ?>
+    <li class="breadcrumb-item<?php echo $isLast ? ' active' : ''; ?>"<?php echo $isLast ? ' aria-current="page"' : ''; ?>>
+      <?php if ($isLast): ?>
+        <?php echo Security::escape((string) $board['title']); ?>
+      <?php else: ?>
+        <a href="<?php echo Security::escape($boardLink); ?>"><?php echo Security::escape((string) $board['title']); ?></a>
+      <?php endif; ?>
+    </li>
+<?php endif; ?>
+<?php if (!empty($thread['title'])): ?>
+    <li class="breadcrumb-item active" aria-current="page">
+      <?php echo Security::escape((string) $thread['title']); ?>
+    </li>
+<?php endif; ?>
+  </ol>
+</nav>
 
-</td><td width="50%" align="center">
+<?php if (!empty($board['title'])): ?>
+<header class="mb-3">
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+    <div>
+      <h2 class="h3 mb-2"><?php echo Security::escape((string) $board['title']); ?></h2>
+      <?php if (!empty($board['mods'])): ?>
+        <p class="text-body-secondary small mb-0">
+          <?php echo $lang_moderatedby ?? 'Moderated by'; ?>:
+          <?php
+          $mods = explode(',', (string) $board['mods']);
+          $modLinks = [];
+          foreach ($mods as $modEmail) {
+              $modEmail = trim($modEmail);
+              if ($modEmail === '') {
+                  continue;
+              }
+              $mod = $db->fetchOne('SELECT id, username FROM ppb_users WHERE email = ?', [$modEmail]);
+              if ($mod !== null) {
+                  $modLinks[] = '<a href="showprofile.php?userid=' . (int) $mod['id']
+                      . '&catid=' . (int) $catid . '&boardid=' . (int) $boardid . '">'
+                      . Security::escape((string) $mod['username']) . '</a>';
+              }
+          }
+          echo implode(', ', $modLinks);
+          ?>
+        </p>
+      <?php endif; ?>
+    </div>
+    <div class="d-flex gap-2 flex-wrap" role="group" aria-label="Aktionen">
 <?php
-if (!empty($board['title'])) {
-    if (($board['status'] ?? '') !== 'Closed') {
-        echo render_action_button('newthread.php?boardid=' . (int) $board['id'], $settings['newthread'] ?? 'images/newthread.gif', $lang_newthread ?? 'New Thread', $settings['tablebg3'] ?? '#cccccc');
+    if (($board['status'] ?? '') === 'Closed') {
+        echo '<span class="badge text-bg-secondary align-self-center">'
+            . ($lang_boardclosed ?? 'Board closed') . '</span>';
+    } else {
+        echo '<a class="btn btn-primary btn-sm" href="newthread.php?boardid='
+            . (int) $board['id'] . '"><i class="bi bi-plus-circle" aria-hidden="true"></i> '
+            . ($lang_newthread ?? 'New Thread') . '</a>';
         if (!empty($thread['title'])) {
             if (($thread['status'] ?? '') !== 'Closed') {
-                echo '&nbsp;&nbsp;' . render_action_button('newpost.php?threadid=' . (int) $thread['id'] . '&current=' . $current, $settings['newpost'] ?? 'images/newpost.gif', $lang_newpost ?? 'New Post', $settings['tablebg3'] ?? '#cccccc');
+                echo '<a class="btn btn-success btn-sm" href="newpost.php?threadid='
+                    . (int) $thread['id'] . '&current=' . (int) $current
+                    . '"><i class="bi bi-reply" aria-hidden="true"></i> '
+                    . ($lang_newpost ?? 'New Post') . '</a>';
             } else {
-                echo '- [ ' . ($lang_threadclosed ?? 'Thread closed') . ' ] -';
+                echo '<span class="badge text-bg-secondary align-self-center">'
+                    . ($lang_threadclosed ?? 'Thread closed') . '</span>';
             }
         }
-    } else {
-        echo '- [ ' . ($lang_boardclosed ?? 'Board closed') . ' ] -';
     }
-    echo '<br>';
-}
 ?>
-<br>
-<small><a href="index.php">Home</a> |
-<?php
-if ($loggedin === 'NO') {
-    echo '<a href="login.php?catid=' . $catid . '&boardid=' . $boardid . '">' . ($lang_login ?? 'Login') . '</a> | ';
-}
-echo '<a href="profile.php?catid=' . $catid . '&boardid=' . $boardid . '">' . ($lang_profile ?? 'Profile') . '</a> | ';
-if ($loggedin === 'NO') {
-    echo '<a href="register.php?catid=' . $catid . '&boardid=' . $boardid . '">' . ($lang_register ?? 'Register') . '</a> | ';
-}
-if ($loggedin === 'YES') {
-    echo '<a href="logout.php?catid=' . $catid . '&boardid=' . $boardid . '">' . ($lang_logout ?? 'Logout') . '</a> | ';
-}
-echo '<a href="statistics.php?catid=' . $catid . '&boardid=' . $boardid . '">' . ($lang_statistics ?? 'Statistics') . '</a><br>';
-if ($loggedin === 'YES') {
-    echo '<br>' . ($lang_loggedinas ?? 'Logged in as') . ' <b>' . Security::escape($ppbuser['username'] ?? '') . '</b><br>';
-}
-?>
-</small>
-</td></tr>
-<tr><td colspan="2" align="center">
-<br>
-<table border="0" cellpadding="0" cellspacing="0" width="100%" bgcolor="<?php echo Security::escape($settings['bordercolor'] ?? '#000000'); ?>">
-<tr><td width="100%">
+    </div>
+  </div>
+</header>
+<?php endif; ?>

@@ -5,133 +5,112 @@ declare(strict_types=1);
 /**
  * PowerPHPBoard - Show User Profile
  *
- * MIT License
- *
- * Copyright (c) 2026 PowerScripts
+ * MIT License - Copyright (c) 2026 PowerScripts
  */
 
 use PowerPHPBoard\Security;
 
 include __DIR__ . '/header.inc.php';
-?>
 
-<table border="0" cellpadding="2" cellspacing="1" width="100%">
-
-<?php
 $userid = Security::getInt('userid');
-
-if ($userid === 0) {
-    echo '
-    <tr><td bgcolor="' . Security::escape($settings['tablebg3'] ?? '#cccccc') . '">
-    <b>' . ($lang_errormessage ?? 'Error') . '</b>
-    </td></tr>
-    <tr><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '"><br>
-    ' . ($lang_chooseuser ?? 'Please choose a user') . '<br><br>
-    </td></tr>
-    <tr><td bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '" align="center">
-    <a href="index.php">' . ($lang_boardlist ?? 'Board list') . '</a>
-    </td></tr>
-    ';
-} else {
+$user = null;
+if ($userid > 0) {
     $user = $db->fetchOne('SELECT * FROM ppb_users WHERE id = ?', [$userid]);
-
-    if ($user === null) {
-        echo '
-        <tr><td bgcolor="' . Security::escape($settings['tablebg3'] ?? '#cccccc') . '">
-        <b>' . ($lang_errormessage ?? 'Error') . '</b>
-        </td></tr>
-        <tr><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '"><br>
-        ' . ($lang_nouserwithid ?? 'No user with this ID') . '<br><br>
-        </td></tr>
-        <tr><td bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '" align="center">
-        <a href="index.php">' . ($lang_boardlist ?? 'Board list') . '</a>
-        </td></tr>
-        ';
-    } else {
-        echo '
-        <tr><td colspan="2" bgcolor="' . Security::escape($settings['tablebg3'] ?? '#cccccc') . '">
-        <b>' . ($lang_showuserprof ?? 'User Profile') . '</b>
-        </td></tr>
-        <tr><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '" width="150">
-        <b>' . ($lang_username ?? 'Username') . '</b>
-        </td><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '">
-        ' . Security::escape($user['username']) . '
-        </td></tr>
-        <tr><td bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '">
-        <b>' . ($lang_email ?? 'Email') . '</b>
-        </td><td bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '">
-        ';
-
-        if ($user['hideemail'] === 'NO') {
-            echo '<a href="mailto:' . Security::escape($user['email']) . '">' . Security::escape($user['email']) . '</a>';
-        } else {
-            echo '<a href="sendmail.php?userid=' . (int) $user['id'] . '&catid=' . (int) $catid . '&boardid=' . (int) $boardid . '">' . ($lang_sendmail ?? 'Send mail') . '</a>';
-        }
-
-        echo '
-        </td></tr>
-        <tr><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '">
-        <b>' . ($lang_icq ?? 'ICQ') . '</b>
-        </td><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '">
-        ';
-
-        if (!empty($user['icq'])) {
-            echo '<a href="mailto:' . Security::escape($user['icq']) . '@pager.icq.com">' . Security::escape($user['icq']) . '</a>';
-        } else {
-            echo 'N/A';
-        }
-
-        echo '
-        </td></tr>
-        <tr><td bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '">
-        <b>' . ($lang_homepage ?? 'Homepage') . '</b>
-        </td><td bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '">
-        ';
-
-        if ($user['homepage'] === 'http://' || empty($user['homepage'])) {
-            echo 'N/A';
-        } else {
-            echo '<a href="' . Security::escape($user['homepage']) . '" target="_new">' . Security::escape($user['homepage']) . '</a>';
-        }
-
-        echo '
-        </td></tr>
-        <tr><td bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '">
-        <b>' . ($lang_biography ?? 'Biography') . '</b>
-        </td><td bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '">
-        ';
-
-        if (!empty($user['biography'])) {
-            $biography = nl2br(Security::escape($user['biography']));
-            echo $biography;
-        } else {
-            echo 'N/A';
-        }
-
-        echo '
-        </td></tr>
-        <tr><td bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '">
-        <b>' . ($lang_rank ?? 'Rank') . '</b>
-        </td><td bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '">
-        ';
-
-        if ($user['status'] === 'Deactivated' || $user['status'] === 'Administrator') {
-            echo Security::escape($user['status']);
-        } else {
-            $rank = getrank((int) $user['id'], $db);
-            echo Security::escape($rank);
-        }
-
-        echo '
-        </td></tr>
-        <tr><td colspan="2" align="center" bgcolor="' . Security::escape($settings['tablebg3'] ?? '#cccccc') . '">
-        <a href="javascript:history.back()">' . ($lang_back ?? 'Back') . '</a>
-        </td></tr>
-        ';
-    }
 }
 ?>
 
-</table>
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+
+  <?php if ($userid === 0 || $user === null): ?>
+    <?php
+    $msg = $userid === 0
+        ? ($lang_chooseuser ?? 'Please choose a user')
+        : ($lang_nouserwithid ?? 'No user with this ID');
+    default_error($msg, 'index.php', $lang_boardlist ?? 'Board list');
+    ?>
+  <?php else:
+      $rank = ($user['status'] === 'Deactivated' || $user['status'] === 'Administrator')
+          ? $user['status']
+          : getrank((int) $user['id'], $db);
+  ?>
+    <section class="card shadow-sm mb-4">
+      <header class="card-header bg-secondary-subtle d-flex align-items-center gap-2">
+        <i class="bi bi-person-circle fs-4" aria-hidden="true"></i>
+        <h1 class="h5 mb-0"><?php echo $lang_showuserprof ?? 'User Profile'; ?></h1>
+      </header>
+      <div class="card-body">
+        <dl class="row mb-0">
+          <dt class="col-sm-4 col-md-3"><?php echo $lang_username ?? 'Username'; ?></dt>
+          <dd class="col-sm-8 col-md-9 fw-semibold">
+            <?php echo Security::escape((string) $user['username']); ?>
+            <?php if ($user['status'] === 'Administrator'): ?>
+              <span class="badge text-bg-danger ms-1">Administrator</span>
+            <?php elseif ($user['status'] === 'Deactivated'): ?>
+              <span class="badge text-bg-secondary ms-1">Deaktiviert</span>
+            <?php endif; ?>
+          </dd>
+
+          <dt class="col-sm-4 col-md-3"><?php echo $lang_email ?? 'Email'; ?></dt>
+          <dd class="col-sm-8 col-md-9">
+            <?php if ($user['hideemail'] === 'NO'): ?>
+              <a class="text-decoration-none" href="mailto:<?php echo Security::escape((string) $user['email']); ?>">
+                <i class="bi bi-envelope" aria-hidden="true"></i>
+                <?php echo Security::escape((string) $user['email']); ?>
+              </a>
+            <?php else: ?>
+              <a class="text-decoration-none" href="sendmail.php?userid=<?php echo (int) $user['id']; ?>&catid=<?php echo (int) $catid; ?>&boardid=<?php echo (int) $boardid; ?>">
+                <i class="bi bi-envelope" aria-hidden="true"></i>
+                <?php echo $lang_sendmail ?? 'Send mail'; ?>
+              </a>
+            <?php endif; ?>
+          </dd>
+
+          <dt class="col-sm-4 col-md-3"><?php echo $lang_icq ?? 'ICQ'; ?></dt>
+          <dd class="col-sm-8 col-md-9">
+            <?php if (!empty($user['icq'])): ?>
+              <?php echo Security::escape((string) $user['icq']); ?>
+            <?php else: ?>
+              <span class="text-body-secondary">N/A</span>
+            <?php endif; ?>
+          </dd>
+
+          <dt class="col-sm-4 col-md-3"><?php echo $lang_homepage ?? 'Homepage'; ?></dt>
+          <dd class="col-sm-8 col-md-9">
+            <?php if (!empty($user['homepage']) && $user['homepage'] !== 'http://'): ?>
+              <a class="text-decoration-none" href="<?php echo Security::escape((string) $user['homepage']); ?>"
+                 target="_blank" rel="noopener noreferrer">
+                <i class="bi bi-globe" aria-hidden="true"></i>
+                <?php echo Security::escape((string) $user['homepage']); ?>
+              </a>
+            <?php else: ?>
+              <span class="text-body-secondary">N/A</span>
+            <?php endif; ?>
+          </dd>
+
+          <dt class="col-sm-4 col-md-3"><?php echo $lang_biography ?? 'Biography'; ?></dt>
+          <dd class="col-sm-8 col-md-9">
+            <?php if (!empty($user['biography'])): ?>
+              <?php echo nl2br(Security::escape((string) $user['biography'])); ?>
+            <?php else: ?>
+              <span class="text-body-secondary">N/A</span>
+            <?php endif; ?>
+          </dd>
+
+          <dt class="col-sm-4 col-md-3"><?php echo $lang_rank ?? 'Rank'; ?></dt>
+          <dd class="col-sm-8 col-md-9"><?php echo Security::escape((string) $rank); ?></dd>
+        </dl>
+      </div>
+      <footer class="card-footer bg-light">
+        <a class="btn btn-outline-secondary btn-sm" href="javascript:history.back()">
+          <i class="bi bi-arrow-left" aria-hidden="true"></i>
+          <?php echo $lang_back ?? 'Back'; ?>
+        </a>
+      </footer>
+    </section>
+  <?php endif; ?>
+
+  </div>
+</div>
 
 <?php include __DIR__ . '/footer.inc.php'; ?>

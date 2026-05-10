@@ -138,6 +138,7 @@ docker-compose.override.yml
 
 # ---------- Claude Code / KI-Tools ----------
 /.claude/
+/.ralph-loop/
 CLAUDE.local.md
 .aider*
 /.aidigestignore

@@ -5,9 +5,7 @@ declare(strict_types=1);
 /**
  * PowerPHPBoard - Send Password Reset Link
  *
- * MIT License
- *
- * Copyright (c) 2026 PowerScripts
+ * MIT License - Copyright (c) 2026 PowerScripts
  */
 
 use PowerPHPBoard\CSRF;
@@ -49,34 +47,16 @@ $rateLimiter = new RateLimiter(
 );
 $rlIdent = (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown');
 
-include __DIR__ . '/header.inc.php';
-?>
+$status = '';
+$errorText = '';
 
-<table border="0" cellpadding="2" cellspacing="1" width="100%">
-
-<?php
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $send === 1) {
     if (!CSRF::validateFromPost()) {
-        default_error(
-            'Security token invalid. Please try again.',
-            'javascript:history.back()',
-            $lang_backtosendpwdform ?? 'Back',
-            $settings['tablebg3'] ?? '#cccccc',
-            $settings['tablebg2'] ?? '#eeeeee',
-            $settings['tablebg1'] ?? '#ffffff'
-        );
+        $errorText = 'Security token invalid. Please try again.';
     } elseif (!$rateLimiter->check('pwreset', $rlIdent)) {
-        default_error(
-            $lang_toomanyattempts ?? 'Too many attempts. Please try again later.',
-            'index.php',
-            'Home',
-            $settings['tablebg3'] ?? '#cccccc',
-            $settings['tablebg2'] ?? '#eeeeee',
-            $settings['tablebg1'] ?? '#ffffff'
-        );
+        $errorText = $lang_toomanyattempts ?? 'Too many attempts. Please try again later.';
     } else {
         $email = Security::getString('email', 'POST');
-        // BUG-018: Rate-Limit zaehlt jede Anfrage unabhaengig vom Ergebnis
         $rateLimiter->recordFailure('pwreset', $rlIdent);
 
         $user = null;
@@ -85,13 +65,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $send === 1) {
         }
 
         if ($user !== null) {
-            // BUG-016: Token-Flow statt sofortiges Passwort-Reset
             $rawToken = bin2hex(random_bytes(32));
             $tokenHash = hash('sha256', $rawToken);
             $now = time();
             $expires = $now + 3600;
 
-            // Alte, noch nicht verwendete Tokens invalidieren
             $db->query(
                 'UPDATE ppb_password_resets SET used_at = ? WHERE userid = ? AND used_at = 0',
                 [$now, $user['id']]
@@ -101,7 +79,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $send === 1) {
                 [$user['id'], $tokenHash, $expires, $now]
             );
 
-            // Reset-URL zusammenbauen
             $baseUrl = (string) ($settings['boardurl'] ?? '');
             if ($baseUrl === '') {
                 $scheme = (($_SERVER['HTTPS'] ?? '') === 'on') ? 'https' : 'http';
@@ -128,36 +105,75 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $send === 1) {
         }
 
         CSRF::regenerate();
-        // BUG-017: Einheitliche Antwort unabhaengig vom Nutzer-Existenz
-        echo '
-        <tr><td bgcolor="' . Security::escape($settings['tablebg3'] ?? '#cccccc') . '">
-        <b>' . ($lang_statusmessage ?? 'Status') . '</b>
-        </td></tr>
-        <tr><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '"><br>
-        ' . ($lang_pwdresetlinksent ?? 'If the email is registered, a reset link has been sent.') . '<br><br>
-        </td></tr>
-        <tr><td bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '" align="center">
-        <a href="index.php">Home</a>
-        </td></tr>
-        ';
+        // Einheitliche Antwort unabhängig von der Nutzer-Existenz (BUG-017)
+        $status = $lang_pwdresetlinksent ?? 'If the email is registered, a reset link has been sent.';
     }
-} else {
-    echo '
-    <tr><td bgcolor="' . Security::escape($settings['tablebg3'] ?? '#cccccc') . '">
-    <b>' . ($lang_sendpwd ?? 'Send Password') . '</b>
-    </td></tr>
-    <form action="sendpassword.php?send=1" method="post">
-    ' . CSRF::getTokenField() . '
-    <input type="hidden" name="send" value="1">
-    <tr><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '" align="center"><br>
-    ' . ($lang_email ?? 'Email') . ':<br>
-    <br>
-    <input name="email" size="25" maxlength="100" type="email" required>&nbsp;&nbsp;&nbsp;<input type="submit" value="' . ($lang_send ?? 'Send') . '"><br><br>
-    </td></tr>
-    </form>
-    ';
 }
+
+include __DIR__ . '/header.inc.php';
 ?>
-</table>
+
+<div class="row justify-content-center">
+  <div class="col-md-8 col-lg-6">
+
+  <?php if ($status !== ''): ?>
+    <div class="card shadow-sm border-success">
+      <header class="card-header bg-success text-white">
+        <h2 class="h6 mb-0">
+          <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+          <?php echo $lang_statusmessage ?? 'Status'; ?>
+        </h2>
+      </header>
+      <div class="card-body">
+        <p class="mb-3"><?php echo Security::escape($status); ?></p>
+        <a href="index.php" class="btn btn-primary">
+          <i class="bi bi-house-door" aria-hidden="true"></i> Home
+        </a>
+      </div>
+    </div>
+  <?php else: ?>
+    <?php if ($errorText !== ''): ?>
+      <div class="alert alert-danger" role="alert">
+        <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+        <?php echo Security::escape($errorText); ?>
+      </div>
+    <?php endif; ?>
+    <section class="card shadow-sm">
+      <header class="card-header bg-secondary-subtle">
+        <h1 class="h5 mb-0">
+          <i class="bi bi-envelope-paper" aria-hidden="true"></i>
+          <?php echo $lang_sendpwd ?? 'Send Password'; ?>
+        </h1>
+      </header>
+      <div class="card-body">
+        <form action="sendpassword.php?send=1" method="post" class="needs-validation" novalidate>
+          <?php echo CSRF::getTokenField(); ?>
+          <input type="hidden" name="send" value="1">
+          <div class="mb-3">
+            <label for="email" class="form-label fw-semibold">
+              <?php echo $lang_email ?? 'Email'; ?>
+            </label>
+            <input id="email" name="email" type="email" class="form-control"
+                   maxlength="100" required autocomplete="email"
+                   aria-describedby="emailHelp">
+            <div id="emailHelp" class="form-text">
+              Wir senden einen einmaligen Reset-Link an diese E-Mail-Adresse, falls sie registriert ist.
+            </div>
+            <div class="invalid-feedback">Bitte eine gültige E-Mail-Adresse eingeben.</div>
+          </div>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-send" aria-hidden="true"></i>
+            <?php echo $lang_send ?? 'Send'; ?>
+          </button>
+          <a class="btn btn-link" href="login.php?catid=<?php echo (int) $catid; ?>&boardid=<?php echo (int) $boardid; ?>">
+            <?php echo $lang_backtologin ?? 'Back to login'; ?>
+          </a>
+        </form>
+      </div>
+    </section>
+  <?php endif; ?>
+
+  </div>
+</div>
 
 <?php include __DIR__ . '/footer.inc.php'; ?>

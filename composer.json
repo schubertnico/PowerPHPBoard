@@ -1,6 +1,6 @@
 {
     "name": "powerscripts/powerphpboard",
-    "description": "PowerPHPBoard - A simple PHP forum system",
+    "description": "PowerPHPBoard - PHP 8.4 forum system with Bootstrap 5 frontend",
     "type": "project",
     "license": "MIT",
     "authors": [

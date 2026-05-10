@@ -1,7 +1,8 @@
 # Installationsanleitung
 
-Diese Anleitung beschreibt die vollstaendige Installation von **PowerPHPBoard 2.1.0**.
-Fuer eine Kurzfassung siehe [README.md](README.md) Abschnitt "Schnellstart".
+Diese Anleitung beschreibt die vollständige Installation von **PowerPHPBoard 2.2.0**
+(mit Bootstrap-5-Frontend).
+Für eine Kurzfassung siehe [README.md](README.md) Abschnitt "Schnellstart".
 
 ---
 
@@ -461,7 +462,7 @@ $mail = [
     'from' => getenv('PPB_MAIL_FROM') ?: 'noreply@powerphpboard.local',
 ];
 
-define('PPB_VERSION', '2.1.0');
+define('PPB_VERSION', '2.2.0');
 define('PPB_SESSION_LIFETIME', 3600);
 define('PPB_CSRF_ENABLED', true);
 define('PPB_DEBUG', (bool) (getenv('PPB_DEBUG') ?: false));
@@ -518,14 +519,14 @@ if (file_exists(__DIR__ . '/config.local.inc.php')) {
 
 ### Board-Einstellungen
 
-Nach der Installation im Admin-Panel unter "General Settings" setzen:
+Nach der Installation im Admin-Panel unter "Allgemein" setzen:
 
-- **boardtitle**: Name des Forums
-- **boardurl**: Vollstaendige URL (fuer Links in E-Mails)
-- **adminemail**: Absender-Adresse (Fallback: `$mail['from']`)
-- **language**: `English`, `Deutsch-Sie` oder `Deutsch-Du`
-- **htmlcode**: `ON` oder `OFF` (Achtung: auf `OFF` ist sicherer)
-- **bbcode**, **smilies**: `ON`/`OFF`
+- **Boardtitel**: Name des Forums (Default: `PowerPHPBoard 1.0`)
+- **Board-URL**: Vollständige URL (für Links in E-Mails)
+- **Admin-E-Mail**: Absender-Adresse (Fallback: `$mail['from']`)
+- **Sprache**: `English`, `Deutsch-Sie` oder `Deutsch-Du` (Default ab 2.2.0: `Deutsch-Du`)
+- **HTML in Beiträgen**: `an` oder `aus` (Achtung: auf `aus` ist sicherer)
+- **BBCode in Beiträgen**, **Smilies in Beiträgen**: `an`/`aus`
 
 ---
 
@@ -614,6 +615,28 @@ Im Admin unter "General Settings":
 
 ## Upgrade
 
+### Von v2.1.x nach 2.2.0 (Bootstrap-5-Frontend)
+
+Reines Frontend-Refactor, **keine** DB-Migration nötig.
+
+```bash
+cd /var/www/forum
+git pull origin main
+composer install --no-dev --optimize-autoloader --classmap-authoritative
+```
+
+Sprache umstellen (falls vorher noch English):
+
+```sql
+UPDATE ppb_config SET language = 'Deutsch-Du' WHERE id = 1;
+```
+
+Eigene Anpassungen in `inc/header.ppb`, `inc/footer.ppb`, `header.inc.php`,
+`footer.inc.php` oder `ppb.css` müssen nach dem Pull manuell mit den neuen
+Bootstrap-Templates abgeglichen werden – das Layout hat sich grundlegend
+geändert (Cards statt verschachtelter Tabellen, Bootstrap-CDN statt
+Inline-Styles).
+
 ### Von v2.0.x nach 2.1.0 (Bugfix-Release)
 
 **Backup erstellen:**
@@ -654,12 +677,12 @@ Die Migration legt an:
 - Nutzer mit alten Base64-Passwoertern werden beim ersten Login automatisch auf Argon2id migriert.
 - Mindestpasswortlaenge ist jetzt 8 Zeichen (vorher 6) - bestehende Passwoerter sind nicht betroffen.
 
-### Von v1.x auf 2.1.0 (grosser Sprung)
+### Von v1.x auf 2.2.0 (großer Sprung)
 
 **Wichtig:** Zwischen v1 und v2 wurde das DB-Schema teilweise umgebaut.
 Empfohlen: Daten exportieren, Version 2 **frisch** installieren, dann Daten
 selektiv reimportieren. Die alte `upgrade_v1_to_v2.sql` ist **nicht Bestandteil**
-des 2.1.0-Releases - kontaktiere bei Bedarf [Support](#support).
+des 2.2.0-Releases – kontaktiere bei Bedarf [Support](#support).
 
 ---
 
@@ -830,5 +853,5 @@ php -m | grep -iE "pdo_mysql|mbstring|openssl|session|filter"
 
 ---
 
-**Stand:** 2026-04-24
-**Version:** 2.1.0
+**Stand:** 2026-05-10
+**Version:** 2.2.0 (Bootstrap-5-Frontend)

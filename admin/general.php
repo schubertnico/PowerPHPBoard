@@ -5,227 +5,246 @@ declare(strict_types=1);
 /**
  * PowerPHPBoard - General Administration
  *
- * MIT License
- *
- * Copyright (c) 2026 PowerScripts
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * MIT License - Copyright (c) 2026 PowerScripts
  */
 
 use PowerPHPBoard\CSRF;
 use PowerPHPBoard\Security;
 
 include __DIR__ . '/header.inc.php';
-?>
 
-<table border="0" cellpadding="2" cellspacing="1" width="100%">
+$row = $db->fetchOne('SELECT * FROM ppb_config WHERE id = ?', [1]) ?? [];
+$editgeneral = Security::getInt('editgeneral', 'GET', 0);
+$saveSuccess = false;
+$formError = '';
 
-<?php
-if (($ppbuser['status'] ?? '') === 'Administrator') {
-    $row = $db->fetchOne('SELECT * FROM ppb_config WHERE id = ?', [1]);
+if ($editgeneral === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    CSRF::validateOrDie();
 
-    if ($row !== null) {
-        $editgeneral = Security::getInt('editgeneral', 'GET', 0);
+    $boardtitle = Security::getString('boardtitle', 'POST');
+    $boardurl = Security::getString('boardurl', 'POST');
+    $adminemail = Security::getString('adminemail', 'POST');
+    $header = Security::getString('header', 'POST');
+    $footer = Security::getString('footer', 'POST');
+    $bordercolor = Security::getString('bordercolor', 'POST');
+    $tablebg1 = Security::getString('tablebg1', 'POST');
+    $tablebg2 = Security::getString('tablebg2', 'POST');
+    $tablebg3 = Security::getString('tablebg3', 'POST');
+    $htmlcode = Security::getString('htmlcode', 'POST');
+    $bbcode = Security::getString('bbcode', 'POST');
+    $smilies = Security::getString('smilies', 'POST');
+    $newthread = Security::getString('newthread', 'POST');
+    $newpost = Security::getString('newpost', 'POST');
+    $language = Security::getString('language', 'POST');
 
-        if ($editgeneral === 1) {
-            // Validate CSRF token
-            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-                CSRF::validateOrDie();
-            }
-
-            $boardtitle = Security::getString('boardtitle', 'POST');
-            $boardurl = Security::getString('boardurl', 'POST');
-            $adminemail = Security::getString('adminemail', 'POST');
-            $header = Security::getString('header', 'POST');
-            $footer = Security::getString('footer', 'POST');
-            $bordercolor = Security::getString('bordercolor', 'POST');
-            $tablebg1 = Security::getString('tablebg1', 'POST');
-            $tablebg2 = Security::getString('tablebg2', 'POST');
-            $tablebg3 = Security::getString('tablebg3', 'POST');
-            $htmlcode = Security::getString('htmlcode', 'POST');
-            $bbcode = Security::getString('bbcode', 'POST');
-            $smilies = Security::getString('smilies', 'POST');
-            $newthread = Security::getString('newthread', 'POST');
-            $newpost = Security::getString('newpost', 'POST');
-            $language = Security::getString('language', 'POST');
-
-            if ($boardtitle === '' || $boardurl === '' || $adminemail === '' || $bordercolor === '' || $tablebg1 === '' || $tablebg2 === '' || $tablebg3 === '' || $newthread === '' || $newpost === '') {
-                echo '
-                    <tr><td bgcolor="' . Security::escape($admin_tbl3) . '">
-                    <b>Error message</b>
-                    </td></tr>
-                    <tr><td bgcolor="' . Security::escape($admin_tbl2) . '"><br>
-                    Please insert values for all fields!<br><br>
-                    </td></tr>
-                    <tr><td bgcolor="' . Security::escape($admin_tbl1) . '" align="center">
-                    <a href="javascript:history.back()">Back to general administration form</a>
-                    </td></tr>
-                ';
-            } else {
-                $db->execute(
-                    'UPDATE ppb_config SET boardtitle = ?, boardurl = ?, adminemail = ?, header = ?, footer = ?, bordercolor = ?, tablebg1 = ?, tablebg2 = ?, tablebg3 = ?, htmlcode = ?, bbcode = ?, smilies = ?, newthread = ?, newpost = ?, language = ? WHERE id = ?',
-                    [$boardtitle, $boardurl, $adminemail, $header, $footer, $bordercolor, $tablebg1, $tablebg2, $tablebg3, $htmlcode, $bbcode, $smilies, $newthread, $newpost, $language, 1]
-                );
-                CSRF::regenerate();
-                echo '
-                    <tr><td bgcolor="' . Security::escape($admin_tbl3) . '">
-                    <b>Status message</b>
-                    </td></tr>
-                    <tr><td bgcolor="' . Security::escape($admin_tbl2) . '"><br>
-                    You edited the settings successfully!<br><br>
-                    </td></tr>
-                    <tr><td bgcolor="' . Security::escape($admin_tbl1) . '" align="center">
-                    <a href="general.php">Back to general administration form</a>
-                    </td></tr>
-                ';
-            }
-        } else {
-            $htmlcode_on = ($row['htmlcode'] === 'ON') ? 'checked' : '';
-            $htmlcode_off = ($row['htmlcode'] !== 'ON') ? 'checked' : '';
-            $bbcode_on = ($row['bbcode'] === 'ON') ? 'checked' : '';
-            $bbcode_off = ($row['bbcode'] !== 'ON') ? 'checked' : '';
-            $smilies_on = ($row['smilies'] === 'ON') ? 'checked' : '';
-            $smilies_off = ($row['smilies'] !== 'ON') ? 'checked' : '';
-
-            echo '
-              <form action="general.php?editgeneral=1" method="post">
-              ' . CSRF::getTokenField() . '
-              <tr><td bgcolor="' . Security::escape($admin_tbl3) . '" colspan="2">
-              <b>General information</b>
-              </td></tr>
-              <tr><td bgcolor="' . Security::escape($admin_tbl2) . '">
-              <b>Boardtitle</b> <small>(The title of this board)</small>
-              </td><td bgcolor="' . Security::escape($admin_tbl2) . '" width="300">
-              <input name="boardtitle" size="25" maxlength="200" value="' . Security::escape($row['boardtitle']) . '">
-              </td></tr>
-              <tr><td bgcolor="' . Security::escape($admin_tbl1) . '">
-              <b>Boardurl</b> <small>(The URL to this board)</small>
-              </td><td bgcolor="' . Security::escape($admin_tbl1) . '">
-              <input name="boardurl" size="25" maxlength="250" value="' . Security::escape($row['boardurl']) . '">
-              </td></tr>
-              <tr><td bgcolor="' . Security::escape($admin_tbl2) . '">
-              <b>Adminemail</b> <small>(The eMail adress of the board administrator)</small>
-              </td><td bgcolor="' . Security::escape($admin_tbl2) . '">
-              <input name="adminemail" size="25" maxlength="100" value="' . Security::escape($row['adminemail']) . '">
-              </td></tr>
-              <tr><td bgcolor="' . Security::escape($admin_tbl1) . '">
-              <b>Language</b> <small>(Choose your language here)</small>
-              </td><td bgcolor="' . Security::escape($admin_tbl1) . '">
-              <select name="language" size="1">
-                <option value="' . Security::escape($row['language']) . '">' . Security::escape($row['language']) . '
-                <option>-----
-                <option value="English">English
-                <option value="Deutsch-Sie">Deutsch-Sie
-                <option value="Deutsch-Du">Deutsch-Du
-              </select>
-              </td></tr>
-              <tr><td bgcolor="' . Security::escape($admin_tbl3) . '" colspan="2">
-              <b>Default design</b>
-              </td></tr>
-              <tr><td bgcolor="' . Security::escape($admin_tbl1) . '">
-              <b>Header</b> <small>(The default header file that will be included from the "inc" folder)</small>
-              </td><td bgcolor="' . Security::escape($admin_tbl1) . '">
-              <input name="header" size="25" maxlength="250" value="' . Security::escape($row['header']) . '">
-              </td></tr>
-              <tr><td bgcolor="' . Security::escape($admin_tbl2) . '">
-              <b>Footer</b> <small>(The default footer file that will be included from the "inc" folder)</small>
-              </td><td bgcolor="' . Security::escape($admin_tbl2) . '">
-              <input name="footer" size="25" maxlength="250" value="' . Security::escape($row['footer']) . '">
-              </td></tr>
-              <tr><td bgcolor="' . Security::escape($admin_tbl1) . '">
-              <b>Border</b> <small>(Default color for tableborder)</small>
-              </td><td bgcolor="' . Security::escape($admin_tbl1) . '">
-                <table border="0" cellpadding="0" cellspacing="2" width="100%">
-                <tr><td>
-                <input name="bordercolor" size="7" maxlength="7" value="' . Security::escape($row['bordercolor']) . '">
-                </td><td bgcolor="' . Security::escape($row['bordercolor']) . '" width="50">
-                &nbsp;
-                </td></tr>
-                </table>
-              </td></tr>
-              <tr><td bgcolor="' . Security::escape($admin_tbl2) . '" valign="top">
-              <b>Tablebackground</b> <small>(Default colors for tablebackgrounds)</small>
-              </td><td bgcolor="' . Security::escape($admin_tbl2) . '">
-                <table border="0" cellpadding="0" cellspacing="2" width="100%">
-                <tr><td>
-                <input name="tablebg1" size="7" maxlength="7" value="' . Security::escape($row['tablebg1']) . '"><br>
-                </td><td bgcolor="' . Security::escape($row['tablebg1']) . '" width="50">
-                &nbsp;
-                </td></tr>
-                <tr><td>
-                <input name="tablebg2" size="7" maxlength="7" value="' . Security::escape($row['tablebg2']) . '"><br>
-                </td><td bgcolor="' . Security::escape($row['tablebg2']) . '" width="50">
-                &nbsp;
-                </td></tr>
-                <tr><td>
-                <input name="tablebg3" size="7" maxlength="7" value="' . Security::escape($row['tablebg3']) . '"><br>
-                </td><td bgcolor="' . Security::escape($row['tablebg3']) . '" width="50">
-                &nbsp;
-                </td></tr>
-                </table>
-              </td></tr>
-              <tr><td bgcolor="' . Security::escape($admin_tbl1) . '">
-              <b>New thread button</b> <small>(The 120 x 20 picture for the \'New thread\' button)</small>
-              </td><td bgcolor="' . Security::escape($admin_tbl1) . '" width="300">
-              <input name="newthread" size="25" maxlength="250" value="' . Security::escape($row['newthread']) . '">
-              </td></tr>
-              <tr><td bgcolor="' . Security::escape($admin_tbl2) . '">
-              <b>New post button</b> <small>(The 120 x 20 picture for the \'New post\' button)</small>
-              </td><td bgcolor="' . Security::escape($admin_tbl2) . '" width="300">
-              <input name="newpost" size="25" maxlength="250" value="' . Security::escape($row['newpost']) . '">
-              </td></tr>
-              <tr><td bgcolor="' . Security::escape($admin_tbl3) . '" colspan="2">
-              <b>Feature settings</b>
-              </td></tr>
-              <tr><td bgcolor="' . Security::escape($admin_tbl2) . '">
-              <b>HTML code</b> <small>(Choose if users can use HTML in postings and signatures)</small>
-              </td><td bgcolor="' . Security::escape($admin_tbl2) . '" width="300">
-              <input type="radio" name="htmlcode" value="ON" ' . $htmlcode_on . '> on <input type="radio" name="htmlcode" value="OFF" ' . $htmlcode_off . '> off
-              </td></tr>
-              <tr><td bgcolor="' . Security::escape($admin_tbl1) . '">
-              <b>vB code</b> <small>(Choose if users can use BBcode in postings and signatures)</small>
-              </td><td bgcolor="' . Security::escape($admin_tbl1) . '" width="300">
-              <input type="radio" name="bbcode" value="ON" ' . $bbcode_on . '> on <input type="radio" name="bbcode" value="OFF" ' . $bbcode_off . '> off
-              </td></tr>
-              <tr><td bgcolor="' . Security::escape($admin_tbl2) . '">
-              <b>Smilies</b> <small>(Choose if users can use Smilies in postings and signatures)</small>
-              </td><td bgcolor="' . Security::escape($admin_tbl2) . '" width="300">
-              <input type="radio" name="smilies" value="ON" ' . $smilies_on . '> on <input type="radio" name="smilies" value="OFF" ' . $smilies_off . '> off
-              </td></tr>
-              <tr><td colspan="2" align="center" bgcolor="' . Security::escape($admin_tbl3) . '">
-              <input type="submit" value="Edit settings"> <input type="reset" value="Reset settings">
-              </td></tr>
-              </form>
-            ';
-        }
+    if ($boardtitle === '' || $boardurl === '' || $adminemail === ''
+        || $bordercolor === '' || $tablebg1 === '' || $tablebg2 === '' || $tablebg3 === '') {
+        $formError = 'Bitte fülle alle Pflichtfelder aus.';
+    } else {
+        $db->execute(
+            'UPDATE ppb_config SET boardtitle = ?, boardurl = ?, adminemail = ?, header = ?, footer = ?, bordercolor = ?, tablebg1 = ?, tablebg2 = ?, tablebg3 = ?, htmlcode = ?, bbcode = ?, smilies = ?, newthread = ?, newpost = ?, language = ? WHERE id = ?',
+            [$boardtitle, $boardurl, $adminemail, $header, $footer, $bordercolor, $tablebg1, $tablebg2, $tablebg3, $htmlcode, $bbcode, $smilies, $newthread, $newpost, $language, 1]
+        );
+        CSRF::regenerate();
+        $saveSuccess = true;
+        $row = $db->fetchOne('SELECT * FROM ppb_config WHERE id = ?', [1]) ?? $row;
     }
-} else {
-    echo '
-        <tr><td bgcolor="' . Security::escape($admin_tbl3) . '">
-        <b>Error message</b>
-        </td></tr>
-        <tr><td bgcolor="' . Security::escape($admin_tbl2) . '"><br>
-        Only administrators can edit the boardsettings!<br><br>
-        </td></tr>
-        <tr><td bgcolor="' . Security::escape($admin_tbl1) . '" align="center">
-        <a href="../index.php">' . Security::escape($settings['boardtitle'] ?? '') . '</a>
-        </td></tr>
-    ';
 }
+
+$languages = ['English', 'Deutsch-Sie', 'Deutsch-Du'];
 ?>
 
-</table>
+<header class="mb-3">
+  <h1 class="h3 mb-1"><i class="bi bi-sliders" aria-hidden="true"></i> Allgemeine Einstellungen</h1>
+  <p class="text-body-secondary mb-0">Allgemeines Forum-Setup, Standard-Design und Feature-Schalter.</p>
+</header>
+
+<?php if ($saveSuccess): ?>
+  <div class="alert alert-success" role="alert">
+    <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+    Einstellungen wurden gespeichert.
+  </div>
+<?php endif; ?>
+<?php if ($formError !== ''): ?>
+  <div class="alert alert-danger" role="alert">
+    <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+    <?php echo Security::escape($formError); ?>
+  </div>
+<?php endif; ?>
+
+<form action="general.php?editgeneral=1" method="post" class="needs-validation" novalidate>
+  <?php echo CSRF::getTokenField(); ?>
+
+  <section class="card shadow-sm mb-3">
+    <header class="card-header bg-secondary-subtle">
+      <h2 class="h6 mb-0"><i class="bi bi-info-circle" aria-hidden="true"></i> Allgemeine Informationen</h2>
+    </header>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label for="boardtitle" class="form-label fw-semibold">Boardtitel</label>
+          <input id="boardtitle" name="boardtitle" type="text" class="form-control"
+                 maxlength="200" required
+                 value="<?php echo Security::escape((string) ($row['boardtitle'] ?? '')); ?>">
+          <div class="form-text">Wird als Marke im Header und Browser-Tab angezeigt.</div>
+        </div>
+        <div class="col-md-6">
+          <label for="boardurl" class="form-label fw-semibold">Board-URL</label>
+          <input id="boardurl" name="boardurl" type="url" class="form-control"
+                 maxlength="250" required
+                 value="<?php echo Security::escape((string) ($row['boardurl'] ?? '')); ?>">
+          <div class="form-text">Wird in Mails verwendet.</div>
+        </div>
+        <div class="col-md-6">
+          <label for="adminemail" class="form-label fw-semibold">Admin-E-Mail</label>
+          <input id="adminemail" name="adminemail" type="email" class="form-control"
+                 maxlength="100" required
+                 value="<?php echo Security::escape((string) ($row['adminemail'] ?? '')); ?>">
+        </div>
+        <div class="col-md-6">
+          <label for="language" class="form-label fw-semibold">Sprache</label>
+          <select id="language" name="language" class="form-select">
+            <?php foreach ($languages as $lang): ?>
+              <option value="<?php echo Security::escape($lang); ?>"
+                <?php echo ($row['language'] ?? '') === $lang ? 'selected' : ''; ?>>
+                <?php echo Security::escape($lang); ?>
+              </option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card shadow-sm mb-3">
+    <header class="card-header bg-secondary-subtle">
+      <h2 class="h6 mb-0"><i class="bi bi-palette" aria-hidden="true"></i> Standard-Design</h2>
+    </header>
+    <div class="card-body">
+      <div class="alert alert-info small d-flex align-items-start gap-2 mb-3" role="alert">
+        <i class="bi bi-info-circle-fill fs-5" aria-hidden="true"></i>
+        <div>
+          <strong>Hinweis:</strong> Im neuen Bootstrap-5-Layout werden die Farb- und
+          Button-Bild-Felder <strong>nicht mehr</strong> für die Darstellung verwendet.
+          Sie bleiben aus Kompatibilitätsgründen erhalten und werden als Defaults an
+          neue Boards / Kategorien vererbt.
+        </div>
+      </div>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label for="header" class="form-label">Eigenes Header-Template</label>
+          <input id="header" name="header" type="text" class="form-control" maxlength="250"
+                 value="<?php echo Security::escape((string) ($row['header'] ?? '')); ?>"
+                 aria-describedby="headerHelp">
+          <div id="headerHelp" class="form-text">Dateiname aus dem <code>inc/</code>-Ordner. Leer = Standard-Header.</div>
+        </div>
+        <div class="col-md-6">
+          <label for="footer" class="form-label">Eigenes Footer-Template</label>
+          <input id="footer" name="footer" type="text" class="form-control" maxlength="250"
+                 value="<?php echo Security::escape((string) ($row['footer'] ?? '')); ?>"
+                 aria-describedby="footerHelp">
+          <div id="footerHelp" class="form-text">Dateiname aus dem <code>inc/</code>-Ordner. Leer = Standard-Footer.</div>
+        </div>
+        <div class="col-md-4">
+          <label for="bordercolor" class="form-label">Rahmenfarbe</label>
+          <div class="input-group">
+            <input id="bordercolor" name="bordercolor" type="text" class="form-control"
+                   maxlength="7" required
+                   value="<?php echo Security::escape((string) ($row['bordercolor'] ?? '')); ?>"
+                   aria-describedby="bordercolorHelp">
+            <span class="input-group-text" style="background:<?php echo Security::escape((string) ($row['bordercolor'] ?? '#000')); ?>;width:40px;" aria-hidden="true">&nbsp;</span>
+          </div>
+          <div id="bordercolorHelp" class="form-text">Hex-Farbcode, z.B. <code>#000000</code></div>
+        </div>
+        <div class="col-md-4">
+          <label for="tablebg1" class="form-label">Tabelle Hintergrund 1</label>
+          <div class="input-group">
+            <input id="tablebg1" name="tablebg1" type="text" class="form-control"
+                   maxlength="7" required
+                   value="<?php echo Security::escape((string) ($row['tablebg1'] ?? '')); ?>">
+            <span class="input-group-text" style="background:<?php echo Security::escape((string) ($row['tablebg1'] ?? '#fff')); ?>;width:40px;" aria-hidden="true">&nbsp;</span>
+          </div>
+          <div class="form-text">Helle Tabellenzeile</div>
+        </div>
+        <div class="col-md-4">
+          <label for="tablebg2" class="form-label">Tabelle Hintergrund 2</label>
+          <div class="input-group">
+            <input id="tablebg2" name="tablebg2" type="text" class="form-control"
+                   maxlength="7" required
+                   value="<?php echo Security::escape((string) ($row['tablebg2'] ?? '')); ?>">
+            <span class="input-group-text" style="background:<?php echo Security::escape((string) ($row['tablebg2'] ?? '#eee')); ?>;width:40px;" aria-hidden="true">&nbsp;</span>
+          </div>
+          <div class="form-text">Wechsel-Zeile</div>
+        </div>
+        <div class="col-md-4">
+          <label for="tablebg3" class="form-label">Tabelle Hintergrund 3</label>
+          <div class="input-group">
+            <input id="tablebg3" name="tablebg3" type="text" class="form-control"
+                   maxlength="7" required
+                   value="<?php echo Security::escape((string) ($row['tablebg3'] ?? '')); ?>">
+            <span class="input-group-text" style="background:<?php echo Security::escape((string) ($row['tablebg3'] ?? '#ccc')); ?>;width:40px;" aria-hidden="true">&nbsp;</span>
+          </div>
+          <div class="form-text">Tabellen-Header</div>
+        </div>
+        <div class="col-md-4">
+          <label for="newthread" class="form-label">Bild für "Neuer Thread"-Button</label>
+          <input id="newthread" name="newthread" type="text" class="form-control" maxlength="250"
+                 value="<?php echo Security::escape((string) ($row['newthread'] ?? '')); ?>"
+                 aria-describedby="newthreadHelp">
+          <div id="newthreadHelp" class="form-text">Pfad zu einem 120×20-px-GIF/PNG, z.B. <code>images/newthread.gif</code></div>
+        </div>
+        <div class="col-md-4">
+          <label for="newpost" class="form-label">Bild für "Neuer Beitrag"-Button</label>
+          <input id="newpost" name="newpost" type="text" class="form-control" maxlength="250"
+                 value="<?php echo Security::escape((string) ($row['newpost'] ?? '')); ?>"
+                 aria-describedby="newpostHelp">
+          <div id="newpostHelp" class="form-text">Pfad zu einem 120×20-px-GIF/PNG, z.B. <code>images/newpost.gif</code></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card shadow-sm mb-3">
+    <header class="card-header bg-secondary-subtle">
+      <h2 class="h6 mb-0"><i class="bi bi-toggles" aria-hidden="true"></i> Feature-Einstellungen</h2>
+    </header>
+    <div class="card-body">
+      <?php
+      $features = [
+          ['htmlcode', 'HTML in Beiträgen', $row['htmlcode'] ?? 'OFF'],
+          ['bbcode',   'BBCode in Beiträgen', $row['bbcode'] ?? 'ON'],
+          ['smilies',  'Smilies in Beiträgen', $row['smilies'] ?? 'ON'],
+      ];
+      foreach ($features as [$name, $label, $val]):
+      ?>
+        <fieldset class="mb-2">
+          <legend class="form-label fw-semibold mb-1 fs-6"><?php echo Security::escape($label); ?></legend>
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" name="<?php echo $name; ?>"
+                   id="<?php echo $name; ?>On" value="ON" <?php echo $val === 'ON' ? 'checked' : ''; ?>>
+            <label class="form-check-label" for="<?php echo $name; ?>On">an</label>
+          </div>
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" name="<?php echo $name; ?>"
+                   id="<?php echo $name; ?>Off" value="OFF" <?php echo $val !== 'ON' ? 'checked' : ''; ?>>
+            <label class="form-check-label" for="<?php echo $name; ?>Off">aus</label>
+          </div>
+        </fieldset>
+      <?php endforeach; ?>
+    </div>
+  </section>
+
+  <div class="d-flex flex-wrap gap-2 mb-4">
+    <button type="submit" class="btn btn-primary">
+      <i class="bi bi-save" aria-hidden="true"></i> Einstellungen speichern
+    </button>
+    <button type="reset" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Zurücksetzen
+    </button>
+    <a class="btn btn-link" href="index.php">
+      Zurück zur Übersicht
+    </a>
+  </div>
+</form>
 
 <?php include __DIR__ . '/footer.inc.php'; ?>

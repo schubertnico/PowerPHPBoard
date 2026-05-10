@@ -5,9 +5,7 @@ declare(strict_types=1);
 /**
  * PowerPHPBoard - Edit Post
  *
- * MIT License
- *
- * Copyright (c) 2026 PowerScripts
+ * MIT License - Copyright (c) 2026 PowerScripts
  */
 
 use PowerPHPBoard\CSRF;
@@ -15,27 +13,22 @@ use PowerPHPBoard\Database;
 use PowerPHPBoard\Security;
 use PowerPHPBoard\Session;
 
-// Load configuration
 require_once __DIR__ . '/config.inc.php';
 
-// Start session
 Session::start();
 
-// Get parameters
 $postid = Security::getInt('postid');
 $catid = Security::getInt('catid');
 $boardid = Security::getInt('boardid');
-$login = Security::getInt('login', 'POST');
-$editpost = Security::getInt('editpost', 'POST');
+$login = Security::getInt('login', 'REQUEST');
+$editpost = Security::getInt('editpost', 'REQUEST');
 
-// Connect to database
 try {
     $db = Database::getInstance($mysql);
 } catch (PDOException $e) {
     die('Database connection failed');
 }
 
-// Load settings and user info
 $settings = $db->fetchOne('SELECT * FROM ppb_config WHERE id = ?', [1]) ?? [];
 $ppbuser = [];
 $loggedin = 'NO';
@@ -52,7 +45,6 @@ if (Session::isLoggedIn()) {
     }
 }
 
-// Load language file
 $langFile = match ($settings['language'] ?? 'English') {
     'Deutsch-Sie' => 'deutsch-sie.inc.php',
     'Deutsch-Du' => 'deutsch-du.inc.php',
@@ -60,359 +52,292 @@ $langFile = match ($settings['language'] ?? 'English') {
 };
 require_once __DIR__ . '/' . $langFile;
 require_once __DIR__ . '/functions.inc.php';
-?>
-<?php include __DIR__ . '/header.inc.php'; ?>
 
-<table border="0" cellpadding="2" cellspacing="1" width="100%">
+// Determine state ahead of any output
+$state = 'form'; // form|error|success
+$errorMessage = '';
+$errorBack = 'index.php';
+$errorBackText = 'Home';
+$successMessage = '';
+$successLink = '';
+$successLinkText = '';
+$post = null;
+$canedit = false;
+$ismod = false;
+$adminCanModerate = false;
+$user = null;
 
-<?php
 if ($postid === 0) {
-    default_error(
-        $lang_choosepost ?? 'Please select a post',
-        'index.php',
-        'Home',
-        $settings['tablebg3'] ?? '#cccccc',
-        $settings['tablebg2'] ?? '#eeeeee',
-        $settings['tablebg1'] ?? '#ffffff'
-    );
+    $state = 'error';
+    $errorMessage = $lang_choosepost ?? 'Please select a post';
 } else {
-    // Get post
     $post = $db->fetchOne('SELECT * FROM ppb_posts WHERE id = ?', [$postid]);
-
     if ($post === null) {
-        default_error(
-            $lang_nopostwithid ?? 'No post with this ID',
-            'index.php',
-            'Home',
-            $settings['tablebg3'] ?? '#cccccc',
-            $settings['tablebg2'] ?? '#eeeeee',
-            $settings['tablebg1'] ?? '#ffffff'
-        );
-    } elseif ($login !== 1) {
-        // BUG-014: Editing a post requires an active session
-        default_error(
-            $lang_loginfirst ?? 'You have to log in first',
-            'login.php',
-            $lang_login ?? 'Login',
-            $settings['tablebg3'] ?? '#cccccc',
-            $settings['tablebg2'] ?? '#eeeeee',
-            $settings['tablebg1'] ?? '#ffffff'
-        );
+        $state = 'error';
+        $errorMessage = $lang_nopostwithid ?? 'No post with this ID';
+    } elseif ($login !== 1 || $loggedin !== 'YES') {
+        $state = 'error';
+        $errorMessage = $lang_loginfirst ?? 'You have to log in first';
+        $errorBack = 'login.php';
+        $errorBackText = $lang_login ?? 'Login';
     } else {
-        // Validate CSRF if POST request
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && !CSRF::validateFromPost()) {
-            default_error(
-                'Security token invalid. Please try again.',
-                'javascript:history.back()',
-                $lang_backtoeditpost ?? 'Back to edit',
-                $settings['tablebg3'] ?? '#cccccc',
-                $settings['tablebg2'] ?? '#eeeeee',
-                $settings['tablebg1'] ?? '#ffffff'
-            );
-        } else {
-            // BUG-014: Editing requires session (no email/password fallback)
-            if ($loggedin !== 'YES') {
-                default_error(
-                    $lang_loginfirst ?? 'You have to log in first',
-                    'login.php',
-                    $lang_login ?? 'Login',
-                    $settings['tablebg3'] ?? '#cccccc',
-                    $settings['tablebg2'] ?? '#eeeeee',
-                    $settings['tablebg1'] ?? '#ffffff'
-                );
-            } else {
-                $user = $ppbuser;
+        $user = $ppbuser;
 
-                // Check permissions
-                $canedit = false;
-                $ismod = false;
-
-                // Check if user is moderator
-                $boardData = $db->fetchOne('SELECT mods FROM ppb_boards WHERE id = ?', [$post['boardid']]);
-                if ($boardData !== null && !empty($boardData['mods'])) {
-                    $mods = explode(',', (string) $boardData['mods']);
-                    foreach ($mods as $modEmail) {
-                        $modEmail = trim($modEmail);
-                        if ($modEmail === $user['email']) {
-                            $canedit = true;
-                            $ismod = true;
-                            break;
-                        }
-                    }
-                }
-
-                // Author or admin can always edit
-                if ((int) $user['id'] === (int) $post['author'] || $user['status'] === 'Administrator') {
+        $boardData = $db->fetchOne('SELECT mods FROM ppb_boards WHERE id = ?', [$post['boardid']]);
+        if ($boardData !== null && !empty($boardData['mods'])) {
+            $mods = explode(',', (string) $boardData['mods']);
+            foreach ($mods as $modEmail) {
+                $modEmail = trim($modEmail);
+                if ($modEmail !== '' && $modEmail === $user['email']) {
                     $canedit = true;
+                    $ismod = true;
+                    break;
                 }
+            }
+        }
+        if ((int) $user['id'] === (int) $post['author'] || $user['status'] === 'Administrator') {
+            $canedit = true;
+        }
+        $adminCanModerate = ($ismod || $user['status'] === 'Administrator');
 
-                if (!$canedit) {
-                    default_error(
-                        $lang_notallowedtoeditpost ?? 'You are not allowed to edit this post',
-                        'index.php',
-                        'Home',
-                        $settings['tablebg3'] ?? '#cccccc',
-                        $settings['tablebg2'] ?? '#eeeeee',
-                        $settings['tablebg1'] ?? '#ffffff'
-                    );
-                } elseif ($editpost === 1) {
-                    // Process edit
-                    $title = Security::getString('title', 'POST');
-                    $text = Security::getString('text', 'POST');
-                    $icon = Security::getString('icon', 'POST');
-                    $deletepost = Security::getString('deletepost', 'POST');
-                    $closethread = Security::getString('closethread', 'POST');
-                    $openthread = Security::getString('openthread', 'POST');
+        if (!$canedit) {
+            $state = 'error';
+            $errorMessage = $lang_notallowedtoeditpost ?? 'You are not allowed to edit this post';
+        } elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && !CSRF::validateFromPost()) {
+            $state = 'error';
+            $errorMessage = 'Security token invalid. Please try again.';
+            $errorBack = 'javascript:history.back()';
+            $errorBackText = $lang_backtoeditpost ?? 'Back to edit';
+        } elseif ($editpost === 1) {
+            $title = Security::getString('title', 'POST');
+            $text = Security::getString('text', 'POST');
+            $icon = Security::getString('icon', 'POST');
+            $deletepost = Security::getString('deletepost', 'POST');
+            $closethread = Security::getString('closethread', 'POST');
+            $openthread = Security::getString('openthread', 'POST');
 
-                    if ($text === '') {
-                        default_error(
-                            $lang_inserttext ?? 'Please enter text',
-                            'javascript:history.back()',
-                            $lang_backtoeditpost ?? 'Back to edit',
-                            $settings['tablebg3'] ?? '#cccccc',
-                            $settings['tablebg2'] ?? '#eeeeee',
-                            $settings['tablebg1'] ?? '#ffffff'
-                        );
-                    } elseif ($post['type'] === 'Thread') {
-                        // Editing a thread
-                        if ($title === '') {
-                            default_error(
-                                $lang_inserttitle ?? 'Please enter a title',
-                                'javascript:history.back()',
-                                $lang_backtoeditpost ?? 'Back to edit',
-                                $settings['tablebg3'] ?? '#cccccc',
-                                $settings['tablebg2'] ?? '#eeeeee',
-                                $settings['tablebg1'] ?? '#ffffff'
-                            );
-                        } elseif ($deletepost === 'YES' && ($ismod || $user['status'] === 'Administrator')) {
-                            // Delete thread and all posts
-                            $db->query('DELETE FROM ppb_posts WHERE id = ?', [$postid]);
-                            $db->query('DELETE FROM ppb_posts WHERE threadid = ?', [$postid]);
-
-                            echo '
-                                <tr><td bgcolor="' . Security::escape($settings['tablebg3'] ?? '#cccccc') . '">
-                                <b>' . ($lang_statusmessage ?? 'Status') . '</b>
-                                </td></tr>
-                                <tr><td bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '"><br>
-                                ' . ($lang_threaddeleted ?? 'Thread deleted') . '<br><br>
-                                </td></tr>
-                                <tr><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '" align="center">
-                                <a href="showboard.php?boardid=' . (int) $post['boardid'] . '">' . ($lang_showboard ?? 'Show board') . '</a>
-                                </td></tr>
-                                ';
-                        } elseif ($closethread === 'YES' && ($ismod || $user['status'] === 'Administrator')) {
-                            // Close thread
-                            $db->query("UPDATE ppb_posts SET status = 'Closed' WHERE id = ?", [$postid]);
-
-                            echo '
-                                <tr><td bgcolor="' . Security::escape($settings['tablebg3'] ?? '#cccccc') . '">
-                                <b>' . ($lang_statusmessage ?? 'Status') . '</b>
-                                </td></tr>
-                                <tr><td bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '"><br>
-                                ' . ($lang_threadclosed ?? 'Thread closed') . '<br><br>
-                                </td></tr>
-                                <tr><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '" align="center">
-                                <a href="showboard.php?boardid=' . (int) $post['boardid'] . '">' . ($lang_showboard ?? 'Show board') . '</a>
-                                </td></tr>
-                                ';
-                        } elseif ($openthread === 'YES' && ($ismod || $user['status'] === 'Administrator')) {
-                            // Open thread
-                            $db->query("UPDATE ppb_posts SET status = 'Open' WHERE id = ?", [$postid]);
-
-                            echo '
-                                <tr><td bgcolor="' . Security::escape($settings['tablebg3'] ?? '#cccccc') . '">
-                                <b>' . ($lang_statusmessage ?? 'Status') . '</b>
-                                </td></tr>
-                                <tr><td bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '"><br>
-                                ' . ($lang_threadopened ?? 'Thread opened') . '<br><br>
-                                </td></tr>
-                                <tr><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '" align="center">
-                                <a href="showboard.php?boardid=' . (int) $post['boardid'] . '">' . ($lang_showboard ?? 'Show board') . '</a>
-                                </td></tr>
-                                ';
-                        } else {
-                            // Update thread
-                            $title = trim($title);
-                            $text = trim($text);
-
-                            // Validate icon
-                            $validIcons = ['icon1.gif', 'icon2.gif', 'icon3.gif', 'icon4.gif', 'icon5.gif', 'icon6.gif', 'icon7.gif',
-                                           'icon8.gif', 'icon9.gif', 'icon10.gif', 'icon11.gif', 'icon12.gif', 'icon13.gif', 'icon14.gif', ''];
-                            if (!in_array($icon, $validIcons, true)) {
-                                $icon = '';
-                            }
-
-                            $db->query(
-                                'UPDATE ppb_posts SET title = ?, text = ?, icon = ? WHERE id = ?',
-                                [$title, $text, $icon, $postid]
-                            );
-
-                            echo '
-                                <tr><td bgcolor="' . Security::escape($settings['tablebg3'] ?? '#cccccc') . '">
-                                <b>' . ($lang_statusmessage ?? 'Status') . '</b>
-                                </td></tr>
-                                <tr><td bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '"><br>
-                                ' . ($lang_threadedited ?? 'Thread edited') . '<br><br>
-                                </td></tr>
-                                <tr><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '" align="center">
-                                <a href="showthread.php?threadid=' . (int) $post['id'] . '">' . ($lang_showthread ?? 'Show thread') . '</a>
-                                </td></tr>
-                                ';
-                        }
-                    } else {
-                        // Editing a post (not thread)
-                        if ($deletepost === 'YES' && ($ismod || $user['status'] === 'Administrator')) {
-                            // Delete post
-                            $db->query('DELETE FROM ppb_posts WHERE id = ?', [$postid]);
-
-                            echo '
-                                <tr><td bgcolor="' . Security::escape($settings['tablebg3'] ?? '#cccccc') . '">
-                                <b>' . ($lang_statusmessage ?? 'Status') . '</b>
-                                </td></tr>
-                                <tr><td bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '"><br>
-                                ' . ($lang_postingdeleted ?? 'Post deleted') . '<br><br>
-                                </td></tr>
-                                <tr><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '" align="center">
-                                <a href="showthread.php?threadid=' . (int) $post['threadid'] . '">' . ($lang_showthread ?? 'Show thread') . '</a>
-                                </td></tr>
-                                ';
-                        } else {
-                            // Update post
-                            $text = trim($text);
-                            $db->query('UPDATE ppb_posts SET text = ? WHERE id = ?', [$text, $postid]);
-
-                            echo '
-                                <tr><td bgcolor="' . Security::escape($settings['tablebg3'] ?? '#cccccc') . '">
-                                <b>' . ($lang_statusmessage ?? 'Status') . '</b>
-                                </td></tr>
-                                <tr><td bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '"><br>
-                                ' . ($lang_postingedited ?? 'Post edited') . '<br><br>
-                                </td></tr>
-                                <tr><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '" align="center">
-                                <a href="showthread.php?threadid=' . (int) $post['threadid'] . '">' . ($lang_showthread ?? 'Show thread') . '</a>
-                                </td></tr>
-                                ';
-                        }
-                    }
+            if ($text === '') {
+                $state = 'error';
+                $errorMessage = $lang_inserttext ?? 'Please enter text';
+                $errorBack = 'javascript:history.back()';
+                $errorBackText = $lang_backtoeditpost ?? 'Back to edit';
+            } elseif ($post['type'] === 'Thread') {
+                if ($title === '' && $deletepost !== 'YES' && $closethread !== 'YES' && $openthread !== 'YES') {
+                    $state = 'error';
+                    $errorMessage = $lang_inserttitle ?? 'Please enter a title';
+                    $errorBack = 'javascript:history.back()';
+                    $errorBackText = $lang_backtoeditpost ?? 'Back to edit';
+                } elseif ($deletepost === 'YES' && $adminCanModerate) {
+                    $db->query('DELETE FROM ppb_posts WHERE id = ?', [$postid]);
+                    $db->query('DELETE FROM ppb_posts WHERE threadid = ?', [$postid]);
+                    $state = 'success';
+                    $successMessage = $lang_threaddeleted ?? 'Thread deleted';
+                    $successLink = 'showboard.php?boardid=' . (int) $post['boardid'];
+                    $successLinkText = $lang_showboard ?? 'Show board';
+                } elseif ($closethread === 'YES' && $adminCanModerate) {
+                    $db->query("UPDATE ppb_posts SET status = 'Closed' WHERE id = ?", [$postid]);
+                    $state = 'success';
+                    $successMessage = $lang_threadclosed ?? 'Thread closed';
+                    $successLink = 'showboard.php?boardid=' . (int) $post['boardid'];
+                    $successLinkText = $lang_showboard ?? 'Show board';
+                } elseif ($openthread === 'YES' && $adminCanModerate) {
+                    $db->query("UPDATE ppb_posts SET status = 'Open' WHERE id = ?", [$postid]);
+                    $state = 'success';
+                    $successMessage = $lang_threadopened ?? 'Thread opened';
+                    $successLink = 'showboard.php?boardid=' . (int) $post['boardid'];
+                    $successLinkText = $lang_showboard ?? 'Show board';
                 } else {
-                    // Show edit form
-                    $text = $post['text'];
-
-                    echo '
-                        <form action="editpost.php?postid=' . (int) $post['id'] . '&login=1&editpost=1&catid=' . $catid . '&boardid=' . $boardid . '" method="post">
-                        ' . CSRF::getTokenField() . '
-                        <input type="hidden" name="email" value="' . Security::escape((string) ($user['email'] ?? '')) . '">
-                        <input type="hidden" name="password" value="">
-                        <tr><td bgcolor="' . Security::escape($settings['tablebg3'] ?? '#cccccc') . '" colspan="2">
-                        <b>' . ($lang_editpost ?? 'Edit Post') . '</b>
-                        </td></tr>
-                        ';
-
-                    // Admin/mod options
-                    if ($user['status'] === 'Administrator' || $ismod) {
-                        echo '
-                            <tr><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '" width="300">
-                            ';
-                        if ($post['type'] === 'Thread') {
-                            echo '<b>' . ($lang_deletethread ?? 'Delete thread') . '</b>';
-                        } else {
-                            echo '<b>' . ($lang_deletepost ?? 'Delete post') . '</b>';
-                        }
-                        echo '
-                            </td><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '">
-                            <input type="checkbox" name="deletepost" value="YES">
-                            </td></tr>
-                            ';
-
-                        if ($post['type'] === 'Thread') {
-                            if ($post['status'] === 'Open' || $post['status'] === '') {
-                                echo '
-                                    <tr><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '" width="300">
-                                    <b>' . ($lang_closethread ?? 'Close thread') . '</b>
-                                    </td><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '">
-                                    <input type="checkbox" name="closethread" value="YES">
-                                    </td></tr>
-                                    ';
-                            } elseif ($post['status'] === 'Closed') {
-                                echo '
-                                    <tr><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '" width="300">
-                                    <b>' . ($lang_openthread ?? 'Open thread') . '</b>
-                                    </td><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '">
-                                    <input type="checkbox" name="openthread" value="YES">
-                                    </td></tr>
-                                    ';
-                            }
-                        }
+                    $title = trim($title);
+                    $text = trim($text);
+                    $validIcons = ['icon1.gif', 'icon2.gif', 'icon3.gif', 'icon4.gif', 'icon5.gif', 'icon6.gif', 'icon7.gif',
+                                   'icon8.gif', 'icon9.gif', 'icon10.gif', 'icon11.gif', 'icon12.gif', 'icon13.gif', 'icon14.gif', ''];
+                    if (!in_array($icon, $validIcons, true)) {
+                        $icon = '';
                     }
-
-                    // Thread-specific fields (title, icon)
-                    if ($post['type'] === 'Thread') {
-                        // Icon selection
-                        $iconchecked = array_fill(0, 15, '');
-                        $iconIndex = match ($post['icon']) {
-                            'icon1.gif' => 1, 'icon2.gif' => 2, 'icon3.gif' => 3, 'icon4.gif' => 4,
-                            'icon5.gif' => 5, 'icon6.gif' => 6, 'icon7.gif' => 7, 'icon8.gif' => 8,
-                            'icon9.gif' => 9, 'icon10.gif' => 10, 'icon11.gif' => 11, 'icon12.gif' => 12,
-                            'icon13.gif' => 13, 'icon14.gif' => 14,
-                            default => 0,
-                        };
-                        $iconchecked[$iconIndex] = 'checked';
-
-                        echo '
-                            <tr><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '" width="300">
-                            <b>' . ($lang_title ?? 'Title') . '</b>
-                            </td><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '">
-                            <input name="title" size="50" maxlength="150" value="' . Security::escape($post['title']) . '">
-                            </td></tr>
-                            <tr><td bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '" width="300" valign="top">
-                            <b>' . ($lang_icon ?? 'Icon') . '</b>
-                            </td><td bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '">
-                            <input type="radio" name="icon" value="icon1.gif" ' . $iconchecked[1] . '> <img src="images/icon1.gif" width="15" height="15" border="0" alt="">
-                            <input type="radio" name="icon" value="icon2.gif" ' . $iconchecked[2] . '> <img src="images/icon2.gif" width="15" height="15" border="0" alt="">
-                            <input type="radio" name="icon" value="icon3.gif" ' . $iconchecked[3] . '> <img src="images/icon3.gif" width="15" height="15" border="0" alt="">
-                            <input type="radio" name="icon" value="icon4.gif" ' . $iconchecked[4] . '> <img src="images/icon4.gif" width="15" height="15" border="0" alt="">
-                            <input type="radio" name="icon" value="icon5.gif" ' . $iconchecked[5] . '> <img src="images/icon5.gif" width="15" height="15" border="0" alt="">
-                            <input type="radio" name="icon" value="icon6.gif" ' . $iconchecked[6] . '> <img src="images/icon6.gif" width="15" height="15" border="0" alt="">
-                            <input type="radio" name="icon" value="icon7.gif" ' . $iconchecked[7] . '> <img src="images/icon7.gif" width="15" height="15" border="0" alt="">
-                            <br>
-                            <input type="radio" name="icon" value="icon8.gif" ' . $iconchecked[8] . '> <img src="images/icon8.gif" width="15" height="15" border="0" alt="">
-                            <input type="radio" name="icon" value="icon9.gif" ' . $iconchecked[9] . '> <img src="images/icon9.gif" width="15" height="15" border="0" alt="">
-                            <input type="radio" name="icon" value="icon10.gif" ' . $iconchecked[10] . '> <img src="images/icon10.gif" width="15" height="15" border="0" alt="">
-                            <input type="radio" name="icon" value="icon11.gif" ' . $iconchecked[11] . '> <img src="images/icon11.gif" width="15" height="15" border="0" alt="">
-                            <input type="radio" name="icon" value="icon12.gif" ' . $iconchecked[12] . '> <img src="images/icon12.gif" width="15" height="15" border="0" alt="">
-                            <input type="radio" name="icon" value="icon13.gif" ' . $iconchecked[13] . '> <img src="images/icon13.gif" width="15" height="15" border="0" alt="">
-                            <input type="radio" name="icon" value="icon14.gif" ' . $iconchecked[14] . '> <img src="images/icon14.gif" width="15" height="15" border="0" alt="">
-                            <br>
-                            <input type="radio" name="icon" value="" ' . $iconchecked[0] . '> ' . ($lang_noicon ?? 'No icon') . '
-                            </td></tr>
-                            ';
-                    }
-
-                    // Text area
-                    echo '
-                        <tr><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '" width="300" valign="top">
-                        <b>' . ($lang_text ?? 'Text') . '</b><br>
-                        <br>
-                        <small>
-                        ' . ($lang_htmlcodeis ?? 'HTML is') . ' <b>' . Security::escape($settings['htmlcode'] ?? 'OFF') . '</b><br>
-                        <a href="bbcode.php?catid=' . $catid . '&boardid=' . $boardid . '" target="_new">' . ($lang_bbcodeis ?? 'BBCode is') . ' <b>' . Security::escape($settings['bbcode'] ?? 'ON') . '</b></a><br>
-                        <a href="smilies.php?catid=' . $catid . '&boardid=' . $boardid . '" target="_new">' . ($lang_smiliesare ?? 'Smilies are') . ' <b>' . Security::escape($settings['smilies'] ?? 'ON') . '</b></a><br>
-                        </small>
-                        </td><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '">
-                        <textarea name="text" cols="60" rows="20">' . Security::escape($text) . '</textarea>
-                        </td></tr>
-                        <tr><td colspan="2" align="center" bgcolor="' . Security::escape($settings['tablebg3'] ?? '#cccccc') . '">
-                        <input type="submit" value="' . ($lang_send ?? 'Send') . '"> <input type="reset" value="' . ($lang_reset ?? 'Reset') . '">
-                        </td></tr>
-                        </form>
-                        ';
+                    $db->query(
+                        'UPDATE ppb_posts SET title = ?, text = ?, icon = ? WHERE id = ?',
+                        [$title, $text, $icon, $postid]
+                    );
+                    $state = 'success';
+                    $successMessage = $lang_threadedited ?? 'Thread edited';
+                    $successLink = 'showthread.php?threadid=' . (int) $post['id'];
+                    $successLinkText = $lang_showthread ?? 'Show thread';
+                }
+            } else {
+                if ($deletepost === 'YES' && $adminCanModerate) {
+                    $db->query('DELETE FROM ppb_posts WHERE id = ?', [$postid]);
+                    $state = 'success';
+                    $successMessage = $lang_postingdeleted ?? 'Post deleted';
+                    $successLink = 'showthread.php?threadid=' . (int) $post['threadid'];
+                    $successLinkText = $lang_showthread ?? 'Show thread';
+                } else {
+                    $text = trim($text);
+                    $db->query('UPDATE ppb_posts SET text = ? WHERE id = ?', [$text, $postid]);
+                    $state = 'success';
+                    $successMessage = $lang_postingedited ?? 'Post edited';
+                    $successLink = 'showthread.php?threadid=' . (int) $post['threadid'];
+                    $successLinkText = $lang_showthread ?? 'Show thread';
                 }
             }
         }
     }
 }
+
+include __DIR__ . '/header.inc.php';
 ?>
 
-</table>
+<?php if ($state === 'error'): ?>
+  <?php default_error($errorMessage, $errorBack, $errorBackText); ?>
+
+<?php elseif ($state === 'success'): ?>
+  <div class="card shadow-sm border-success mb-4">
+    <header class="card-header bg-success text-white">
+      <h2 class="h6 mb-0">
+        <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+        <?php echo $lang_statusmessage ?? 'Status'; ?>
+      </h2>
+    </header>
+    <div class="card-body">
+      <p class="mb-3"><?php echo Security::escape($successMessage); ?></p>
+      <a href="<?php echo Security::escape($successLink); ?>" class="btn btn-primary">
+        <i class="bi bi-arrow-left" aria-hidden="true"></i>
+        <?php echo Security::escape($successLinkText); ?>
+      </a>
+    </div>
+  </div>
+
+<?php else:
+    $iconValue = (string) ($post['icon'] ?? '');
+?>
+  <form action="editpost.php?postid=<?php echo (int) $post['id']; ?>&login=1&editpost=1&catid=<?php echo (int) $catid; ?>&boardid=<?php echo (int) $boardid; ?>"
+        method="post" class="needs-validation" novalidate>
+    <?php echo CSRF::getTokenField(); ?>
+
+    <section class="card shadow-sm mb-3">
+      <header class="card-header bg-secondary-subtle">
+        <h1 class="h5 mb-0">
+          <i class="bi bi-pencil-square" aria-hidden="true"></i>
+          <?php echo $lang_editpost ?? 'Edit Post'; ?>
+        </h1>
+      </header>
+      <div class="card-body">
+
+        <?php if ($adminCanModerate): ?>
+          <fieldset class="border border-warning rounded p-3 mb-3">
+            <legend class="h6 float-none w-auto px-2 text-warning-emphasis">
+              <i class="bi bi-shield-exclamation" aria-hidden="true"></i>
+              Moderation
+            </legend>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="deletepost" name="deletepost" value="YES">
+              <label class="form-check-label fw-semibold text-danger" for="deletepost">
+                <?php echo $post['type'] === 'Thread'
+                    ? ($lang_deletethread ?? 'Delete thread')
+                    : ($lang_deletepost ?? 'Delete post'); ?>
+              </label>
+              <div class="form-text">Diese Aktion kann nicht rückgängig gemacht werden.</div>
+            </div>
+            <?php if ($post['type'] === 'Thread'): ?>
+              <?php if ($post['status'] === 'Open' || $post['status'] === ''): ?>
+                <div class="form-check mt-2">
+                  <input class="form-check-input" type="checkbox" id="closethread" name="closethread" value="YES">
+                  <label class="form-check-label fw-semibold" for="closethread">
+                    <?php echo $lang_closethread ?? 'Close thread'; ?>
+                  </label>
+                  <div class="form-text">Niemand kann mehr antworten.</div>
+                </div>
+              <?php elseif ($post['status'] === 'Closed'): ?>
+                <div class="form-check mt-2">
+                  <input class="form-check-input" type="checkbox" id="openthread" name="openthread" value="YES">
+                  <label class="form-check-label fw-semibold" for="openthread">
+                    <?php echo $lang_openthread ?? 'Open thread'; ?>
+                  </label>
+                </div>
+              <?php endif; ?>
+            <?php endif; ?>
+          </fieldset>
+        <?php endif; ?>
+
+        <?php if ($post['type'] === 'Thread'): ?>
+          <div class="mb-3">
+            <label for="title" class="form-label fw-semibold">
+              <?php echo $lang_title ?? 'Title'; ?>
+              <span class="text-danger" aria-hidden="true">*</span>
+            </label>
+            <input id="title" name="title" type="text" class="form-control"
+                   maxlength="150" required
+                   value="<?php echo Security::escape((string) $post['title']); ?>">
+            <div class="invalid-feedback">Bitte einen Titel angeben.</div>
+          </div>
+
+          <fieldset class="mb-3">
+            <legend class="form-label fw-semibold mb-2 fs-6">
+              <?php echo $lang_icon ?? 'Icon'; ?>
+            </legend>
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+              <?php for ($i = 1; $i <= 14; $i++):
+                  $val = 'icon' . $i . '.gif';
+              ?>
+                <div class="form-check form-check-inline mb-0">
+                  <input class="form-check-input" type="radio" name="icon"
+                         id="icon<?php echo $i; ?>" value="<?php echo $val; ?>"
+                         <?php echo $iconValue === $val ? 'checked' : ''; ?>>
+                  <label class="form-check-label" for="icon<?php echo $i; ?>">
+                    <img src="images/<?php echo $val; ?>" width="15" height="15" alt="Icon <?php echo $i; ?>">
+                  </label>
+                </div>
+              <?php endfor; ?>
+              <div class="form-check form-check-inline mb-0">
+                <input class="form-check-input" type="radio" name="icon" id="iconNone" value=""
+                       <?php echo $iconValue === '' ? 'checked' : ''; ?>>
+                <label class="form-check-label" for="iconNone">
+                  <?php echo $lang_noicon ?? 'No icon'; ?>
+                </label>
+              </div>
+            </div>
+          </fieldset>
+        <?php endif; ?>
+
+        <div class="mb-3">
+          <label for="text" class="form-label fw-semibold">
+            <?php echo $lang_text ?? 'Text'; ?>
+            <span class="text-danger" aria-hidden="true">*</span>
+          </label>
+          <textarea id="text" name="text" class="form-control" rows="12" required><?php echo Security::escape((string) $post['text']); ?></textarea>
+          <div class="form-text">
+            <?php echo $lang_htmlcodeis ?? 'HTML ist'; ?>
+            <strong><?php echo ppb_onoff_label($settings['htmlcode'] ?? 'OFF'); ?></strong>,
+            <a href="bbcode.php?catid=<?php echo (int) $catid; ?>&boardid=<?php echo (int) $boardid; ?>" target="_blank" rel="noopener">
+              <?php echo $lang_bbcodeis ?? 'BBCode ist'; ?>
+              <strong><?php echo ppb_onoff_label($settings['bbcode'] ?? 'ON'); ?></strong>
+            </a>,
+            <a href="smilies.php?catid=<?php echo (int) $catid; ?>&boardid=<?php echo (int) $boardid; ?>" target="_blank" rel="noopener">
+              <?php echo $lang_smiliesare ?? 'Smilies sind'; ?>
+              <strong><?php echo ppb_onoff_label($settings['smilies'] ?? 'ON'); ?></strong>
+            </a>.
+          </div>
+          <div class="invalid-feedback">Bitte einen Text eingeben.</div>
+        </div>
+
+      </div>
+      <footer class="card-footer bg-light d-flex flex-wrap gap-2">
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-save" aria-hidden="true"></i>
+          <?php echo $lang_send ?? 'Send'; ?>
+        </button>
+        <button type="reset" class="btn btn-outline-secondary">
+          <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
+          <?php echo $lang_reset ?? 'Reset'; ?>
+        </button>
+        <?php if (!empty($post['threadid']) || $post['type'] === 'Thread'): ?>
+          <a class="btn btn-link"
+             href="showthread.php?threadid=<?php echo $post['type'] === 'Thread' ? (int) $post['id'] : (int) $post['threadid']; ?>">
+            <?php echo $lang_back ?? 'Back'; ?>
+          </a>
+        <?php endif; ?>
+      </footer>
+    </section>
+  </form>
+<?php endif; ?>
 
 <?php include __DIR__ . '/footer.inc.php'; ?>

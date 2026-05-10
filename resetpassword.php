@@ -5,9 +5,7 @@ declare(strict_types=1);
 /**
  * PowerPHPBoard - Password Reset Via Token
  *
- * MIT License
- *
- * Copyright (c) 2026 PowerScripts
+ * MIT License - Copyright (c) 2026 PowerScripts
  */
 
 use PowerPHPBoard\CSRF;
@@ -51,7 +49,7 @@ if ($token !== '' && strlen($token) <= 128) {
     }
 }
 
-$errorText = null;
+$errorText = '';
 $done = false;
 
 if ($tokenValid && $reset !== null && $_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -77,53 +75,80 @@ if ($tokenValid && $reset !== null && $_SERVER['REQUEST_METHOD'] === 'POST') {
 include __DIR__ . '/header.inc.php';
 ?>
 
-<table border="0" cellpadding="2" cellspacing="1" width="100%">
+<div class="row justify-content-center">
+  <div class="col-md-8 col-lg-6">
 
-<?php
-if (!$tokenValid) {
+  <?php if (!$tokenValid): ?>
+    <?php
     default_error(
         $lang_pwdresettokeninvalid ?? 'Invalid or expired reset link.',
         'index.php',
-        'Home',
-        $settings['tablebg3'] ?? '#cccccc',
-        $settings['tablebg2'] ?? '#eeeeee',
-        $settings['tablebg1'] ?? '#ffffff'
+        'Home'
     );
-} elseif ($done) {
-    echo '
-    <tr><td bgcolor="' . Security::escape($settings['tablebg3'] ?? '#cccccc') . '">
-    <b>' . ($lang_statusmessage ?? 'Status') . '</b>
-    </td></tr>
-    <tr><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '"><br>
-    ' . ($lang_pwdresetsuccess ?? 'Password has been reset. You can now log in.') . '<br><br>
-    </td></tr>
-    <tr><td bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '" align="center">
-    <a href="login.php">' . ($lang_login ?? 'Login') . '</a>
-    </td></tr>
-    ';
-} else {
-    $errorHtml = $errorText !== null
-        ? '<tr><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '" align="center"><b>' . Security::escape($errorText) . '</b></td></tr>'
-        : '';
-    echo '
-    <tr><td bgcolor="' . Security::escape($settings['tablebg3'] ?? '#cccccc') . '">
-    <b>' . ($lang_newpassword ?? 'New Password') . '</b>
-    </td></tr>
-    ' . $errorHtml . '
-    <form action="resetpassword.php?token=' . Security::escape($token) . '" method="post">
-    ' . CSRF::getTokenField() . '
-    <tr><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '" align="center">
-      <br>
-      ' . ($lang_newpassword ?? 'New password') . ':<br>
-      <input type="password" name="password1" minlength="8" required><br><br>
-      ' . ($lang_confirmation ?? 'Confirmation') . ':<br>
-      <input type="password" name="password2" minlength="8" required><br><br>
-      <input type="submit" value="' . ($lang_send ?? 'Send') . '">
-    </td></tr>
-    </form>
-    ';
-}
-?>
-</table>
+    ?>
+  <?php elseif ($done): ?>
+    <div class="card shadow-sm border-success">
+      <header class="card-header bg-success text-white">
+        <h2 class="h6 mb-0">
+          <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+          <?php echo $lang_statusmessage ?? 'Status'; ?>
+        </h2>
+      </header>
+      <div class="card-body">
+        <p class="mb-3">
+          <?php echo $lang_pwdresetsuccess ?? 'Password has been reset. You can now log in.'; ?>
+        </p>
+        <a href="login.php" class="btn btn-primary">
+          <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
+          <?php echo $lang_login ?? 'Login'; ?>
+        </a>
+      </div>
+    </div>
+  <?php else: ?>
+    <?php if ($errorText !== ''): ?>
+      <div class="alert alert-danger" role="alert">
+        <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+        <?php echo Security::escape($errorText); ?>
+      </div>
+    <?php endif; ?>
+    <section class="card shadow-sm">
+      <header class="card-header bg-secondary-subtle">
+        <h1 class="h5 mb-0">
+          <i class="bi bi-key" aria-hidden="true"></i>
+          <?php echo $lang_newpassword ?? 'New Password'; ?>
+        </h1>
+      </header>
+      <div class="card-body">
+        <form action="resetpassword.php?token=<?php echo Security::escape($token); ?>"
+              method="post" class="needs-validation" novalidate>
+          <?php echo CSRF::getTokenField(); ?>
+          <div class="mb-3">
+            <label for="password1" class="form-label fw-semibold">
+              <?php echo $lang_newpassword ?? 'New password'; ?>
+            </label>
+            <input id="password1" name="password1" type="password" class="form-control"
+                   minlength="8" required autocomplete="new-password" aria-describedby="pwd1Help">
+            <div id="pwd1Help" class="form-text">Mindestens 8 Zeichen.</div>
+            <div class="invalid-feedback">Mindestens 8 Zeichen erforderlich.</div>
+          </div>
+          <div class="mb-3">
+            <label for="password2" class="form-label fw-semibold">
+              <?php echo $lang_confirmation ?? 'Confirmation'; ?>
+            </label>
+            <input id="password2" name="password2" type="password" class="form-control"
+                   minlength="8" required autocomplete="new-password">
+            <div class="invalid-feedback">Bitte zur Bestätigung wiederholen.</div>
+          </div>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-shield-check" aria-hidden="true"></i>
+            <?php echo $lang_send ?? 'Send'; ?>
+          </button>
+        </form>
+      </div>
+    </section>
+  <?php endif; ?>
+
+  </div>
+</div>
 
 <?php include __DIR__ . '/footer.inc.php'; ?>

@@ -5,66 +5,47 @@ declare(strict_types=1);
 /**
  * PowerPHPBoard - BBCode Reference
  *
- * MIT License
- *
- * Copyright (c) 2026 PowerScripts
+ * MIT License - Copyright (c) 2026 PowerScripts
  */
 
 use PowerPHPBoard\Security;
 
 include __DIR__ . '/header.inc.php';
+
+$rows = [
+    ['[b]text[/b]',                                         $lang_bbbold       ?? 'Bold text'],
+    ['[u]text[/u]',                                         $lang_bbunderlined ?? 'Underlined text'],
+    ['[i]text[/i]',                                         $lang_bbitalic     ?? 'Italic text'],
+    ['[url]www.powerscripts.org[/url]',                     $lang_bburl        ?? 'Link to URL'],
+    ['[url="http://www.powerscripts.org"]PowerScripts[/url]', $lang_bburlis    ?? 'Link with custom text'],
+    ['[email]admin@powerscripts.org[/email]',               $lang_bbemail      ?? 'Email link'],
+    ['[quote]Text[/quote]',                                 $lang_bbquote      ?? 'Quote block'],
+];
 ?>
 
-<table border="0" cellpadding="2" cellspacing="1" width="100%">
-
-<tr><td colspan="2" bgcolor="<?php echo Security::escape($settings['tablebg3'] ?? '#cccccc'); ?>">
-<b><?php echo $lang_bbcommans ?? 'BBCode Commands'; ?></b>
-</td></tr>
-<tr><td bgcolor="<?php echo Security::escape($settings['tablebg3'] ?? '#cccccc'); ?>" width="50%">
-<b><?php echo $lang_command ?? 'Command'; ?></b>
-</td><td bgcolor="<?php echo Security::escape($settings['tablebg3'] ?? '#cccccc'); ?>" width="50%">
-<b><?php echo $lang_action ?? 'Result'; ?></b>
-</td></tr>
-
-<tr><td bgcolor="<?php echo Security::escape($settings['tablebg2'] ?? '#eeeeee'); ?>">
-<b>[b]</b>text<b>[/b]</b>
-</td><td bgcolor="<?php echo Security::escape($settings['tablebg1'] ?? '#ffffff'); ?>">
-<?php echo $lang_bbbold ?? 'Bold text'; ?>
-</td></tr>
-<tr><td bgcolor="<?php echo Security::escape($settings['tablebg2'] ?? '#eeeeee'); ?>">
-<b>[u]</b>text<b>[/u]</b>
-</td><td bgcolor="<?php echo Security::escape($settings['tablebg1'] ?? '#ffffff'); ?>">
-<?php echo $lang_bbunderlined ?? 'Underlined text'; ?>
-</td></tr>
-<tr><td bgcolor="<?php echo Security::escape($settings['tablebg2'] ?? '#eeeeee'); ?>">
-<b>[i]</b>text<b>[/i]</b>
-</td><td bgcolor="<?php echo Security::escape($settings['tablebg1'] ?? '#ffffff'); ?>">
-<?php echo $lang_bbitalic ?? 'Italic text'; ?>
-</td></tr>
-
-<tr><td bgcolor="<?php echo Security::escape($settings['tablebg2'] ?? '#eeeeee'); ?>">
-<b>[url]</b>www.powerscripts.org<b>[/url]</b>
-</td><td bgcolor="<?php echo Security::escape($settings['tablebg1'] ?? '#ffffff'); ?>">
-<?php echo $lang_bburl ?? 'Link to URL'; ?>
-</td></tr>
-<tr><td bgcolor="<?php echo Security::escape($settings['tablebg2'] ?? '#eeeeee'); ?>">
-<b>[url="http://www.powerscripts.org"]</b>PowerScripts<b>[/url]</b>
-</td><td bgcolor="<?php echo Security::escape($settings['tablebg1'] ?? '#ffffff'); ?>">
-<?php echo $lang_bburlis ?? 'Link with custom text'; ?>
-</td></tr>
-
-<tr><td bgcolor="<?php echo Security::escape($settings['tablebg2'] ?? '#eeeeee'); ?>">
-<b>[email]</b>admin@powerscripts.org<b>[/email]</b>
-</td><td bgcolor="<?php echo Security::escape($settings['tablebg1'] ?? '#ffffff'); ?>">
-<?php echo $lang_bbemail ?? 'Email link'; ?>
-</td></tr>
-
-<tr><td bgcolor="<?php echo Security::escape($settings['tablebg2'] ?? '#eeeeee'); ?>">
-<b>[quote]</b>Text<b>[/quote]</b>
-</td><td bgcolor="<?php echo Security::escape($settings['tablebg1'] ?? '#ffffff'); ?>">
-<?php echo $lang_bbquote ?? 'Quote block'; ?>
-</td></tr>
-
-</table>
+<section class="card shadow-sm mb-4">
+  <header class="card-header bg-secondary-subtle d-flex align-items-center gap-2">
+    <i class="bi bi-code-slash" aria-hidden="true"></i>
+    <h1 class="h5 mb-0"><?php echo $lang_bbcommans ?? 'BBCode Commands'; ?></h1>
+  </header>
+  <div class="table-responsive">
+    <table class="table table-striped align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th scope="col" style="width:50%;"><?php echo $lang_command ?? 'Command'; ?></th>
+          <th scope="col"><?php echo $lang_action ?? 'Result'; ?></th>
+        </tr>
+      </thead>
+      <tbody>
+        <?php foreach ($rows as [$cmd, $desc]): ?>
+          <tr>
+            <td><code><?php echo Security::escape($cmd); ?></code></td>
+            <td><?php echo Security::escape($desc); ?></td>
+          </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+  </div>
+</section>
 
 <?php include __DIR__ . '/footer.inc.php'; ?>

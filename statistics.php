@@ -5,48 +5,54 @@ declare(strict_types=1);
 /**
  * PowerPHPBoard - Statistics
  *
- * MIT License
- *
- * Copyright (c) 2026 PowerScripts
+ * MIT License - Copyright (c) 2026 PowerScripts
  */
 
 use PowerPHPBoard\Security;
 
 include __DIR__ . '/header.inc.php';
+
+$allusers = (int) ($db->fetchOne('SELECT COUNT(*) as count FROM ppb_users')['count'] ?? 0);
+$allthreads = (int) ($db->fetchOne("SELECT COUNT(*) as count FROM ppb_posts WHERE type = 'Thread'")['count'] ?? 0);
+$allpostings = (int) ($db->fetchOne('SELECT COUNT(*) as count FROM ppb_posts')['count'] ?? 0);
 ?>
 
-<table border="0" cellpadding="2" cellspacing="1" width="100%">
-
-<tr><td bgcolor="<?php echo Security::escape($settings['tablebg3'] ?? '#cccccc'); ?>" colspan="2">
-<b><?php echo $lang_statistics ?? 'Statistics'; ?></b>
-</td></tr>
-<?php
-$allusersResult = $db->fetchOne('SELECT COUNT(*) as count FROM ppb_users');
-$allthreadsResult = $db->fetchOne("SELECT COUNT(*) as count FROM ppb_posts WHERE type = 'Thread'");
-$allpostingsResult = $db->fetchOne('SELECT COUNT(*) as count FROM ppb_posts');
-
-$allusers = (int) ($allusersResult['count'] ?? 0);
-$allthreads = (int) ($allthreadsResult['count'] ?? 0);
-$allpostings = (int) ($allpostingsResult['count'] ?? 0);
-?>
-<tr><td bgcolor="<?php echo Security::escape($settings['tablebg2'] ?? '#eeeeee'); ?>" valign="top">
-<?php echo $lang_numregistered ?? 'Registered users'; ?>
-</td><td bgcolor="<?php echo Security::escape($settings['tablebg1'] ?? '#ffffff'); ?>" align="center" width="300">
-<?php echo $allusers; ?>
-</td></tr>
-
-<tr><td bgcolor="<?php echo Security::escape($settings['tablebg2'] ?? '#eeeeee'); ?>" valign="top">
-<?php echo $lang_numthreads ?? 'Threads'; ?>
-</td><td bgcolor="<?php echo Security::escape($settings['tablebg1'] ?? '#ffffff'); ?>" align="center" width="300">
-<?php echo $allthreads; ?>
-</td></tr>
-
-<tr><td bgcolor="<?php echo Security::escape($settings['tablebg2'] ?? '#eeeeee'); ?>" valign="top">
-<?php echo $lang_numposts ?? 'Posts'; ?>
-</td><td bgcolor="<?php echo Security::escape($settings['tablebg1'] ?? '#ffffff'); ?>" align="center" width="300">
-<?php echo $allpostings; ?>
-</td></tr>
-
-</table>
+<section class="card shadow-sm mb-4">
+  <header class="card-header bg-secondary-subtle d-flex align-items-center gap-2">
+    <i class="bi bi-bar-chart-fill" aria-hidden="true"></i>
+    <h1 class="h5 mb-0"><?php echo $lang_statistics ?? 'Statistics'; ?></h1>
+  </header>
+  <div class="card-body">
+    <div class="row g-3 row-cols-1 row-cols-md-3">
+      <div class="col">
+        <div class="border rounded p-3 h-100 d-flex flex-column">
+          <div class="text-body-secondary small">
+            <i class="bi bi-people" aria-hidden="true"></i>
+            <?php echo $lang_numregistered ?? 'Registered users'; ?>
+          </div>
+          <div class="display-6 mt-1"><?php echo $allusers; ?></div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="border rounded p-3 h-100 d-flex flex-column">
+          <div class="text-body-secondary small">
+            <i class="bi bi-card-list" aria-hidden="true"></i>
+            <?php echo $lang_numthreads ?? 'Threads'; ?>
+          </div>
+          <div class="display-6 mt-1"><?php echo $allthreads; ?></div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="border rounded p-3 h-100 d-flex flex-column">
+          <div class="text-body-secondary small">
+            <i class="bi bi-chat-square-text" aria-hidden="true"></i>
+            <?php echo $lang_numposts ?? 'Posts'; ?>
+          </div>
+          <div class="display-6 mt-1"><?php echo $allpostings; ?></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
 <?php include __DIR__ . '/footer.inc.php'; ?>

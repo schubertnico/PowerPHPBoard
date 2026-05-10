@@ -4,20 +4,21 @@
  *
  * MIT License - Copyright (c) 2026 PowerScripts
  */
-
 ?>
-  </td></tr>
-  </table>
-</td></tr>
-<tr><td align="center" colspan="2"><br>
-<small><a href="https://github.com/schubertnico/PowerPHPBoard">PowerPHPBoard</a> &copy; Copyright 2001-2024 by PowerScripts | MIT License</small>
-</td></tr>
-</table>
+</main>
 
-</center>
+<footer class="bg-dark text-light py-3 mt-auto">
+  <div class="container-xl text-center">
+    <small>
+      PowerPHPBoard &copy; 2001-2026
+      <a class="link-light" href="https://www.powerscripts.org" target="_blank" rel="noopener">PowerScripts</a>
+    </small>
+  </div>
+</footer>
+
 <?php
 // Update last visit time for logged in users
-if ($loggedin === 'YES' && isset($ppbuser['id'])) {
+if ($loggedin === 'YES' && isset($ppbuser['id']) && isset($db)) {
     $now = time();
     $db->query('UPDATE ppb_users SET lastvisit = ? WHERE id = ?', [$now, $ppbuser['id']]);
 }

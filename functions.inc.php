@@ -5,23 +5,7 @@ declare(strict_types=1);
 /**
  * PowerPHPBoard - Core Functions
  *
- * MIT License
- *
- * Copyright (c) 2026 PowerScripts
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * MIT License - Copyright (c) 2026 PowerScripts
  */
 
 use PowerPHPBoard\Database;
@@ -29,44 +13,69 @@ use PowerPHPBoard\Security;
 use PowerPHPBoard\TextFormatter;
 
 /**
- * Display default error message
+ * Display default error message as Bootstrap alert with "back" link.
  *
- * @param string $message Error message
- * @param string $backUrl URL for back link
- * @param string $backText Text for back link
- * @param string $headerBg Header background color
- * @param string $contentBg Content background color
- * @param string $footerBg Footer background color
+ * Color parameters are kept for backwards compatibility but ignored.
+ *
+ * @param string $message   Error message text
+ * @param string $backUrl   URL for back link
+ * @param string $backText  Text for back link
+ * @param string $headerBg  Legacy header background color (ignored)
+ * @param string $contentBg Legacy content background color (ignored)
+ * @param string $footerBg  Legacy footer background color (ignored)
  */
 function default_error(
     string $message,
     string $backUrl,
     string $backText,
-    string $headerBg,
-    string $contentBg,
-    string $footerBg
+    string $headerBg = '',
+    string $contentBg = '',
+    string $footerBg = ''
 ): void {
-    echo '
-      <tr><td bgcolor="' . Security::escape($headerBg) . '">
-      <b>Error message</b>
-      </td></tr>
-      <tr><td bgcolor="' . Security::escape($contentBg) . '">
-      <br>
-      ' . Security::escape($message) . '<br><br>
-      </td></tr>
-      <tr><td bgcolor="' . Security::escape($footerBg) . '" align="center">
-      <a href="' . Security::escape($backUrl) . '">' . Security::escape($backText) . '</a>
-      </td></tr>
-    ';
+    echo '<div class="card shadow-sm border-danger mb-3">'
+        . '<div class="card-header bg-danger text-white"><strong>'
+        . Security::escape('Fehler')
+        . '</strong></div>'
+        . '<div class="card-body">'
+        . '<p class="mb-3">' . Security::escape($message) . '</p>'
+        . '<a href="' . Security::escape($backUrl) . '" class="btn btn-outline-secondary btn-sm">'
+        . '<i class="bi bi-arrow-left" aria-hidden="true"></i> '
+        . Security::escape($backText)
+        . '</a>'
+        . '</div></div>';
 }
 
 /**
- * Replace BBCode and smilies in post content
- * Legacy wrapper for TextFormatter::formatPost()
+ * Render a Bootstrap alert (success/info/warning/danger).
  *
- * @param string $text Text to process (passed by reference for legacy compatibility)
- * @param string $bbcode Enable BBCode ('ON' or 'OFF')
- * @param string $smilies Enable smilies ('ON' or 'OFF')
+ * @param string      $message Alert body
+ * @param string      $type    Bootstrap context (primary/success/info/warning/danger/...)
+ * @param string|null $title   Optional alert heading
+ *
+ * @return string HTML
+ */
+function ppb_alert(string $message, string $type = 'info', ?string $title = null): string
+{
+    $allowed = ['primary', 'secondary', 'success', 'danger', 'warning', 'info', 'light', 'dark'];
+    if (!in_array($type, $allowed, true)) {
+        $type = 'info';
+    }
+    $body = '';
+    if ($title !== null && $title !== '') {
+        $body .= '<h2 class="h6 alert-heading mb-1">' . Security::escape($title) . '</h2>';
+    }
+    $body .= '<div>' . Security::escape($message) . '</div>';
+    return '<div class="alert alert-' . $type . '" role="alert">' . $body . '</div>';
+}
+
+/**
+ * Replace BBCode and smilies in post content.
+ *
+ * Legacy wrapper for {@see TextFormatter::formatPost()}.
+ *
+ * @param string $text     Text to process (passed by reference for legacy compatibility)
+ * @param string $bbcode   Enable BBCode ('ON' or 'OFF')
+ * @param string $smilies  Enable smilies ('ON' or 'OFF')
  * @param string $htmlcode Allow HTML ('ON' or 'OFF')
  *
  * @return string Formatted text
@@ -78,10 +87,10 @@ function posting_replace(string &$text, string $bbcode, string $smilies, string 
 }
 
 /**
- * Get user rank based on post count
+ * Get user rank based on post count.
  *
- * @param int $userId User ID
- * @param Database $db Database instance
+ * @param int      $userId User ID
+ * @param Database $db     Database instance
  *
  * @return string User rank title
  */
@@ -110,14 +119,15 @@ function getrank(int $userId, Database $db): string
 }
 
 /**
- * Get pagination links for a thread
+ * Get pagination links for a thread as Bootstrap pagination.
  *
- * @param int $threadId Thread ID
- * @param Database $db Database instance
+ * @param int      $threadId Thread ID
+ * @param Database $db       Database instance
+ * @param int      $current  Currently active offset (post index, 0-based on page boundaries)
  *
- * @return string HTML pagination links
+ * @return string HTML pagination block, or '' if only one page
  */
-function getpages(int $threadId, Database $db): string
+function getpages(int $threadId, Database $db, int $current = 0): string
 {
     $result = $db->fetchOne(
         'SELECT COUNT(*) as count FROM ppb_posts WHERE threadid = ? OR id = ?',
@@ -132,21 +142,26 @@ function getpages(int $threadId, Database $db): string
         return '';
     }
 
-    $output = '[ ';
+    $output = '<nav aria-label="Seiten"><ul class="pagination pagination-sm mb-0">';
     for ($i = 0; $i < $pageNum; $i++) {
         $pageDisplay = $i + 1;
-        $current = $i * $postsPerPage;
-        $output .= '<a href="showthread.php?threadid=' . $threadId . '&current=' . $current . '">' . $pageDisplay . '</a> ';
+        $offset = $i * $postsPerPage;
+        $isActive = ($offset === $current);
+        $output .= '<li class="page-item' . ($isActive ? ' active' : '') . '"'
+            . ($isActive ? ' aria-current="page"' : '') . '>'
+            . '<a class="page-link" href="showthread.php?threadid=' . $threadId
+            . '&current=' . $offset . '">' . $pageDisplay . '</a></li>';
     }
+    $output .= '</ul></nav>';
 
-    return $output . ']';
+    return $output;
 }
 
 /**
- * Format timestamp for display
+ * Format timestamp for display.
  *
- * @param int $timestamp Unix timestamp
- * @param string $format Date format string
+ * @param int    $timestamp Unix timestamp
+ * @param string $format    Date format string
  *
  * @return string Formatted date
  */
@@ -156,10 +171,10 @@ function format_date(int $timestamp, string $format = 'd.m.Y H:i'): string
 }
 
 /**
- * Truncate text to specified length
+ * Truncate text to specified length.
  *
- * @param string $text Text to truncate
- * @param int $length Maximum length
+ * @param string $text   Text to truncate
+ * @param int    $length Maximum length
  * @param string $suffix Suffix to append if truncated
  *
  * @return string Truncated text
@@ -173,22 +188,42 @@ function truncate_text(string $text, int $length = 100, string $suffix = '...'):
 }
 
 /**
- * Render action button (image if exists, otherwise text button)
+ * Convert legacy ON/OFF / YES/NO setting value to a German label "an"/"aus".
  *
- * @param string $href Link URL
- * @param string $imagePath Path to image file
- * @param string $altText Alt text / button label
- * @param string $buttonBg Background color for fallback button
+ * @param string|null $value Setting value (typically 'ON', 'OFF', 'YES', 'NO')
+ *
+ * @return string 'an' or 'aus'
+ */
+function ppb_onoff_label(?string $value): string
+{
+    return in_array(strtoupper((string) $value), ['ON', 'YES', '1', 'AN'], true) ? 'an' : 'aus';
+}
+
+/**
+ * Render an action button as Bootstrap button.
+ *
+ * Legacy parameters $imagePath and $buttonBg are kept for backwards compatibility
+ * with existing call sites; $imagePath is ignored. If $buttonBg starts with
+ * 'btn-' it is used as the Bootstrap button variant class, otherwise the default
+ * 'btn-primary' is applied.
+ *
+ * @param string $href      Link URL
+ * @param string $imagePath Legacy image path (ignored)
+ * @param string $altText   Button label
+ * @param string $buttonBg  Either a Bootstrap variant ('btn-primary'/'btn-success'/...) or legacy color (ignored)
  *
  * @return string HTML for the button
  */
-function render_action_button(string $href, string $imagePath, string $altText, string $buttonBg = '#cccccc'): string
-{
-    $fullPath = __DIR__ . '/' . $imagePath;
-
-    if ($imagePath !== '' && file_exists($fullPath)) {
-        return '<a href="' . Security::escape($href) . '"><img src="' . Security::escape($imagePath) . '" border="0" width="120" height="20" alt="' . Security::escape($altText) . '"></a>';
+function render_action_button(
+    string $href,
+    string $imagePath = '',
+    string $altText = '',
+    string $buttonBg = ''
+): string {
+    $btnClass = 'btn btn-primary btn-sm';
+    if (str_starts_with($buttonBg, 'btn-')) {
+        $btnClass = 'btn ' . $buttonBg . ' btn-sm';
     }
-
-    return '<a href="' . Security::escape($href) . '" style="display:inline-block;padding:2px 10px;background:' . Security::escape($buttonBg) . ';text-decoration:none;color:#000;border:1px solid #999;font-size:12px;">' . Security::escape($altText) . '</a>';
+    return '<a href="' . Security::escape($href) . '" class="' . $btnClass . '">'
+        . Security::escape($altText) . '</a>';
 }

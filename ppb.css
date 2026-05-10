@@ -1,28 +1,46 @@
-BODY, TABLE, TR, TD {
-  font-family: Tahoma;
-  font-size: 12px;
-  color: #000000;
+/*
+ * PowerPHPBoard - Slim project styles
+ *
+ * Bootstrap 5 liefert das gesamte Layout. Diese Datei enthält nur kleine
+ * Anpassungen, die über Bootstrap-Utilities allein nicht ausdrückbar sind.
+ * Achtung: Hier KEINE globalen `a { color: ... }`-Regeln mehr setzen, weil
+ * sie sonst die Navbar-/Footer-Linkfarben aus `navbar-dark`/`link-light`
+ * überschreiben (Kontrast-Problem auf dunklem Hintergrund).
+ */
+
+/* Bootstrap-Default-Linkblau (#0d6efd) hat auf bg-body-tertiary nur 4.26
+ * Kontrast - knapp unter WCAG AA. Wir verdunkeln auf #0a58ca (gleiche Farbe
+ * wie Bootstrap link-hover), das ergibt ~5.6 Kontrast und genügt AA. */
+.breadcrumb a,
+.card-body a:not(.btn):not(.alert-link):not(.link-light):not(.link-dark),
+.card-footer a:not(.btn):not(.alert-link):not(.link-light):not(.link-dark) {
+  color: #0a58ca;
 }
 
-A, A:LINK, A:ACTIVE, A:VISITED {
-  font-family: Tahoma;
-  color: #000080;
-  text-decoration: none;
+/* text-danger (#dc3545) auf bg-body-tertiary hat nur ~4.0 Kontrast.
+ * Bootstrap text-danger-emphasis (#58151c) hat ~9.5 - WCAG AAA. */
+.text-danger-aa {
+  color: #842029 !important;
 }
 
-A:HOVER {
-  font-family: Tahoma;
-  color: #000000;
-  text-decoration: underline;
-}
-
-.big {
-  font-family: Tahoma;
-  font-size: 16px;
-}
-
+/* Legacy hint, falls irgendwo `.mark` verwendet wird */
 .mark {
-  font-family: Tahoma;
-  font-weight: normal;
-  color: #FF0000;
+  background: transparent;
+  color: #b02a37;
+  font-weight: 500;
+}
+
+/* Beitragsinhalt: bequemes Wrapping für lange Würfe von BBCode-Output */
+.post-content,
+.post-signature {
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* Quote-Blocks aus dem TextFormatter etwas freundlicher trennen */
+.post-content blockquote {
+  border-left: 3px solid #dee2e6;
+  padding-left: 0.75rem;
+  margin: 0.5rem 0;
+  color: #495057;
 }

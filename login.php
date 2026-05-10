@@ -5,9 +5,7 @@ declare(strict_types=1);
 /**
  * PowerPHPBoard - User Login
  *
- * MIT License
- *
- * Copyright (c) 2026 PowerScripts
+ * MIT License - Copyright (c) 2026 PowerScripts
  */
 
 use PowerPHPBoard\CSRF;
@@ -18,23 +16,18 @@ use PowerPHPBoard\RateLimiter;
 use PowerPHPBoard\Security;
 use PowerPHPBoard\Session;
 
-// Load configuration
 require_once __DIR__ . '/config.inc.php';
 
-// Start session
 Session::start();
 
-// Connect to database
 try {
     $db = Database::getInstance($mysql);
 } catch (PDOException $e) {
     die('Database connection failed');
 }
 
-// Load settings
 $settings = $db->fetchOne('SELECT * FROM ppb_config WHERE id = ?', [1]) ?? [];
 
-// Load language file
 $langFile = match ($settings['language'] ?? 'English') {
     'Deutsch-Sie' => 'deutsch-sie.inc.php',
     'Deutsch-Du' => 'deutsch-du.inc.php',
@@ -42,11 +35,11 @@ $langFile = match ($settings['language'] ?? 'English') {
 };
 require_once __DIR__ . '/' . $langFile;
 
-// Get parameters
 $catid = Security::getInt('catid');
 $boardid = Security::getInt('boardid');
 $login = Security::getInt('login', 'POST');
 $loginerror = '';
+$loginSuccess = false;
 
 $rateLimiter = new RateLimiter(
     new DatabaseRateLimitStorage($db),
@@ -56,9 +49,7 @@ $rateLimiter = new RateLimiter(
 );
 $rateLimitIdentifier = (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown');
 
-// Process login form
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $login === 1) {
-    // Validate CSRF token
     if (!CSRF::validateFromPost()) {
         $loginerror = 'Security token invalid. Please try again.';
     } elseif (!$rateLimiter->check('login', $rateLimitIdentifier)) {
@@ -72,42 +63,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $login === 1) {
         } elseif ($password === '' || $password === '0') {
             $loginerror = $lang_insertpwd ?? 'Please enter your password';
         } else {
-            // Find user by email using prepared statement (prevents SQL injection)
             $user = $db->fetchOne('SELECT * FROM ppb_users WHERE email = ?', [$email]);
 
             if ($user === null) {
-                // BUG-006: Unified error message (no user enumeration)
                 $loginerror = $lang_loginfailed ?? 'Invalid email or password.';
                 ErrorHandler::logFailedLogin($email, 'user_not_found');
                 $rateLimiter->recordFailure('login', $rateLimitIdentifier);
             } else {
-                // Verify password (supports both legacy base64 and modern hashes)
                 if (Security::verifyPassword($password, $user['password'])) {
-                    // Check if user allows login cookies (legacy setting, now uses sessions)
                     if ($user['logincookie'] === 'YES' || $user['logincookie'] === 'NO') {
-                        // Rehash password if using legacy format
                         if (Security::needsRehash($user['password'])) {
                             $newHash = Security::hashPassword($password);
                             $db->query('UPDATE ppb_users SET password = ? WHERE id = ?', [$newHash, $user['id']]);
                         }
 
-                        // Login user via secure session (no passwords in cookies!)
                         Session::login((int) $user['id']);
-
-                        // Log successful login
                         ErrorHandler::logSuccessfulLogin((int) $user['id'], $email);
-
-                        // Regenerate CSRF token
                         CSRF::regenerate();
-
-                        // Reset rate limit on success
                         $rateLimiter->recordSuccess('login', $rateLimitIdentifier);
+                        $loginSuccess = true;
                     } else {
                         $loginerror = $lang_loginfailed ?? 'Invalid email or password.';
                         $rateLimiter->recordFailure('login', $rateLimitIdentifier);
                     }
                 } else {
-                    // BUG-006: Unified error message (no user enumeration)
                     $loginerror = $lang_loginfailed ?? 'Invalid email or password.';
                     ErrorHandler::logFailedLogin($email, 'invalid_password');
                     $rateLimiter->recordFailure('login', $rateLimitIdentifier);
@@ -120,71 +99,95 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $login === 1) {
 include __DIR__ . '/header.inc.php';
 ?>
 
-<table border="0" cellpadding="2" cellspacing="1" width="100%">
+<div class="row justify-content-center">
+  <div class="col-md-8 col-lg-6">
 
-<?php
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && $login === 1) {
-    if ($loginerror) {
-        default_error(
-            $loginerror,
-            'javascript:history.back()',
-            $lang_backtologin ?? 'Back to login',
-            $settings['tablebg3'] ?? '#cccccc',
-            $settings['tablebg2'] ?? '#eeeeee',
-            $settings['tablebg1'] ?? '#ffffff'
-        );
-    } else {
-        echo '
-        <tr><td bgcolor="' . Security::escape($settings['tablebg3'] ?? '#cccccc') . '">
-        <b>' . ($lang_statusmessage ?? 'Status') . '</b>
-        </td></tr>
-        <tr><td bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '"><br>
-        ' . ($lang_loginok ?? 'Login successful!') . '<br><br>
-        </td></tr>
-        <tr><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '" align="center">
-        <a href="index.php">Home</a>
-        </td></tr>
-        ';
-    }
-} else {
-    // Display login form
-    echo '
-      <tr><td bgcolor="' . Security::escape($settings['tablebg3'] ?? '#cccccc') . '">
-      <b>' . ($lang_login ?? 'Login') . '</b>
-      </td></tr>
-      <form action="login.php" method="post">
-      ' . CSRF::getTokenField() . '
-      <input type="hidden" name="catid" value="' . $catid . '">
-      <input type="hidden" name="boardid" value="' . $boardid . '">
-      <input type="hidden" name="login" value="1">
-      <tr><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '" align="center">
-        <br>
-        <table border="0" cellpadding="3" cellspacing="0">
-        <tr><td>
-        <b>' . ($lang_email ?? 'Email') . '</b>
-        </td><td>
-        <input name="email" size="25" maxlength="100" type="email" required>
-        </td><td>
-        <small><a href="register.php?catid=' . $catid . '&boardid=' . $boardid . '">' . ($lang_wanttoregister ?? 'Register') . '</a></small>
-        </td></tr>
-        <tr><td>
-        <b>' . ($lang_password ?? 'Password') . '</b>
-        </td><td>
-        <input name="password" size="25" maxlength="255" type="password" required>
-        </td><td>
-        <small><a href="sendpassword.php?catid=' . $catid . '&boardid=' . $boardid . '">' . ($lang_pwdforgotten ?? 'Forgot password?') . '</a></small>
-        </td></tr>
-        <tr><td colspan="2" align="center">
-        <input type="submit" value="' . ($lang_send ?? 'Submit') . '">
-        </td></tr>
-        </table><br>
-        <small>' . ($lang_cookiesenabled ?? 'Please enable cookies') . '</small><br>
-      </td></tr>
-      </form>
-    ';
-}
-?>
+  <?php if ($loginSuccess): ?>
+    <div class="card shadow-sm border-success">
+      <header class="card-header bg-success text-white">
+        <h2 class="h6 mb-0">
+          <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+          <?php echo $lang_statusmessage ?? 'Status'; ?>
+        </h2>
+      </header>
+      <div class="card-body">
+        <p class="mb-3"><?php echo $lang_loginok ?? 'Login successful!'; ?></p>
+        <a href="index.php" class="btn btn-primary">
+          <i class="bi bi-house-door" aria-hidden="true"></i> Home
+        </a>
+      </div>
+    </div>
+  <?php else: ?>
+    <?php if ($loginerror !== ''): ?>
+      <div class="alert alert-danger" role="alert">
+        <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+        <?php echo Security::escape($loginerror); ?>
+      </div>
+    <?php endif; ?>
 
-</table>
+    <section class="card shadow-sm">
+      <header class="card-header bg-secondary-subtle">
+        <h1 class="h5 mb-0">
+          <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
+          <?php echo $lang_login ?? 'Login'; ?>
+        </h1>
+      </header>
+      <div class="card-body">
+        <form action="login.php" method="post" class="needs-validation" novalidate>
+          <?php echo CSRF::getTokenField(); ?>
+          <input type="hidden" name="catid" value="<?php echo (int) $catid; ?>">
+          <input type="hidden" name="boardid" value="<?php echo (int) $boardid; ?>">
+          <input type="hidden" name="login" value="1">
+
+          <div class="mb-3">
+            <label for="email" class="form-label fw-semibold">
+              <?php echo $lang_email ?? 'Email'; ?>
+            </label>
+            <input id="email" name="email" type="email" class="form-control"
+                   maxlength="100" required autocomplete="email"
+                   aria-describedby="emailHelp">
+            <div id="emailHelp" class="form-text">
+              Bitte gib die E-Mail-Adresse ein, mit der du registriert bist.
+            </div>
+            <div class="invalid-feedback">
+              <?php echo $lang_insertemail ?? 'Please enter your email address'; ?>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="password" class="form-label fw-semibold">
+              <?php echo $lang_password ?? 'Password'; ?>
+            </label>
+            <input id="password" name="password" type="password" class="form-control"
+                   maxlength="255" required autocomplete="current-password">
+            <div class="invalid-feedback">
+              <?php echo $lang_insertpwd ?? 'Please enter your password'; ?>
+            </div>
+          </div>
+
+          <div class="d-flex flex-wrap gap-2 align-items-center">
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
+              <?php echo $lang_send ?? 'Submit'; ?>
+            </button>
+            <a class="btn btn-link" href="register.php?catid=<?php echo (int) $catid; ?>&boardid=<?php echo (int) $boardid; ?>">
+              <?php echo $lang_wanttoregister ?? 'Register'; ?>
+            </a>
+            <a class="btn btn-link" href="sendpassword.php?catid=<?php echo (int) $catid; ?>&boardid=<?php echo (int) $boardid; ?>">
+              <?php echo $lang_pwdforgotten ?? 'Forgot password?'; ?>
+            </a>
+          </div>
+
+          <p class="form-text mt-3 mb-0">
+            <i class="bi bi-info-circle" aria-hidden="true"></i>
+            <?php echo $lang_cookeisenabled ?? 'Cookies müssen aktiviert sein'; ?>
+          </p>
+        </form>
+      </div>
+    </section>
+  <?php endif; ?>
+
+  </div>
+</div>
 
 <?php include __DIR__ . '/footer.inc.php'; ?>

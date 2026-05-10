@@ -1,15 +1,17 @@
 # Sicherheitsrichtlinien
 
-## Unterstuetzte Versionen
+## Unterstützte Versionen
 
-| Version | Unterstuetzt |
-|---------|--------------|
-| 2.0.x   | Ja           |
-| 1.x     | Nein         |
+| Version | Unterstützt | Frontend            |
+|---------|-------------|---------------------|
+| 2.2.x   | Ja          | Bootstrap 5.3.3     |
+| 2.1.x   | Ja          | Legacy (Tabellen)   |
+| 2.0.x   | Nein        | Legacy (Tabellen)   |
+| 1.x     | Nein        | –                   |
 
-## Sicherheitsluecke melden
+## Sicherheitslücke melden
 
-Wenn Sie eine Sicherheitsluecke entdecken, melden Sie diese bitte **nicht** oeffentlich ueber GitHub Issues.
+Wenn Sie eine Sicherheitslücke entdecken, melden Sie diese bitte **nicht** öffentlich über GitHub Issues.
 
 ### Meldeprozess
 

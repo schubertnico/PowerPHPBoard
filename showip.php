@@ -5,32 +5,24 @@ declare(strict_types=1);
 /**
  * PowerPHPBoard - Show IP Address (Admin/Mod Only)
  *
- * MIT License
- *
- * Copyright (c) 2026 PowerScripts
+ * MIT License - Copyright (c) 2026 PowerScripts
  */
 
 use PowerPHPBoard\Database;
 use PowerPHPBoard\Security;
 use PowerPHPBoard\Session;
 
-// Load configuration
 require_once __DIR__ . '/config.inc.php';
-
-// Start session
 Session::start();
 
-// Connect to database
 try {
     $db = Database::getInstance($mysql);
 } catch (PDOException $e) {
     die('Database connection failed');
 }
 
-// Load settings
 $settings = $db->fetchOne('SELECT * FROM ppb_config WHERE id = ?', [1]) ?? [];
 
-// Load language file
 $langFile = match ($settings['language'] ?? 'English') {
     'Deutsch-Sie' => 'deutsch-sie.inc.php',
     'Deutsch-Du' => 'deutsch-du.inc.php',
@@ -39,11 +31,9 @@ $langFile = match ($settings['language'] ?? 'English') {
 require_once __DIR__ . '/' . $langFile;
 require_once __DIR__ . '/functions.inc.php';
 
-// Get user info from session
 $ppbuser = [];
 $loggedin = 'NO';
 $userId = Session::getUserId();
-
 if ($userId !== null) {
     $userRow = $db->fetchOne('SELECT * FROM ppb_users WHERE id = ?', [$userId]);
     if ($userRow !== null) {
@@ -57,87 +47,72 @@ $boardid = Security::getInt('boardid');
 $threadid = Security::getInt('threadid');
 $postid = Security::getInt('postid');
 
-// Load board info for moderator check
 $board = [];
 if ($boardid > 0) {
     $board = $db->fetchOne('SELECT * FROM ppb_boards WHERE id = ?', [$boardid]) ?? [];
 }
-?>
-<?php include __DIR__ . '/header.inc.php'; ?>
 
-<table border="0" cellpadding="2" cellspacing="1" width="100%">
-
-<?php
-if ($threadid > 0 && $postid > 0) {
-    // Check if user is admin or moderator
-    $showip = 'NO';
-
-    if (($ppbuser['status'] ?? '') === 'Administrator') {
-        $showip = 'YES';
-    } else {
-        // Check if user is a moderator for this board
-        $mods = explode(',', (string) ($board['mods'] ?? ''));
-        foreach ($mods as $mod) {
-            if (($ppbuser['email'] ?? '') === trim($mod)) {
-                $showip = 'YES';
-                break;
-            }
-        }
-    }
-
-    if ($showip === 'YES') {
-        echo '
-        <tr><td bgcolor="' . Security::escape($settings['tablebg3'] ?? '#cccccc') . '">
-        <b>' . ($lang_ipaddressforpost ?? 'IP Address for post') . ' #' . $postid . '</b>
-        </td></tr>
-        <tr><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '"><br>
-        ';
-
-        $post = $db->fetchOne('SELECT * FROM ppb_posts WHERE id = ?', [$postid]);
-
-        if ($post === null) {
-            echo $lang_nopostwithid ?? 'No post with this ID found';
-        } elseif ((int) $post['threadid'] === $threadid || (int) $post['id'] === $threadid) {
-            echo ($lang_ipaddressis ?? 'IP Address is') . ': <b>' . Security::escape($post['ip'] ?? 'Unknown') . '</b>';
-        } else {
-            echo $lang_postingdoesntbelongtothread ?? 'This post does not belong to this thread';
-        }
-
-        echo '
-        <br><br>
-        </td></tr>
-        <tr><td bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '" align="center">
-        <a href="javascript:history.back()">' . ($lang_back ?? 'Back') . '</a>
-        </td></tr>
-        ';
-    } else {
-        echo '
-        <tr><td bgcolor="' . Security::escape($settings['tablebg3'] ?? '#cccccc') . '">
-        <b>' . ($lang_errormessage ?? 'Error') . '</b>
-        </td></tr>
-        <tr><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '"><br>
-        ' . ($lang_onlyadminscanviewip ?? 'Only administrators and moderators can view IP addresses') . '<br><br>
-        </td></tr>
-        <tr><td bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '" align="center">
-        <a href="index.php">Home</a>
-        </td></tr>
-        ';
-    }
-} else {
-    echo '
-    <tr><td bgcolor="' . Security::escape($settings['tablebg3'] ?? '#cccccc') . '">
-    <b>' . ($lang_errormessage ?? 'Error') . '</b>
-    </td></tr>
-    <tr><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '"><br>
-    ' . ($lang_choosepost ?? 'Please choose a post') . '<br><br>
-    </td></tr>
-    <tr><td bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '" align="center">
-    <a href="index.php">Home</a>
-    </td></tr>
-    ';
-}
+include __DIR__ . '/header.inc.php';
 ?>
 
-</table>
+<div class="row justify-content-center">
+  <div class="col-md-8 col-lg-6">
+
+  <?php if ($threadid === 0 || $postid === 0): ?>
+    <?php default_error($lang_choosepost ?? 'Please choose a post', 'index.php', 'Home'); ?>
+  <?php else:
+      $showip = false;
+      if (($ppbuser['status'] ?? '') === 'Administrator') {
+          $showip = true;
+      } else {
+          $mods = explode(',', (string) ($board['mods'] ?? ''));
+          foreach ($mods as $modEmail) {
+              if (($ppbuser['email'] ?? '') === trim($modEmail)) {
+                  $showip = true;
+                  break;
+              }
+          }
+      }
+
+      if (!$showip):
+  ?>
+    <?php default_error($lang_onlyadminscanviewip ?? 'Only administrators and moderators can view IP addresses', 'index.php', 'Home'); ?>
+  <?php else:
+      $post = $db->fetchOne('SELECT * FROM ppb_posts WHERE id = ?', [$postid]);
+  ?>
+    <section class="card shadow-sm">
+      <header class="card-header bg-secondary-subtle d-flex align-items-center gap-2">
+        <i class="bi bi-geo-alt-fill" aria-hidden="true"></i>
+        <h1 class="h6 mb-0">
+          <?php echo $lang_ipaddressforpost ?? 'IP Address for post'; ?> #<?php echo (int) $postid; ?>
+        </h1>
+      </header>
+      <div class="card-body">
+        <?php if ($post === null): ?>
+          <div class="alert alert-warning mb-0" role="alert">
+            <?php echo $lang_nopostwithid ?? 'No post with this ID found'; ?>
+          </div>
+        <?php elseif ((int) $post['threadid'] === $threadid || (int) $post['id'] === $threadid): ?>
+          <p class="mb-1 small text-body-secondary">
+            <?php echo $lang_ipaddressis ?? 'IP Address is:'; ?>
+          </p>
+          <code class="fs-5"><?php echo Security::escape($post['ip'] ?? 'Unknown'); ?></code>
+        <?php else: ?>
+          <div class="alert alert-warning mb-0" role="alert">
+            <?php echo $lang_postingdoesntbelongtothread ?? 'This post does not belong to this thread'; ?>
+          </div>
+        <?php endif; ?>
+      </div>
+      <footer class="card-footer bg-light">
+        <a class="btn btn-outline-secondary btn-sm" href="javascript:history.back()">
+          <i class="bi bi-arrow-left" aria-hidden="true"></i>
+          <?php echo $lang_back ?? 'Back'; ?>
+        </a>
+      </footer>
+    </section>
+  <?php endif; endif; ?>
+
+  </div>
+</div>
 
 <?php include __DIR__ . '/footer.inc.php'; ?>

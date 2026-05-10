@@ -5,9 +5,7 @@ declare(strict_types=1);
 /**
  * PowerPHPBoard - Thread View (Post List)
  *
- * MIT License
- *
- * Copyright (c) 2026 PowerScripts
+ * MIT License - Copyright (c) 2026 PowerScripts
  */
 
 use PowerPHPBoard\CSRF;
@@ -16,24 +14,19 @@ use PowerPHPBoard\Security;
 use PowerPHPBoard\Session;
 use PowerPHPBoard\TextFormatter;
 
-// Load configuration
 require_once __DIR__ . '/config.inc.php';
 
-// Start session
 Session::start();
 
-// Get parameters
 $threadid = Security::getInt('threadid');
 $current = Security::getInt('current');
 
-// Connect to database
 try {
     $db = Database::getInstance($mysql);
 } catch (PDOException $e) {
     die('Database connection failed');
 }
 
-// Get thread and board info
 $thread = [];
 $board = [];
 $boardid = 0;
@@ -60,12 +53,10 @@ if ($boardid > 0) {
     }
 }
 
-// Handle board password for private boards
 $boardpassword = Security::getString('boardpassword', 'POST');
 $hasAccess = false;
 
 if (!empty($board['id'])) {
-    // Check if user has stored password in visits
     if (Session::isLoggedIn()) {
         $userId = Session::getUserId();
         $visit = $db->fetchOne(
@@ -78,12 +69,10 @@ if (!empty($board['id'])) {
         }
     }
 
-    // Check submitted password
     $boardpasswordCoded = base64_encode($boardpassword);
     if ($board['status'] === 'Private' && $boardpasswordCoded === $board['password']) {
         $hasAccess = true;
 
-        // Store password in visits
         if (Session::isLoggedIn()) {
             $userId = Session::getUserId();
             $existingVisit = $db->fetchOne(
@@ -111,7 +100,6 @@ if (!empty($board['id'])) {
     }
 }
 
-// Load settings and user info
 $settings = $db->fetchOne('SELECT * FROM ppb_config WHERE id = ?', [1]) ?? [];
 $ppbuser = [];
 $loggedin = 'NO';
@@ -127,7 +115,6 @@ if (Session::isLoggedIn()) {
     }
 }
 
-// Load language file
 $langFile = match ($settings['language'] ?? 'English') {
     'Deutsch-Sie' => 'deutsch-sie.inc.php',
     'Deutsch-Du' => 'deutsch-du.inc.php',
@@ -136,280 +123,308 @@ $langFile = match ($settings['language'] ?? 'English') {
 require_once __DIR__ . '/' . $langFile;
 require_once __DIR__ . '/functions.inc.php';
 
-// Pagination
 $current2 = $current + 25;
 $current3 = $current - 25;
-?>
-<?php include __DIR__ . '/header.inc.php'; ?>
 
-<table border="0" cellpadding="2" cellspacing="1" width="100%">
-<tr><td bgcolor="<?php echo Security::escape($settings['tablebg3'] ?? '#cccccc'); ?>" width="175" valign="top">
-<b><?php echo $lang_author ?? 'Author'; ?></b>
-</td><td bgcolor="<?php echo Security::escape($settings['tablebg3'] ?? '#cccccc'); ?>" width="*">
-<small><?php echo $lang_thread ?? 'Thread'; ?>: <?php echo Security::escape($thread['title'] ?? ''); ?></small><br>
-<small><center>
-<?php
-if (!empty($thread['id'])) {
+include __DIR__ . '/header.inc.php';
+
+/**
+ * Renders the thread pagination block (top + bottom of the thread).
+ */
+$renderPagination = static function () use ($thread, $db, $current, $current2, $current3, $lang_pages, $lang_prevpage, $lang_nextpage): string {
+    if (empty($thread['id'])) {
+        return '';
+    }
     $postCountResult = $db->fetchOne(
         'SELECT COUNT(*) as count FROM ppb_posts WHERE threadid = ? OR id = ?',
         [$thread['id'], $thread['id']]
     );
     $cnum = (int) ($postCountResult['count'] ?? 0);
+    $pages = getpages((int) $thread['id'], $db, $current);
 
-    echo '<center>';
-    echo '<small>' . ($lang_pages ?? 'Pages') . ': ';
-    echo getpages((int) $thread['id'], $db);
-    echo '</small> ';
-
+    $prevHtml = '';
+    $nextHtml = '';
     if ($cnum > $current2) {
         if ($current >= 25) {
-            echo '[ <a href="showthread.php?threadid=' . (int) $thread['id'] . '&current=' . $current3 . '">' . ($lang_prevpage ?? 'Previous') . '</a> ]';
+            $prevHtml = '<a class="btn btn-outline-secondary btn-sm" href="showthread.php?threadid='
+                . (int) $thread['id'] . '&current=' . $current3 . '">'
+                . '<i class="bi bi-chevron-left" aria-hidden="true"></i> '
+                . htmlspecialchars($lang_prevpage ?? 'Previous', ENT_QUOTES, 'UTF-8') . '</a>';
         }
-        echo '&nbsp;[ <a href="showthread.php?threadid=' . (int) $thread['id'] . '&current=' . $current2 . '">' . ($lang_nextpage ?? 'Next') . '</a> ]';
+        $nextHtml = '<a class="btn btn-outline-secondary btn-sm" href="showthread.php?threadid='
+            . (int) $thread['id'] . '&current=' . $current2 . '">'
+            . htmlspecialchars($lang_nextpage ?? 'Next', ENT_QUOTES, 'UTF-8')
+            . ' <i class="bi bi-chevron-right" aria-hidden="true"></i></a>';
     } elseif ($cnum <= $current2 && $current > 1) {
-        echo '[ <a href="showthread.php?threadid=' . (int) $thread['id'] . '&current=' . $current3 . '">' . ($lang_prevpage ?? 'Previous') . '</a> ]';
+        $prevHtml = '<a class="btn btn-outline-secondary btn-sm" href="showthread.php?threadid='
+            . (int) $thread['id'] . '&current=' . $current3 . '">'
+            . '<i class="bi bi-chevron-left" aria-hidden="true"></i> '
+            . htmlspecialchars($lang_prevpage ?? 'Previous', ENT_QUOTES, 'UTF-8') . '</a>';
     }
-}
+
+    $out = '<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 my-3">';
+    $out .= '<div class="d-flex align-items-center gap-2 flex-wrap">';
+    if ($pages !== '') {
+        $out .= '<span class="small text-body-secondary">' . htmlspecialchars($lang_pages ?? 'Pages', ENT_QUOTES, 'UTF-8') . ':</span>';
+        $out .= $pages;
+    }
+    $out .= '</div>';
+    $out .= '<div class="btn-group" role="group" aria-label="Seitennavigation">';
+    $out .= $prevHtml . $nextHtml;
+    $out .= '</div></div>';
+    return $out;
+};
 ?>
-</center></small>
-</td></tr>
 
-<?php
-$boardpasswordCoded = base64_encode($boardpassword);
-if (($board['status'] ?? '') === 'Private' && !$hasAccess) {
-    // Show password form for private boards
-    echo '
-    <form action="showthread.php?threadid=' . (int) $thread['id'] . '" method="post">
-    ' . CSRF::getTokenField() . '
-    <tr><td colspan="2" bgcolor="' . Security::escape($settings['tablebg3'] ?? '#cccccc') . '" align="center"><br>
-    <b>' . ($lang_threadrequirespwd ?? 'This thread requires a board password') . '</b><br>
-    <br>
-    <input type="password" name="boardpassword" size="25" maxlength="25"> <input type="submit" value="OK"><br>
-    <br>
-    </td></tr>
-    </form>
-    ';
-} else {
-    // Get posts
-    $posts = $db->fetchAll(
-        'SELECT * FROM ppb_posts WHERE threadid = ? OR id = ? ORDER BY id LIMIT ?, 25',
-        [$thread['id'] ?? 0, $thread['id'] ?? 0, $current]
-    );
+<?php if (($board['status'] ?? '') === 'Private' && !$hasAccess): ?>
+  <section class="card shadow-sm mb-4 border-warning">
+    <header class="card-header bg-warning-subtle">
+      <h2 class="h6 mb-0">
+        <i class="bi bi-shield-lock-fill" aria-hidden="true"></i>
+        <?php echo $lang_threadrequirespwd ?? 'This thread requires a board password'; ?>
+      </h2>
+    </header>
+    <div class="card-body">
+      <form action="showthread.php?threadid=<?php echo (int) $thread['id']; ?>"
+            method="post" class="needs-validation row g-2" novalidate>
+        <?php echo CSRF::getTokenField(); ?>
+        <div class="col-sm-8">
+          <label for="boardpassword" class="form-label fw-semibold">
+            <?php echo $lang_password ?? 'Password'; ?>
+          </label>
+          <input id="boardpassword" name="boardpassword" type="password"
+                 class="form-control" maxlength="25" required autocomplete="off">
+        </div>
+        <div class="col-sm-4 d-flex align-items-end">
+          <button type="submit" class="btn btn-primary w-100">
+            <i class="bi bi-unlock" aria-hidden="true"></i> Zugang anfordern
+          </button>
+        </div>
+        <div class="col-12">
+          <div class="form-text mt-0">Bitte gib das Forum-Passwort ein, um diesen Thread zu lesen.</div>
+        </div>
+      </form>
+    </div>
+  </section>
+<?php else: ?>
 
-    if (count($posts) === 0 || empty($thread['id'])) {
-        if (empty($thread['id'])) {
-            echo '
-            <tr><td colspan="2" align="center" bgcolor="' . Security::escape($settings['tablebg3'] ?? '#cccccc') . '">
-            <b>' . ($lang_nothreadwithid ?? 'No thread with this ID') . '</b>
-            </td></tr>
-            ';
-        } else {
-            echo '
-            <tr><td colspan="2" align="center" bgcolor="' . Security::escape($settings['tablebg3'] ?? '#cccccc') . '">
-            <b>' . ($lang_nopostsinthread ?? 'No posts in this thread') . '</b>
-            </td></tr>
-            ';
+  <h2 class="h5 text-body-secondary mb-3">
+    <i class="bi bi-card-text" aria-hidden="true"></i>
+    <?php echo Security::escape($thread['title'] ?? ''); ?>
+  </h2>
+
+  <?php echo $renderPagination(); ?>
+
+  <?php
+  $posts = [];
+  if (!empty($thread['id'])) {
+      $posts = $db->fetchAll(
+          'SELECT * FROM ppb_posts WHERE threadid = ? OR id = ? ORDER BY id LIMIT ?, 25',
+          [$thread['id'], $thread['id'], $current]
+      );
+  }
+  ?>
+
+  <?php if (empty($thread['id'])): ?>
+    <?php echo ppb_alert($lang_nothreadwithid ?? 'No thread with this ID', 'warning'); ?>
+  <?php elseif (count($posts) === 0): ?>
+    <?php echo ppb_alert($lang_nopostsinthread ?? 'No posts in this thread', 'info'); ?>
+  <?php else: ?>
+    <?php foreach ($posts as $row):
+        $author = $db->fetchOne('SELECT * FROM ppb_users WHERE id = ?', [$row['author']]);
+        $authorName = $author !== null
+            ? (string) $author['username']
+            : ($lang_anonymous ?? 'Anonymous');
+        $rank = '';
+        $rankClass = 'text-body-secondary';
+        if ($author !== null) {
+            if ($author['status'] === 'Deactivated') {
+                $rank = $lang_deactivated ?? 'Deactivated';
+                $rankClass = 'text-warning-emphasis';
+            } elseif ($author['status'] === 'Normal user') {
+                $rank = getrank((int) $author['id'], $db);
+            } elseif ($author['status'] === 'Administrator') {
+                $rank = 'Administrator';
+                $rankClass = 'text-danger-emphasis fw-semibold';
+            }
         }
-    } else {
-        $designnum = 1;
-        foreach ($posts as $row) {
-            $tablebg = $designnum === 1 ? ($settings['tablebg1'] ?? '#ffffff') : ($settings['tablebg2'] ?? '#eeeeee');
-            $designnum = $designnum === 1 ? 2 : 1;
-
-            echo '
-            <tr><td bgcolor="' . Security::escape($tablebg) . '" rowspan="2" valign="top" width="175">
-            <a name="post' . (int) $row['id'] . '"></a>
-            <b>
-            ';
-
-            // Get author info
-            $author = $db->fetchOne('SELECT * FROM ppb_users WHERE id = ?', [$row['author']]);
-            if ($author !== null) {
-                echo Security::escape($author['username']);
-            } else {
-                echo $lang_anonymous ?? 'Anonymous';
-            }
-
-            echo '
-            </b><br>
-            <br>
-            <small>
-            ';
-
-            // User status/rank
-            if ($author !== null) {
-                if ($author['status'] === 'Deactivated') {
-                    echo $lang_deactivated ?? 'Deactivated';
-                } elseif ($author['status'] === 'Normal user') {
-                    $rank = getrank((int) $author['id'], $db);
-                    echo Security::escape($rank);
-                } elseif ($author['status'] === 'Administrator') {
-                    echo '<b class="mark">Administrator</b>';
-                }
-            }
-
-            echo '
-            </small><br>
-            <br>
-            <small>' . ($lang_registeredsince ?? 'Registered') . '
-            ';
-
-            $registeredDate = $author !== null ? date('d.m.Y', (int) $author['registered']) : '';
-            echo Security::escape($registeredDate) . '</small><br>
-            <small>Postings: ';
-
-            // User post count
-            if ($author !== null) {
-                $userPostCount = $db->fetchOne(
-                    'SELECT COUNT(*) as count FROM ppb_posts WHERE author = ?',
-                    [$author['id']]
-                );
-                echo (int) ($userPostCount['count'] ?? 0);
-            } else {
-                echo '0';
-            }
-
-            echo '</small><br>
-            </td><td bgcolor="' . Security::escape($tablebg) . '" valign="top" height="16">
-              <table border="0" cellpadding="0" cellspacing="0" width="100%">
-              <tr><td width="50%">
-              <small>' . ($lang_postedon ?? 'Posted on') . ' ';
-
-            $postedDate = date('d.m.Y - H:i', (int) $row['time']);
-            echo Security::escape($postedDate) . '</small>
-              </td><td width="50%" align="right">';
-
-            if ($author !== null) {
-                echo '<a href="showprofile.php?userid=' . (int) $author['id'] . '&catid=' . (int) ($catid ?? 0) . '&boardid=' . $boardid . '"><img src="images/profile.gif" width="20" height="16" border="0" alt="' . Security::escape($author['username']) . '\'s ' . ($lang_profile ?? 'Profile') . '"></a>';
-
-                if (($author['hideemail'] ?? 'YES') === 'NO') {
-                    echo '<a href="sendmail.php?userid=' . (int) $author['id'] . '&catid=' . (int) ($catid ?? 0) . '&boardid=' . $boardid . '"><img src="images/email.gif" width="20" height="16" border="0" alt="' . ($lang_writemail ?? 'Write mail to') . ' ' . Security::escape($author['username']) . '"></a>';
-                }
-
-                if (!empty($author['homepage']) && $author['homepage'] !== 'http://') {
-                    echo ' <a href="' . Security::escape($author['homepage']) . '" target="_new"><img src="images/homepage.gif" width="20" height="16" border="0" alt="' . Security::escape($author['username']) . '\'s ' . ($lang_homepage ?? 'Homepage') . '"></a>';
-                }
-
-                if (!empty($author['icq'])) {
-                    echo ' <a href="mailto:' . Security::escape($author['icq']) . '@pager.icq.com"><img src="images/addicq.gif" width="34" height="16" border="0" alt="' . ($lang_add ?? 'Add') . ' ' . Security::escape($author['username']) . ' ' . ($lang_tocontacts ?? 'to contacts') . '"></a> ';
-                }
-            }
-
-            echo '
-              <a href="editpost.php?postid=' . (int) $row['id'] . '&catid=' . (int) ($catid ?? 0) . '&boardid=' . $boardid . '"><img src="images/editpost.gif" width="20" height="16" border="0" alt="' . ($lang_editpost ?? 'Edit post') . '"></a>
-              <a href="newpost.php?threadid=' . (int) $thread['id'] . '&postid=' . (int) $row['id'] . '"><img src="images/quoteanswer.gif" width="39" height="16" border="0" alt="' . ($lang_writequotedanswer ?? 'Quote reply') . '">
-              </td></tr>
-              </table>
-            </td></tr>
-            <tr><td bgcolor="' . Security::escape($tablebg) . '" valign="top" height="70">
-            ';
-
-            // Format post text
-            $text = $row['text'];
-            $text = TextFormatter::formatPost($text, $settings['bbcode'] ?? 'ON', $settings['smilies'] ?? 'ON', $settings['htmlcode'] ?? 'OFF');
-            echo $text;
-
-            // Signature
-            if ($author !== null && !empty($author['signature'])) {
-                // BUG-010: Signaturen immer mit htmlcode=OFF rendern (unabhaengig von $settings),
-                // damit rohes HTML in der Signatur keinen Stored-XSS ermoeglicht.
-                $signature = TextFormatter::formatPost($author['signature'], $settings['bbcode'] ?? 'ON', $settings['smilies'] ?? 'ON', 'OFF');
-                echo '
-                <br><br><hr width="20%" noshade color="' . Security::escape($settings['text'] ?? '#000000') . '" align="left">
-                ' . $signature;
-            }
-
-            echo '
-            <small><div align="right">IP: <a href="showip.php?threadid=' . (int) $thread['id'] . '&postid=' . (int) $row['id'] . '">' . ($lang_logged ?? 'logged') . '</a></div></small>
-            </td></tr>
-            ';
+        $postDate = date('d.m.Y - H:i', (int) $row['time']);
+        $authorPostCount = 0;
+        if ($author !== null) {
+            $authorPostCount = (int) ($db->fetchOne(
+                'SELECT COUNT(*) as count FROM ppb_posts WHERE author = ?',
+                [$author['id']]
+            )['count'] ?? 0);
         }
-    }
 
-    // Update thread views
-    if (!empty($thread['id'])) {
-        $threadViews = (int) ($thread['views'] ?? 0) + 1;
-        $db->query('UPDATE ppb_posts SET views = ? WHERE id = ?', [$threadViews, $threadid]);
-    }
-
-    // Update visit time
-    if ($loggedin === 'YES' && !empty($thread['title'])) {
-        $now = time();
-        $existingVisit = $db->fetchOne(
-            "SELECT id FROM ppb_visits WHERE userid = ? AND vid = ? AND type = 'Thread'",
-            [$ppbuser['id'], $threadid]
+        $rawText = (string) $row['text'];
+        $renderedText = TextFormatter::formatPost(
+            $rawText,
+            $settings['bbcode'] ?? 'ON',
+            $settings['smilies'] ?? 'ON',
+            $settings['htmlcode'] ?? 'OFF'
         );
+    ?>
+      <article class="card shadow-sm mb-3" id="post<?php echo (int) $row['id']; ?>">
+        <div class="row g-0">
+          <aside class="col-md-3 col-lg-2 bg-body-tertiary border-end p-3">
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <i class="bi bi-person-circle fs-3 text-secondary" aria-hidden="true"></i>
+              <div class="fw-semibold">
+                <?php if ($author !== null): ?>
+                  <a class="link-dark text-decoration-none" href="showprofile.php?userid=<?php echo (int) $author['id']; ?>&catid=<?php echo (int) ($catid ?? 0); ?>&boardid=<?php echo (int) $boardid; ?>">
+                    <?php echo Security::escape($authorName); ?>
+                  </a>
+                <?php else: ?>
+                  <?php echo Security::escape($authorName); ?>
+                <?php endif; ?>
+              </div>
+            </div>
+            <?php if ($rank !== ''): ?>
+              <div class="small <?php echo $rankClass; ?> mb-2">
+                <?php echo Security::escape($rank); ?>
+              </div>
+            <?php endif; ?>
+            <?php if ($author !== null): ?>
+              <ul class="list-unstyled small text-body-secondary mb-0">
+                <li>
+                  <span class="fw-semibold"><?php echo $lang_registeredsince ?? 'Registriert:'; ?></span>
+                  <?php echo Security::escape(date('d.m.Y', (int) $author['registered'])); ?>
+                </li>
+                <li>
+                  <span class="fw-semibold">Beiträge:</span>
+                  <?php echo $authorPostCount; ?>
+                </li>
+              </ul>
+            <?php endif; ?>
+          </aside>
 
-        if ($existingVisit !== null) {
-            $db->query('UPDATE ppb_visits SET time = ? WHERE id = ?', [$now, $existingVisit['id']]);
-        } else {
-            $db->query(
-                "INSERT INTO ppb_visits (userid, vid, time, type) VALUES (?, ?, ?, 'Thread')",
-                [$ppbuser['id'], $thread['id'], $now]
-            );
-        }
-    }
-}
-?>
-<tr><td bgcolor="<?php echo Security::escape($settings['tablebg3'] ?? '#cccccc'); ?>" width="175" valign="top">
-<b><?php echo $lang_author ?? 'Author'; ?></b>
-</td><td bgcolor="<?php echo Security::escape($settings['tablebg3'] ?? '#cccccc'); ?>" width="*">
-<small><?php echo $lang_thread ?? 'Thread'; ?>: <?php echo Security::escape($thread['title'] ?? ''); ?></small><br>
-<small><center>
-<?php
-if (!empty($thread['id'])) {
-    $postCountResult = $db->fetchOne(
-        'SELECT COUNT(*) as count FROM ppb_posts WHERE threadid = ? OR id = ?',
-        [$thread['id'], $thread['id']]
-    );
-    $cnum = (int) ($postCountResult['count'] ?? 0);
+          <div class="col-md-9 col-lg-10">
+            <header class="card-header bg-light d-flex flex-wrap align-items-center justify-content-between gap-2 py-2">
+              <div class="small text-body-secondary">
+                <i class="bi bi-clock" aria-hidden="true"></i>
+                <?php echo $lang_postedon ?? 'Posted on'; ?>
+                <?php echo Security::escape($postDate); ?>
+              </div>
+              <div class="btn-group btn-group-sm" role="group" aria-label="Beitragsaktionen">
+                <?php if ($author !== null): ?>
+                  <a class="btn btn-outline-secondary"
+                     href="showprofile.php?userid=<?php echo (int) $author['id']; ?>&catid=<?php echo (int) ($catid ?? 0); ?>&boardid=<?php echo (int) $boardid; ?>"
+                     title="<?php echo $lang_profile ?? 'Profile'; ?>">
+                    <i class="bi bi-person" aria-hidden="true"></i>
+                  </a>
+                  <?php if (($author['hideemail'] ?? 'YES') === 'NO'): ?>
+                    <a class="btn btn-outline-secondary"
+                       href="sendmail.php?userid=<?php echo (int) $author['id']; ?>&catid=<?php echo (int) ($catid ?? 0); ?>&boardid=<?php echo (int) $boardid; ?>"
+                       title="<?php echo $lang_writemail ?? 'Write mail to'; ?> <?php echo Security::escape($authorName); ?>">
+                      <i class="bi bi-envelope" aria-hidden="true"></i>
+                    </a>
+                  <?php endif; ?>
+                  <?php if (!empty($author['homepage']) && $author['homepage'] !== 'http://'): ?>
+                    <a class="btn btn-outline-secondary"
+                       href="<?php echo Security::escape((string) $author['homepage']); ?>"
+                       target="_blank" rel="noopener noreferrer"
+                       title="<?php echo $lang_homepage ?? 'Homepage'; ?>">
+                      <i class="bi bi-globe" aria-hidden="true"></i>
+                    </a>
+                  <?php endif; ?>
+                <?php endif; ?>
+                <a class="btn btn-outline-secondary"
+                   href="editpost.php?postid=<?php echo (int) $row['id']; ?>&catid=<?php echo (int) ($catid ?? 0); ?>&boardid=<?php echo (int) $boardid; ?>"
+                   title="<?php echo $lang_editpost ?? 'Edit post'; ?>">
+                  <i class="bi bi-pencil" aria-hidden="true"></i>
+                </a>
+                <a class="btn btn-outline-secondary"
+                   href="newpost.php?threadid=<?php echo (int) $thread['id']; ?>&postid=<?php echo (int) $row['id']; ?>"
+                   title="<?php echo $lang_writequotedanswer ?? 'Quote reply'; ?>">
+                  <i class="bi bi-chat-quote" aria-hidden="true"></i>
+                </a>
+              </div>
+            </header>
 
-    echo '<center>';
-    echo '<small>' . ($lang_pages ?? 'Pages') . ': ';
-    echo getpages((int) $thread['id'], $db);
-    echo '</small> ';
+            <div class="card-body">
+              <div class="post-content">
+                <?php echo $renderedText; ?>
+              </div>
+              <?php if ($author !== null && !empty($author['signature'])):
+                  // Signaturen immer mit htmlcode=OFF rendern (BUG-010), Stored-XSS-Schutz.
+                  $signature = TextFormatter::formatPost(
+                      (string) $author['signature'],
+                      $settings['bbcode'] ?? 'ON',
+                      $settings['smilies'] ?? 'ON',
+                      'OFF'
+                  );
+              ?>
+                <hr class="text-body-secondary mt-4">
+                <div class="post-signature small text-body-secondary">
+                  <?php echo $signature; ?>
+                </div>
+              <?php endif; ?>
+            </div>
 
-    if ($cnum > $current2) {
-        if ($current >= 25) {
-            echo '[ <a href="showthread.php?threadid=' . (int) $thread['id'] . '&current=' . $current3 . '">' . ($lang_prevpage ?? 'Previous') . '</a> ]';
-        }
-        echo '&nbsp;[ <a href="showthread.php?threadid=' . (int) $thread['id'] . '&current=' . $current2 . '">' . ($lang_nextpage ?? 'Next') . '</a> ]';
-    } elseif ($cnum <= $current2 && $current > 1) {
-        echo '[ <a href="showthread.php?threadid=' . (int) $thread['id'] . '&current=' . $current3 . '">' . ($lang_prevpage ?? 'Previous') . '</a> ]';
-    }
-}
-?>
-</center></small>
-</td></tr>
+            <footer class="card-footer bg-body-tertiary text-end small">
+              <span class="text-body-secondary">IP:</span>
+              <a class="text-decoration-none"
+                 href="showip.php?threadid=<?php echo (int) $thread['id']; ?>&postid=<?php echo (int) $row['id']; ?>">
+                <?php echo $lang_logged ?? 'logged'; ?>
+              </a>
+            </footer>
+          </div>
+        </div>
+      </article>
+    <?php endforeach; ?>
+  <?php endif; ?>
 
-</table>
-</td></tr>
-</table>
+  <?php
+  if (!empty($thread['id'])) {
+      $threadViews = (int) ($thread['views'] ?? 0) + 1;
+      $db->query('UPDATE ppb_posts SET views = ? WHERE id = ?', [$threadViews, $threadid]);
+  }
 
-</td></tr>
-<tr><td align="center"><br>
-<?php
-if (!empty($board['title'])) {
-    if (($board['status'] ?? '') !== 'Closed') {
-        echo render_action_button('newthread.php?boardid=' . (int) $board['id'], $settings['newthread'] ?? 'images/newthread.gif', $lang_newthread ?? 'New Thread', $settings['tablebg3'] ?? '#cccccc');
-        if (!empty($thread['title'])) {
-            if (($thread['status'] ?? '') !== 'Closed') {
-                echo '&nbsp;&nbsp;' . render_action_button('newpost.php?threadid=' . (int) $thread['id'] . '&current=' . $current, $settings['newpost'] ?? 'images/newpost.gif', $lang_newpost ?? 'New Post', $settings['tablebg3'] ?? '#cccccc');
-            } else {
-                echo '- [ ' . ($lang_threadclosed ?? 'Thread closed') . ' ] -';
-            }
-        }
-    } else {
-        echo '- [ ' . ($lang_boardclosed ?? 'Board closed') . ' ] -';
-    }
-    echo '<br>';
-}
-?>
-</td><td>
-</td></tr>
-</table>
-<table><tr><td>
-<table><tr><td>
+  if ($loggedin === 'YES' && !empty($thread['title'])) {
+      $now = time();
+      $existingVisit = $db->fetchOne(
+          "SELECT id FROM ppb_visits WHERE userid = ? AND vid = ? AND type = 'Thread'",
+          [$ppbuser['id'], $threadid]
+      );
 
+      if ($existingVisit !== null) {
+          $db->query('UPDATE ppb_visits SET time = ? WHERE id = ?', [$now, $existingVisit['id']]);
+      } else {
+          $db->query(
+              "INSERT INTO ppb_visits (userid, vid, time, type) VALUES (?, ?, ?, 'Thread')",
+              [$ppbuser['id'], $thread['id'], $now]
+          );
+      }
+  }
+  ?>
+
+  <?php echo $renderPagination(); ?>
+
+  <?php if (!empty($board['title'])): ?>
+    <div class="d-flex flex-wrap justify-content-end gap-2 mb-4">
+      <?php if (($board['status'] ?? '') === 'Closed'): ?>
+        <span class="badge text-bg-secondary"><?php echo $lang_boardclosed ?? 'Board closed'; ?></span>
+      <?php else: ?>
+        <a href="newthread.php?boardid=<?php echo (int) $board['id']; ?>" class="btn btn-primary">
+          <i class="bi bi-plus-circle" aria-hidden="true"></i>
+          <?php echo $lang_newthread ?? 'New Thread'; ?>
+        </a>
+        <?php if (!empty($thread['title'])): ?>
+          <?php if (($thread['status'] ?? '') !== 'Closed'): ?>
+            <a href="newpost.php?threadid=<?php echo (int) $thread['id']; ?>&current=<?php echo (int) $current; ?>"
+               class="btn btn-success">
+              <i class="bi bi-reply" aria-hidden="true"></i>
+              <?php echo $lang_newpost ?? 'New Post'; ?>
+            </a>
+          <?php else: ?>
+            <span class="badge text-bg-secondary"><?php echo $lang_threadclosed ?? 'Thread closed'; ?></span>
+          <?php endif; ?>
+        <?php endif; ?>
+      <?php endif; ?>
+    </div>
+  <?php endif; ?>
+
+<?php endif; ?>
 
 <?php include __DIR__ . '/footer.inc.php'; ?>

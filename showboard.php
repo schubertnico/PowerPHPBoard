@@ -5,9 +5,7 @@ declare(strict_types=1);
 /**
  * PowerPHPBoard - Board View (Thread List)
  *
- * MIT License
- *
- * Copyright (c) 2026 PowerScripts
+ * MIT License - Copyright (c) 2026 PowerScripts
  */
 
 use PowerPHPBoard\CSRF;
@@ -15,23 +13,18 @@ use PowerPHPBoard\Database;
 use PowerPHPBoard\Security;
 use PowerPHPBoard\Session;
 
-// Load configuration
 require_once __DIR__ . '/config.inc.php';
 
-// Start session
 Session::start();
 
-// Get board ID
 $boardid = Security::getInt('boardid');
 
-// Connect to database
 try {
     $db = Database::getInstance($mysql);
 } catch (PDOException $e) {
     die('Database connection failed');
 }
 
-// Check board exists and get status
 $board = [];
 if ($boardid > 0) {
     $board = $db->fetchOne(
@@ -43,12 +36,10 @@ if ($boardid > 0) {
     }
 }
 
-// Handle board password for private boards
 $boardpassword = Security::getString('boardpassword', 'POST');
 $hasAccess = false;
 
 if (!empty($board['id'])) {
-    // Check if user has stored password in visits
     if (Session::isLoggedIn()) {
         $userId = Session::getUserId();
         $visit = $db->fetchOne(
@@ -61,12 +52,10 @@ if (!empty($board['id'])) {
         }
     }
 
-    // Check submitted password
     $boardpasswordCoded = base64_encode($boardpassword);
     if ($board['status'] === 'Private' && $boardpasswordCoded === $board['password']) {
         $hasAccess = true;
 
-        // Store password in visits
         if (Session::isLoggedIn()) {
             $userId = Session::getUserId();
             $existingVisit = $db->fetchOne(
@@ -94,7 +83,6 @@ if (!empty($board['id'])) {
     }
 }
 
-// Load settings and user info
 $settings = $db->fetchOne('SELECT * FROM ppb_config WHERE id = ?', [1]) ?? [];
 $ppbuser = [];
 $loggedin = 'NO';
@@ -110,236 +98,256 @@ if (Session::isLoggedIn()) {
     }
 }
 
-// Load language file
 $langFile = match ($settings['language'] ?? 'English') {
     'Deutsch-Sie' => 'deutsch-sie.inc.php',
     'Deutsch-Du' => 'deutsch-du.inc.php',
     default => 'english.inc.php',
 };
 require_once __DIR__ . '/' . $langFile;
+
+include __DIR__ . '/header.inc.php';
 ?>
-<?php include __DIR__ . '/header.inc.php'; ?>
 
-<table border="0" cellpadding="2" cellspacing="1" width="100%">
-<tr><td bgcolor="<?php echo Security::escape($settings['tablebg1'] ?? '#ffffff'); ?>" width="20">
-&nbsp;
-</td><td bgcolor="<?php echo Security::escape($settings['tablebg2'] ?? '#eeeeee'); ?>" width="15">
-&nbsp;
-</td><td bgcolor="<?php echo Security::escape($settings['tablebg1'] ?? '#ffffff'); ?>" width="*">
-<b><?php echo $lang_thread ?? 'Thread'; ?></b>
-</td><td bgcolor="<?php echo Security::escape($settings['tablebg2'] ?? '#eeeeee'); ?>" width="125">
-<b><?php echo $lang_author ?? 'Author'; ?></b>
-</td><td bgcolor="<?php echo Security::escape($settings['tablebg1'] ?? '#ffffff'); ?>" width="50">
-<b><?php echo $lang_replys ?? 'Replies'; ?></b>
-</td><td bgcolor="<?php echo Security::escape($settings['tablebg2'] ?? '#eeeeee'); ?>" width="50">
-<b><?php echo $lang_views ?? 'Views'; ?></b>
-</td><td bgcolor="<?php echo Security::escape($settings['tablebg1'] ?? '#ffffff'); ?>" width="140">
-<b><?php echo $lang_lastreply ?? 'Last Reply'; ?></b>
-</td></tr>
-<?php
+<?php if ($board['status'] === 'Private' && !$hasAccess): ?>
+  <section class="card shadow-sm mb-4 border-warning">
+    <header class="card-header bg-warning-subtle">
+      <h2 class="h6 mb-0">
+        <i class="bi bi-shield-lock-fill" aria-hidden="true"></i>
+        <?php echo $lang_thisboardrequirespwd ?? 'This board requires a password'; ?>
+      </h2>
+    </header>
+    <div class="card-body">
+      <form action="showboard.php?boardid=<?php echo (int) $board['id']; ?>"
+            method="post" class="needs-validation row g-2" novalidate>
+        <?php echo CSRF::getTokenField(); ?>
+        <div class="col-sm-8">
+          <label for="boardpassword" class="form-label fw-semibold">
+            <?php echo $lang_password ?? 'Password'; ?>
+          </label>
+          <input id="boardpassword" name="boardpassword" type="password"
+                 class="form-control" maxlength="25" required autocomplete="off">
+          <div class="invalid-feedback">Bitte ein Passwort eingeben.</div>
+        </div>
+        <div class="col-sm-4 d-flex align-items-end">
+          <button type="submit" class="btn btn-primary w-100">
+            <i class="bi bi-unlock" aria-hidden="true"></i> Zugang anfordern
+          </button>
+        </div>
+        <div class="col-12">
+          <div class="form-text mt-0">Bitte gib das Forum-Passwort ein, um diesen Bereich zu betreten.</div>
+        </div>
+      </form>
+    </div>
+  </section>
+<?php else: ?>
+  <?php
+  $threads = $db->fetchAll(
+      "SELECT * FROM ppb_posts WHERE type = 'Thread' AND boardid = ? ORDER BY lastreply DESC",
+      [$boardid]
+  );
+  ?>
 
-if ($board['status'] === 'Private' && !$hasAccess) {
-    // Show password form for private boards
-    echo '
-    <form action="showboard.php?boardid=' . (int) $board['id'] . '" method="post">
-    ' . CSRF::getTokenField() . '
-    <tr><td colspan="7" bgcolor="' . Security::escape($settings['tablebg3'] ?? '#cccccc') . '" align="center"><br>
-    <b>' . ($lang_thisboardrequirespwd ?? 'This board requires a password') . '</b><br>
-    <br>
-    <input type="password" name="boardpassword" size="25" maxlength="25"> <input type="submit" value="OK"><br>
-    <br>
-    </td></tr>
-    </form>
-    ';
-} else {
-    // Get threads in this board
-    $threads = $db->fetchAll(
-        "SELECT * FROM ppb_posts WHERE type = 'Thread' AND boardid = ? ORDER BY lastreply DESC",
-        [$boardid]
-    );
+  <section class="card shadow-sm mb-4">
+    <header class="card-header bg-secondary-subtle d-flex flex-wrap align-items-center justify-content-between gap-2">
+      <h2 class="h6 mb-0">
+        <i class="bi bi-card-list" aria-hidden="true"></i>
+        <?php echo $lang_thread ?? 'Thread'; ?>
+      </h2>
+      <span class="badge text-bg-secondary"><?php echo count($threads); ?></span>
+    </header>
 
-    if (count($threads) > 0) {
-        foreach ($threads as $row) {
-            echo '<tr><td bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '" align="center">';
+    <?php if (count($threads) === 0): ?>
+      <div class="card-body text-center text-body-secondary">
+        <?php echo $lang_nothreadsinboard ?? 'No threads in this board'; ?>
+      </div>
+    <?php else: ?>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th scope="col" class="text-center" style="width:40px;">
+                <span class="visually-hidden">Status</span>
+              </th>
+              <th scope="col"><?php echo $lang_thread ?? 'Thread'; ?></th>
+              <th scope="col" class="d-none d-md-table-cell" style="width:140px;">
+                <?php echo $lang_author ?? 'Author'; ?>
+              </th>
+              <th scope="col" class="text-end d-none d-md-table-cell" style="width:80px;">
+                <?php echo $lang_replys ?? 'Replies'; ?>
+              </th>
+              <th scope="col" class="text-end d-none d-md-table-cell" style="width:80px;">
+                <?php echo $lang_views ?? 'Views'; ?>
+              </th>
+              <th scope="col" class="d-none d-lg-table-cell" style="width:200px;">
+                <?php echo $lang_lastreply ?? 'Last Reply'; ?>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+          <?php foreach ($threads as $row):
+              $postCount = (int) ($db->fetchOne(
+                  'SELECT COUNT(*) as count FROM ppb_posts WHERE threadid = ? OR id = ?',
+                  [$row['id'], $row['id']]
+              )['count'] ?? 0);
 
-            // Count posts in thread
-            $postCountResult = $db->fetchOne(
-                'SELECT COUNT(*) as count FROM ppb_posts WHERE threadid = ? OR id = ?',
-                [$row['id'], $row['id']]
-            );
-            $postCount = (int) ($postCountResult['count'] ?? 0);
+              $statusIcon = '<i class="bi bi-chat-square-text fs-5 text-secondary" aria-hidden="true"></i>';
+              $statusLabel = $lang_nonewreplys ?? 'No new replies';
+              $isHot = $postCount > 15;
 
-            // Thread status icon
-            if (($thread['status'] ?? '') === 'Closed' || ($board['status'] ?? '') === 'Closed') {
-                echo '<img src="images/lockeddir.gif" width="13" height="16" alt="Closed">';
-            } elseif ($postCount <= 15) {
+              if (($row['status'] ?? '') === 'Closed' || ($board['status'] ?? '') === 'Closed') {
+                  $statusIcon = '<i class="bi bi-lock-fill fs-5 text-secondary" aria-hidden="true"></i>';
+                  $statusLabel = $lang_lockedthread ?? 'Locked thread';
+              } elseif ($loggedin === 'YES') {
+                  $visit = $db->fetchOne(
+                      "SELECT time FROM ppb_visits WHERE userid = ? AND vid = ? AND type = 'Thread'",
+                      [$ppbuser['id'], $row['id']]
+                  );
+                  if ($visit !== null && $visit['time'] < $row['lastreply']) {
+                      if ($isHot) {
+                          $statusIcon = '<i class="bi bi-fire fs-5 text-danger" aria-hidden="true"></i>';
+                          $statusLabel = $lang_newreplys ?? 'New replies';
+                      } else {
+                          $statusIcon = '<i class="bi bi-chat-square-text-fill fs-5 text-primary" aria-hidden="true"></i>';
+                          $statusLabel = $lang_newreplys ?? 'New replies';
+                      }
+                  } elseif ($isHot) {
+                      $statusIcon = '<i class="bi bi-fire fs-5 text-warning" aria-hidden="true"></i>';
+                      $statusLabel = $lang_morethan15posts ?? 'More than 15 posts';
+                  }
+              } elseif ($isHot) {
+                  $statusIcon = '<i class="bi bi-fire fs-5 text-warning" aria-hidden="true"></i>';
+                  $statusLabel = $lang_morethan15posts ?? 'More than 15 posts';
+              }
+
+              $author = $db->fetchOne('SELECT id, username FROM ppb_users WHERE id = ?', [$row['author']]);
+              $replyCount = (int) ($db->fetchOne(
+                  'SELECT COUNT(*) as count FROM ppb_posts WHERE threadid = ?',
+                  [$row['id']]
+              )['count'] ?? 0);
+          ?>
+            <tr>
+              <td class="text-center" title="<?php echo Security::escape($statusLabel); ?>">
+                <span class="visually-hidden"><?php echo Security::escape($statusLabel); ?></span>
+                <?php echo $statusIcon; ?>
+              </td>
+              <td>
+                <?php
                 if ($loggedin === 'YES') {
                     $visit = $db->fetchOne(
                         "SELECT time FROM ppb_visits WHERE userid = ? AND vid = ? AND type = 'Thread'",
                         [$ppbuser['id'], $row['id']]
                     );
-                    if ($row['status'] === 'Closed') {
-                        echo '<img src="images/lockeddir.gif" width="13" height="16" border="0" alt="">';
-                    } elseif ($visit !== null && $visit['time'] < $row['lastreply']) {
-                        echo '<img src="images/newdir.gif" width="20" height="20" border="0" alt="">';
-                    } else {
-                        echo '<img src="images/dir.gif" width="20" height="20" border="0" alt="">';
-                    }
-                } else {
-                    echo '<img src="images/dir.gif" width="20" height="20" border="0" alt="">';
-                }
-            } else {
-                // Hot thread (more than 15 posts)
-                if ($loggedin === 'YES') {
-                    $visit = $db->fetchOne(
-                        "SELECT time FROM ppb_visits WHERE userid = ? AND vid = ? AND type = 'Thread'",
-                        [$ppbuser['id'], $row['id']]
-                    );
-                    if ($row['status'] === 'Closed') {
-                        echo '<img src="images/lockeddir.gif" width="13" height="16" border="0" alt="">';
-                    } elseif ($visit !== null && $visit['time'] < $row['lastreply']) {
-                        echo '<img src="images/newhotdir.gif" width="20" height="20" border="0" alt="">';
-                    } else {
-                        echo '<img src="images/hotdir.gif" width="20" height="20" border="0" alt="">';
-                    }
-                } else {
-                    echo '<img src="images/hotdir.gif" width="20" height="20" border="0" alt="">';
-                }
-            }
-
-            echo '</td><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '">';
-
-            // Thread icon
-            if (!empty($row['icon'])) {
-                echo '<img src="images/' . Security::escape($row['icon']) . '" width="15" height="15" border="0">';
-            }
-
-            echo '</td><td bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '">';
-
-            // Jump to first unread post
-            if ($loggedin === 'YES') {
-                $visit = $db->fetchOne(
-                    "SELECT time FROM ppb_visits WHERE userid = ? AND vid = ? AND type = 'Thread'",
-                    [$ppbuser['id'], $row['id']]
-                );
-                if ($visit !== null) {
-                    $firstUnread = $db->fetchOne(
-                        'SELECT id FROM ppb_posts WHERE (id = ? OR threadid = ?) AND `time` > ? ORDER BY `time` LIMIT 1',
-                        [$row['id'], $row['id'], $visit['time']]
-                    );
-                    if ($firstUnread !== null) {
-                        $currentPosts = (int) floor($postCount / 25) * 25;
-                        echo '<a href="showthread.php?threadid=' . (int) $row['id'] . '&current=' . $currentPosts . '#post' . (int) $firstUnread['id'] . '"><img src="images/bluearrow.gif" border="0" width="10" height="9" alt="' . ($lang_jumptofirstunread ?? 'Jump to first unread') . '"></a> ';
+                    if ($visit !== null) {
+                        $firstUnread = $db->fetchOne(
+                            'SELECT id FROM ppb_posts WHERE (id = ? OR threadid = ?) AND `time` > ? ORDER BY `time` LIMIT 1',
+                            [$row['id'], $row['id'], $visit['time']]
+                        );
+                        if ($firstUnread !== null) {
+                            $currentPosts = (int) floor($postCount / 25) * 25;
+                            echo '<a class="text-decoration-none me-1" href="showthread.php?threadid='
+                                . (int) $row['id'] . '&current=' . $currentPosts
+                                . '#post' . (int) $firstUnread['id'] . '" title="'
+                                . ($lang_jumptofirstunread ?? 'Jump to first unread')
+                                . '"><i class="bi bi-arrow-right-circle-fill text-primary" aria-hidden="true"></i></a>';
+                        }
                     }
                 }
-            }
+                ?>
+                <a class="link-dark fw-semibold text-decoration-none"
+                   href="showthread.php?threadid=<?php echo (int) $row['id']; ?>">
+                  <?php echo Security::escape((string) $row['title']); ?>
+                </a>
+                <?php $pages = getpages((int) $row['id'], $db); ?>
+                <?php if ($pages !== ''): ?>
+                  <div class="mt-1"><?php echo $pages; ?></div>
+                <?php endif; ?>
+                <div class="small text-body-secondary d-md-none mt-1">
+                  <?php if ($author !== null): ?>
+                    <?php echo $lang_author ?? 'Author'; ?>:
+                    <a class="text-decoration-none" href="showprofile.php?userid=<?php echo (int) $author['id']; ?>&catid=<?php echo (int) $catid; ?>&boardid=<?php echo (int) $boardid; ?>">
+                      <?php echo Security::escape((string) $author['username']); ?>
+                    </a>
+                    &middot;
+                  <?php endif; ?>
+                  <?php echo $lang_replys ?? 'Replies'; ?>: <?php echo $replyCount; ?>
+                  &middot;
+                  <?php echo $lang_views ?? 'Views'; ?>: <?php echo (int) $row['views']; ?>
+                </div>
+              </td>
+              <td class="d-none d-md-table-cell">
+                <?php if ($author !== null): ?>
+                  <a class="text-decoration-none" href="showprofile.php?userid=<?php echo (int) $author['id']; ?>&catid=<?php echo (int) $catid; ?>&boardid=<?php echo (int) $boardid; ?>">
+                    <?php echo Security::escape((string) $author['username']); ?>
+                  </a>
+                <?php else: ?>
+                  <span class="text-body-secondary">&ndash;</span>
+                <?php endif; ?>
+              </td>
+              <td class="text-end d-none d-md-table-cell"><?php echo $replyCount; ?></td>
+              <td class="text-end d-none d-md-table-cell"><?php echo (int) $row['views']; ?></td>
+              <td class="d-none d-lg-table-cell small">
+                <?php if ($row['lastreply'] == 0): ?>
+                  <span class="text-body-secondary"><?php echo $lang_noreplys ?? 'No replies'; ?></span>
+                <?php else:
+                    $lastAuthor = $db->fetchOne('SELECT username FROM ppb_users WHERE id = ?', [$row['lastauthor']]);
+                    if ($lastAuthor !== null):
+                        $lastPost = $db->fetchOne(
+                            'SELECT id FROM ppb_posts WHERE (threadid = ? OR id = ?) AND time = ? AND author = ?',
+                            [$row['id'], $row['id'], $row['lastreply'], $row['lastauthor']]
+                        );
+                        $jumpLink = '#';
+                        if ($lastPost !== null) {
+                            $currentPosts = (int) floor($postCount / 25) * 25;
+                            $jumpLink = 'showthread.php?threadid=' . (int) $row['id']
+                                . '&current=' . $currentPosts . '#post' . (int) $lastPost['id'];
+                        }
+                ?>
+                  <a class="text-decoration-none" href="<?php echo Security::escape($jumpLink); ?>"
+                     title="<?php echo $lang_jumptolastpost ?? 'Jump to last post'; ?>">
+                    <i class="bi bi-arrow-right-circle" aria-hidden="true"></i>
+                  </a>
+                  <?php echo Security::escape(date('d.m.Y - H:i', (int) $row['lastreply'])); ?><br>
+                  <span class="text-body-secondary">von</span>
+                  <?php echo Security::escape((string) $lastAuthor['username']); ?>
+                <?php endif; endif; ?>
+              </td>
+            </tr>
+          <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
+    <?php endif; ?>
+  </section>
 
-            // Thread title with pages
-            echo '<a href="showthread.php?threadid=' . (int) $row['id'] . '">' . Security::escape($row['title']) . '</a> <small>';
-            getpages((int) $row['id'], $db);
-            echo '</small>';
+  <?php
+  if ($loggedin === 'YES' && !empty($board['id'])) {
+      $now = time();
+      $existingVisit = $db->fetchOne(
+          "SELECT id FROM ppb_visits WHERE userid = ? AND vid = ? AND type = 'Board'",
+          [$ppbuser['id'], $boardid]
+      );
+      if ($existingVisit !== null) {
+          $db->query('UPDATE ppb_visits SET time = ? WHERE id = ?', [$now, $existingVisit['id']]);
+      } else {
+          $db->query(
+              "INSERT INTO ppb_visits (userid, vid, time, type) VALUES (?, ?, ?, 'Board')",
+              [$ppbuser['id'], $board['id'], $now]
+          );
+      }
+  }
+  ?>
 
-            echo '</td><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '">';
+<?php endif; ?>
 
-            // Author
-            $author = $db->fetchOne('SELECT id, username FROM ppb_users WHERE id = ?', [$row['author']]);
-            if ($author !== null) {
-                echo '<a href="showprofile.php?userid=' . (int) $author['id'] . '&catid=' . (int) $catid . '&boardid=' . $boardid . '">' . Security::escape($author['username']) . '</a>';
-            }
-
-            echo '</td><td bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '" align="center">';
-
-            // Reply count
-            $replyCount = $db->fetchOne(
-                'SELECT COUNT(*) as count FROM ppb_posts WHERE threadid = ?',
-                [$row['id']]
-            );
-            echo (int) ($replyCount['count'] ?? 0);
-
-            echo '</td><td bgcolor="' . Security::escape($settings['tablebg2'] ?? '#eeeeee') . '" align="center">';
-
-            // Views
-            echo (int) $row['views'];
-
-            echo '</td><td bgcolor="' . Security::escape($settings['tablebg1'] ?? '#ffffff') . '" align="center">';
-
-            // Last reply
-            if ($row['lastreply'] == 0) {
-                echo $lang_noreplys ?? 'No replies';
-            } else {
-                $lastAuthor = $db->fetchOne('SELECT username FROM ppb_users WHERE id = ?', [$row['lastauthor']]);
-                if ($lastAuthor !== null) {
-                    // Find last post for linking
-                    $lastPost = $db->fetchOne(
-                        'SELECT id FROM ppb_posts WHERE (threadid = ? OR id = ?) AND time = ? AND author = ?',
-                        [$row['id'], $row['id'], $row['lastreply'], $row['lastauthor']]
-                    );
-
-                    if ($lastPost !== null) {
-                        $currentPosts = (int) floor($postCount / 25) * 25;
-                        echo '<a href="showthread.php?threadid=' . (int) $row['id'] . '&current=' . $currentPosts . '#post' . (int) $lastPost['id'] . '"><img src="images/bluearrow.gif" border="0" width="10" height="9" alt="' . ($lang_jumptolastpost ?? 'Jump to last post') . '"></a> ';
-                    }
-
-                    $dateAndTime = date('d.m.Y - H:i', (int) $row['lastreply']);
-                    echo Security::escape($dateAndTime) . '<br>by ' . Security::escape($lastAuthor['username']);
-                }
-            }
-
-            echo '</td></tr>';
-        }
-    } else {
-        echo '
-        <tr><td colspan="7" bgcolor="' . Security::escape($settings['tablebg3'] ?? '#cccccc') . '" align="center">
-        <b>' . ($lang_nothreadsinboard ?? 'No threads in this board') . '</b>
-        </td></tr>';
-    }
-
-    // Update visit time
-    if ($loggedin === 'YES' && !empty($board['title'])) {
-        $now = time();
-        $existingVisit = $db->fetchOne(
-            "SELECT id FROM ppb_visits WHERE userid = ? AND vid = ? AND type = 'Board'",
-            [$ppbuser['id'], $boardid]
-        );
-
-        if ($existingVisit !== null) {
-            $db->query('UPDATE ppb_visits SET time = ? WHERE id = ?', [$now, $existingVisit['id']]);
-        } else {
-            $db->query(
-                "INSERT INTO ppb_visits (userid, vid, time, type) VALUES (?, ?, ?, 'Board')",
-                [$ppbuser['id'], $board['id'], $now]
-            );
-        }
-    }
-}
-?>
-</table>
-</td></tr>
-</table>
-
-</td></tr>
-<tr><td align="center"><br>
-<?php
-if (!empty($board['title'])) {
-    if (($board['status'] ?? '') !== 'Closed') {
-        echo render_action_button('newthread.php?boardid=' . (int) $board['id'], $settings['newthread'] ?? 'images/newthread.gif', $lang_newthread ?? 'New Thread', $settings['tablebg3'] ?? '#cccccc');
-    } else {
-        echo '- [ ' . ($lang_boardclosed ?? 'Board closed') . ' ] -';
-    }
-    echo '<br>';
-}
-?>
-</td><td>
-</td></tr>
-<tr><td align="center" colspan="2" valign="center"><br>
-<br>
-<img src="images/newdir.gif" width="20" height="20" border="0" alt=""> <?php echo $lang_newreplys ?? 'New replies'; ?>&nbsp;
-<img src="images/dir.gif" width="20" height="20" border="0" alt=""> <?php echo $lang_nonewreplys ?? 'No new replies'; ?>&nbsp;
-<img src="images/newhotdir.gif" width="20" height="20" border="0" alt=""> <img src="images/hotdir.gif" width="20" height="20" border="0" alt=""> <?php echo $lang_morethan15posts ?? 'More than 15 posts'; ?>&nbsp;
-<img src="images/lockeddir.gif" width="13" height="16" border="0" alt=""> <?php echo $lang_lockedthread ?? 'Locked thread'; ?><br>
-</td></tr>
-</table>
-<table><tr><td>
-<table><tr><td>
+<aside class="text-body-secondary small d-flex flex-wrap gap-3 mb-4" aria-label="Legende">
+  <span><i class="bi bi-chat-square-text-fill text-primary" aria-hidden="true"></i>
+    <?php echo $lang_newreplys ?? 'New replies'; ?></span>
+  <span><i class="bi bi-chat-square-text text-secondary" aria-hidden="true"></i>
+    <?php echo $lang_nonewreplys ?? 'No new replies'; ?></span>
+  <span><i class="bi bi-fire text-warning" aria-hidden="true"></i>
+    <?php echo $lang_morethan15posts ?? 'More than 15 posts'; ?></span>
+  <span><i class="bi bi-lock-fill text-secondary" aria-hidden="true"></i>
+    <?php echo $lang_lockedthread ?? 'Locked thread'; ?></span>
+</aside>
 
 <?php include __DIR__ . '/footer.inc.php'; ?>

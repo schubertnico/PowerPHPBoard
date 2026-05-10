@@ -172,8 +172,8 @@ abstract class FeatureTestCase extends TestCase
 
         try {
             $this->db->query(
-                "INSERT INTO ppb_users (email, password, username, status, regdate) VALUES (?, ?, ?, 'User', NOW())",
-                [$email, $hashedPassword, $username]
+                "INSERT INTO ppb_users (username, email, password, homepage, icq, biography, signature, hideemail, logincookie, status, registered) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                [$username, $email, $hashedPassword, '', 0, '', '', 'NO', 'YES', 'Normal user', time()]
             );
             return (int) $this->db->lastInsertId();
         } catch (PDOException $e) {
