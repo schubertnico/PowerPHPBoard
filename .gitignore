@@ -151,3 +151,4 @@ CLAUDE.local.md
 *.rar
 *.7z
 /releases/
+/.release/
