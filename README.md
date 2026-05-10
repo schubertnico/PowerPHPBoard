@@ -258,7 +258,7 @@ $mail = [
     'from' => getenv('PPB_MAIL_FROM') ?: 'noreply@powerphpboard.local',
 ];
 
-define('PPB_VERSION', '2.2.0');
+define('PPB_VERSION', '2.2.1');
 define('PPB_SESSION_LIFETIME', 3600);
 define('PPB_CSRF_ENABLED', true);
 define('PPB_DEBUG', (bool) (getenv('PPB_DEBUG') ?: false));
@@ -673,6 +673,40 @@ auf dunklem Hintergrund unleserlich werden.
 
 ## Changelog
 
+### Version 2.2.1 – 2026-05-10 (i18n + CI)
+
+**Sprachdateien synchronisiert und Pipeline gehärtet.**
+
+#### Bug-Fixes
+- `english.inc.php`: Tippfehler-Variable `$lang_opentrhead` (toter Code) entfernt
+- `english.inc.php`: 3 doppelte Definitionen entfernt (`$lang_closethread`,
+  `$lang_title`, `$lang_nopostwithid`)
+- `english.inc.php`: HTML-Bug `BBCode</a> is` und `Smilies</a> are`
+  (Schließtag ohne öffnendes `<a>`) – war im Frontend auf Edit-/New-Post/
+  New-Thread/Profile/Register-Seite sichtbar
+- `editpost.php`: PHPStan Level-8 `assert($post !== null)` für Null-Guard
+- `deutsch-du.inc.php` / `deutsch-sie.inc.php`: Tippfehler `kansnt`,
+  `Korrektniss`, `Passworterinnerumg`, `unterstichen`
+
+#### Modernisierung Englisch
+- `adress` → `address` (9× im Datenbestand)
+- `eMail` → `email` (10×)
+- `successfull` → `successful`, `loggin in` → `logging in`,
+  `replys` → `replies`, `updateing` → `updating`,
+  `autmatic generated` → `automatically generated`, `can not` → `cannot`
+
+#### Sonstiges
+- BBCode-Beispiele in allen drei Sprachdateien:
+  alte Domain `ps-powerscripts.de` → `https://www.powerscripts.org`
+- Default-Boardtitel: `PowerPHPBoard 2.2.1`
+- 21 Files mit `php-cs-fixer fix` formatiert (Indents in Inline-PHP)
+- CI grün: PHPStan Level 8 (0 Errors), PHP-CS-Fixer (0 Findings),
+  PHPMD clean, alle PHPUnit-Tests grün
+
+#### Validierung
+- `$lang_*`-Schlüssel: 199 in `deutsch-du.inc.php` und `english.inc.php`
+  identisch (vorher Drift durch `opentrhead`-Tippfehler)
+
 ### Version 2.2.0 – 2026-05-10 (Bootstrap-5-Frontend)
 
 **Komplettes Frontend-Refactoring** – die gesamte HTML-Ausgabe wurde in
@@ -701,7 +735,7 @@ das Audit-Protokoll).
   `Button "Neuer Thread"` → "Bild für 'Neuer Thread'-Button" + Größenhinweis)
 - Color-Preview-Squares neben jedem Hex-Farb-Input
 - Footer auf https://www.powerscripts.org verlinkt (statt GitHub + MIT-Link)
-- Default-Boardtitel: `PowerPHPBoard 2.2.0` (statt `1.0 BETA`)
+- Default-Boardtitel: `PowerPHPBoard 2.2.1` (statt `1.0 BETA`)
 
 #### Refactor
 - 18 Forum-PHP-Dateien (index, showboard, showthread, login, logout,

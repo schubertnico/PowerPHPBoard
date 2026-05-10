@@ -1,6 +1,6 @@
 # Installationsanleitung
 
-Diese Anleitung beschreibt die vollständige Installation von **PowerPHPBoard 2.2.0**
+Diese Anleitung beschreibt die vollständige Installation von **PowerPHPBoard 2.2.1**
 (mit Bootstrap-5-Frontend).
 Für eine Kurzfassung siehe [README.md](README.md) Abschnitt "Schnellstart".
 
@@ -462,7 +462,7 @@ $mail = [
     'from' => getenv('PPB_MAIL_FROM') ?: 'noreply@powerphpboard.local',
 ];
 
-define('PPB_VERSION', '2.2.0');
+define('PPB_VERSION', '2.2.1');
 define('PPB_SESSION_LIFETIME', 3600);
 define('PPB_CSRF_ENABLED', true);
 define('PPB_DEBUG', (bool) (getenv('PPB_DEBUG') ?: false));
@@ -521,7 +521,7 @@ if (file_exists(__DIR__ . '/config.local.inc.php')) {
 
 Nach der Installation im Admin-Panel unter "Allgemein" setzen:
 
-- **Boardtitel**: Name des Forums (Default: `PowerPHPBoard 2.2.0`)
+- **Boardtitel**: Name des Forums (Default: `PowerPHPBoard 2.2.1`)
 - **Board-URL**: Vollständige URL (für Links in E-Mails)
 - **Admin-E-Mail**: Absender-Adresse (Fallback: `$mail['from']`)
 - **Sprache**: `English`, `Deutsch-Sie` oder `Deutsch-Du` (Default ab 2.2.0: `Deutsch-Du`)
@@ -854,4 +854,4 @@ php -m | grep -iE "pdo_mysql|mbstring|openssl|session|filter"
 ---
 
 **Stand:** 2026-05-10
-**Version:** 2.2.0 (Bootstrap-5-Frontend)
+**Version:** 2.2.1 (Bootstrap-5-Frontend + i18n)
