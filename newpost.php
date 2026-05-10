@@ -159,15 +159,15 @@ if ($postid > 0 && !$postCreated) {
       'index.php',
       $lang_boardlist ?? 'Board list'
   );
-  ?>
+    ?>
 <?php elseif (($board['status'] ?? '') === 'Closed' || ($thread['status'] ?? '') === 'Closed'): ?>
   <?php
-  default_error(
-      $lang_threadclosedcannotpost ?? 'Thread is closed, cannot post',
-      'showboard.php?boardid=' . (int) ($board['id'] ?? 0) . '&current=' . (int) $current,
-      ($lang_backto ?? 'Back to') . ' "' . ($board['title'] ?? '') . '" ' . ($lang_board ?? 'board')
-  );
-  ?>
+    default_error(
+        $lang_threadclosedcannotpost ?? 'Thread is closed, cannot post',
+        'showboard.php?boardid=' . (int) ($board['id'] ?? 0) . '&current=' . (int) $current,
+        ($lang_backto ?? 'Back to') . ' "' . ($board['title'] ?? '') . '" ' . ($lang_board ?? 'board')
+    );
+        ?>
 <?php elseif ($postCreated): ?>
   <div class="card shadow-sm border-success mb-4">
     <header class="card-header bg-success text-white">

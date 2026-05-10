@@ -155,4 +155,4 @@ INSERT INTO ppb_users (username, email, password, homepage, icq, biography, sign
 # Konfiguration erstellen
 #
 
-INSERT INTO ppb_config (boardtitle) VALUES('PowerPHPBoard 1.0');
+INSERT INTO ppb_config (boardtitle) VALUES('PowerPHPBoard 2.2.0');

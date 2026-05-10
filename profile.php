@@ -181,7 +181,7 @@ include __DIR__ . '/header.inc.php';
     $user = $ppbuser;
     $hideEmailValue = $user['hideemail'] === 'YES' ? 'YES' : 'NO';
     $cookieValue = $user['logincookie'] === 'NO' ? 'NO' : 'YES';
-?>
+    ?>
 
   <?php if ($updated): ?>
     <div class="alert alert-success" role="alert">

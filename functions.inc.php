@@ -17,12 +17,12 @@ use PowerPHPBoard\TextFormatter;
  *
  * Color parameters are kept for backwards compatibility but ignored.
  *
- * @param string $message   Error message text
- * @param string $backUrl   URL for back link
- * @param string $backText  Text for back link
- * @param string $headerBg  Legacy header background color (ignored)
+ * @param string $message Error message text
+ * @param string $backUrl URL for back link
+ * @param string $backText Text for back link
+ * @param string $headerBg Legacy header background color (ignored)
  * @param string $contentBg Legacy content background color (ignored)
- * @param string $footerBg  Legacy footer background color (ignored)
+ * @param string $footerBg Legacy footer background color (ignored)
  */
 function default_error(
     string $message,
@@ -48,9 +48,9 @@ function default_error(
 /**
  * Render a Bootstrap alert (success/info/warning/danger).
  *
- * @param string      $message Alert body
- * @param string      $type    Bootstrap context (primary/success/info/warning/danger/...)
- * @param string|null $title   Optional alert heading
+ * @param string $message Alert body
+ * @param string $type Bootstrap context (primary/success/info/warning/danger/...)
+ * @param string|null $title Optional alert heading
  *
  * @return string HTML
  */
@@ -73,9 +73,9 @@ function ppb_alert(string $message, string $type = 'info', ?string $title = null
  *
  * Legacy wrapper for {@see TextFormatter::formatPost()}.
  *
- * @param string $text     Text to process (passed by reference for legacy compatibility)
- * @param string $bbcode   Enable BBCode ('ON' or 'OFF')
- * @param string $smilies  Enable smilies ('ON' or 'OFF')
+ * @param string $text Text to process (passed by reference for legacy compatibility)
+ * @param string $bbcode Enable BBCode ('ON' or 'OFF')
+ * @param string $smilies Enable smilies ('ON' or 'OFF')
  * @param string $htmlcode Allow HTML ('ON' or 'OFF')
  *
  * @return string Formatted text
@@ -89,8 +89,8 @@ function posting_replace(string &$text, string $bbcode, string $smilies, string 
 /**
  * Get user rank based on post count.
  *
- * @param int      $userId User ID
- * @param Database $db     Database instance
+ * @param int $userId User ID
+ * @param Database $db Database instance
  *
  * @return string User rank title
  */
@@ -121,9 +121,9 @@ function getrank(int $userId, Database $db): string
 /**
  * Get pagination links for a thread as Bootstrap pagination.
  *
- * @param int      $threadId Thread ID
- * @param Database $db       Database instance
- * @param int      $current  Currently active offset (post index, 0-based on page boundaries)
+ * @param int $threadId Thread ID
+ * @param Database $db Database instance
+ * @param int $current Currently active offset (post index, 0-based on page boundaries)
  *
  * @return string HTML pagination block, or '' if only one page
  */
@@ -160,8 +160,8 @@ function getpages(int $threadId, Database $db, int $current = 0): string
 /**
  * Format timestamp for display.
  *
- * @param int    $timestamp Unix timestamp
- * @param string $format    Date format string
+ * @param int $timestamp Unix timestamp
+ * @param string $format Date format string
  *
  * @return string Formatted date
  */
@@ -173,8 +173,8 @@ function format_date(int $timestamp, string $format = 'd.m.Y H:i'): string
 /**
  * Truncate text to specified length.
  *
- * @param string $text   Text to truncate
- * @param int    $length Maximum length
+ * @param string $text Text to truncate
+ * @param int $length Maximum length
  * @param string $suffix Suffix to append if truncated
  *
  * @return string Truncated text
@@ -207,10 +207,10 @@ function ppb_onoff_label(?string $value): string
  * 'btn-' it is used as the Bootstrap button variant class, otherwise the default
  * 'btn-primary' is applied.
  *
- * @param string $href      Link URL
+ * @param string $href Link URL
  * @param string $imagePath Legacy image path (ignored)
- * @param string $altText   Button label
- * @param string $buttonBg  Either a Bootstrap variant ('btn-primary'/'btn-success'/...) or legacy color (ignored)
+ * @param string $altText Button label
+ * @param string $buttonBg Either a Bootstrap variant ('btn-primary'/'btn-success'/...) or legacy color (ignored)
  *
  * @return string HTML for the button
  */

@@ -215,8 +215,8 @@ $languages = ['English', 'Deutsch-Sie', 'Deutsch-Du'];
           ['bbcode',   'BBCode in Beiträgen', $row['bbcode'] ?? 'ON'],
           ['smilies',  'Smilies in Beiträgen', $row['smilies'] ?? 'ON'],
       ];
-      foreach ($features as [$name, $label, $val]):
-      ?>
+foreach ($features as [$name, $label, $val]):
+    ?>
         <fieldset class="mb-2">
           <legend class="form-label fw-semibold mb-1 fs-6"><?php echo Security::escape($label); ?></legend>
           <div class="form-check form-check-inline">

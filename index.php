@@ -67,33 +67,33 @@ if ($catid > 0) {
             <?php foreach ($boards as $boardRow): ?>
               <?php
               $statusIcon = '<i class="bi bi-chat-dots text-secondary fs-5" aria-hidden="true"></i>';
-              $statusLabel = $lang_nonewpostings ?? 'No new posts';
-              if ($boardRow['status'] === 'Closed') {
-                  $statusIcon = '<i class="bi bi-lock-fill text-secondary fs-5" aria-hidden="true"></i>';
-                  $statusLabel = $lang_closedboard ?? 'Closed';
-              } elseif ($boardRow['status'] === 'Private') {
-                  $statusIcon = '<i class="bi bi-shield-lock-fill text-warning fs-5" aria-hidden="true"></i>';
-                  $statusLabel = $lang_privateboard ?? 'Private';
-              } elseif ($loggedin === 'YES') {
-                  $visit = $db->fetchOne(
-                      "SELECT time FROM ppb_visits WHERE userid = ? AND vid = ? AND type = 'Board'",
-                      [$ppbuser['id'], $boardRow['id']]
-                  );
-                  if ($visit !== null && $visit['time'] < $boardRow['lastchange']) {
-                      $statusIcon = '<i class="bi bi-chat-dots-fill text-primary fs-5" aria-hidden="true"></i>';
-                      $statusLabel = $lang_newpostings ?? 'New posts';
-                  }
-              }
+                $statusLabel = $lang_nonewpostings ?? 'No new posts';
+                if ($boardRow['status'] === 'Closed') {
+                    $statusIcon = '<i class="bi bi-lock-fill text-secondary fs-5" aria-hidden="true"></i>';
+                    $statusLabel = $lang_closedboard ?? 'Closed';
+                } elseif ($boardRow['status'] === 'Private') {
+                    $statusIcon = '<i class="bi bi-shield-lock-fill text-warning fs-5" aria-hidden="true"></i>';
+                    $statusLabel = $lang_privateboard ?? 'Private';
+                } elseif ($loggedin === 'YES') {
+                    $visit = $db->fetchOne(
+                        "SELECT time FROM ppb_visits WHERE userid = ? AND vid = ? AND type = 'Board'",
+                        [$ppbuser['id'], $boardRow['id']]
+                    );
+                    if ($visit !== null && $visit['time'] < $boardRow['lastchange']) {
+                        $statusIcon = '<i class="bi bi-chat-dots-fill text-primary fs-5" aria-hidden="true"></i>';
+                        $statusLabel = $lang_newpostings ?? 'New posts';
+                    }
+                }
 
-              $postCount = (int) ($db->fetchOne(
-                  'SELECT COUNT(*) as count FROM ppb_posts WHERE boardid = ?',
-                  [$boardRow['id']]
-              )['count'] ?? 0);
-              $threadCount = (int) ($db->fetchOne(
-                  "SELECT COUNT(*) as count FROM ppb_posts WHERE boardid = ? AND type = 'Thread'",
-                  [$boardRow['id']]
-              )['count'] ?? 0);
-              ?>
+                $postCount = (int) ($db->fetchOne(
+                    'SELECT COUNT(*) as count FROM ppb_posts WHERE boardid = ?',
+                    [$boardRow['id']]
+                )['count'] ?? 0);
+                $threadCount = (int) ($db->fetchOne(
+                    "SELECT COUNT(*) as count FROM ppb_posts WHERE boardid = ? AND type = 'Thread'",
+                    [$boardRow['id']]
+                )['count'] ?? 0);
+                ?>
               <tr>
                 <td class="text-center" title="<?php echo Security::escape($statusLabel); ?>">
                   <span class="visually-hidden"><?php echo Security::escape($statusLabel); ?></span>
@@ -139,7 +139,7 @@ if ($catid > 0) {
                               $lastPostLink = 'showthread.php?threadid=' . (int) $lastPostThreadId
                                   . '&current=' . $currentPostings . '#post' . (int) $lastPost['id'];
                           }
-                  ?>
+                          ?>
                     <a href="<?php echo Security::escape($lastPostLink); ?>"
                        class="text-decoration-none"
                        title="<?php echo $lang_jumptolastpost ?? 'Jump to last post'; ?>">
@@ -157,33 +157,33 @@ if ($catid > 0) {
                 </td>
                 <td class="d-none d-lg-table-cell small">
                   <?php
-                  if (!empty($boardRow['mods'])) {
-                      $mods = explode(',', (string) $boardRow['mods']);
-                      $first = true;
-                      foreach ($mods as $modEmail) {
-                          $modEmail = trim($modEmail);
-                          if ($modEmail === '') {
-                              continue;
-                          }
-                          $mod = $db->fetchOne(
-                              'SELECT id, username FROM ppb_users WHERE email = ?',
-                              [$modEmail]
-                          );
-                          if ($mod !== null) {
-                              if (!$first) {
-                                  echo ', ';
+                          if (!empty($boardRow['mods'])) {
+                              $mods = explode(',', (string) $boardRow['mods']);
+                              $first = true;
+                              foreach ($mods as $modEmail) {
+                                  $modEmail = trim($modEmail);
+                                  if ($modEmail === '') {
+                                      continue;
+                                  }
+                                  $mod = $db->fetchOne(
+                                      'SELECT id, username FROM ppb_users WHERE email = ?',
+                                      [$modEmail]
+                                  );
+                                  if ($mod !== null) {
+                                      if (!$first) {
+                                          echo ', ';
+                                      }
+                                      echo '<a class="text-decoration-none" href="showprofile.php?userid='
+                                          . (int) $mod['id'] . '&catid=' . (int) $catid
+                                          . '&boardid=' . (int) $boardid . '">'
+                                          . Security::escape((string) $mod['username']) . '</a>';
+                                      $first = false;
+                                  }
                               }
-                              echo '<a class="text-decoration-none" href="showprofile.php?userid='
-                                  . (int) $mod['id'] . '&catid=' . (int) $catid
-                                  . '&boardid=' . (int) $boardid . '">'
-                                  . Security::escape((string) $mod['username']) . '</a>';
-                              $first = false;
+                          } else {
+                              echo '<span class="text-body-secondary">&ndash;</span>';
                           }
-                      }
-                  } else {
-                      echo '<span class="text-body-secondary">&ndash;</span>';
-                  }
-                  ?>
+                ?>
                 </td>
               </tr>
             <?php endforeach; ?>
@@ -230,14 +230,14 @@ $onlineUsers = $db->fetchAll(
       <p class="mb-0 small">
       <?php
       $links = [];
-      foreach ($onlineUsers as $onlineUser) {
-          $links[] = '<a class="text-decoration-none" href="showprofile.php?userid='
-              . (int) $onlineUser['id'] . '&catid=' . (int) $catid
-              . '&boardid=' . (int) $boardid . '">'
-              . Security::escape((string) $onlineUser['username']) . '</a>';
-      }
-      echo implode(', ', $links);
-      ?>
+        foreach ($onlineUsers as $onlineUser) {
+            $links[] = '<a class="text-decoration-none" href="showprofile.php?userid='
+                . (int) $onlineUser['id'] . '&catid=' . (int) $catid
+                . '&boardid=' . (int) $boardid . '">'
+                . Security::escape((string) $onlineUser['username']) . '</a>';
+        }
+        echo implode(', ', $links);
+        ?>
       </p>
     <?php else: ?>
       <p class="mb-0 text-body-secondary small">

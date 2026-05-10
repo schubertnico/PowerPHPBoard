@@ -217,13 +217,13 @@ $renderPagination = static function () use ($thread, $db, $current, $current2, $
 
   <?php
   $posts = [];
-  if (!empty($thread['id'])) {
-      $posts = $db->fetchAll(
-          'SELECT * FROM ppb_posts WHERE threadid = ? OR id = ? ORDER BY id LIMIT ?, 25',
-          [$thread['id'], $thread['id'], $current]
-      );
-  }
-  ?>
+    if (!empty($thread['id'])) {
+        $posts = $db->fetchAll(
+            'SELECT * FROM ppb_posts WHERE threadid = ? OR id = ? ORDER BY id LIMIT ?, 25',
+            [$thread['id'], $thread['id'], $current]
+        );
+    }
+    ?>
 
   <?php if (empty($thread['id'])): ?>
     <?php echo ppb_alert($lang_nothreadwithid ?? 'No thread with this ID', 'warning'); ?>
@@ -264,7 +264,7 @@ $renderPagination = static function () use ($thread, $db, $current, $current2, $
             $settings['smilies'] ?? 'ON',
             $settings['htmlcode'] ?? 'OFF'
         );
-    ?>
+        ?>
       <article class="card shadow-sm mb-3" id="post<?php echo (int) $row['id']; ?>">
         <div class="row g-0">
           <aside class="col-md-3 col-lg-2 bg-body-tertiary border-end p-3">
@@ -354,7 +354,7 @@ $renderPagination = static function () use ($thread, $db, $current, $current2, $
                       $settings['smilies'] ?? 'ON',
                       'OFF'
                   );
-              ?>
+                  ?>
                 <hr class="text-body-secondary mt-4">
                 <div class="post-signature small text-body-secondary">
                   <?php echo $signature; ?>
@@ -381,23 +381,23 @@ $renderPagination = static function () use ($thread, $db, $current, $current2, $
       $db->query('UPDATE ppb_posts SET views = ? WHERE id = ?', [$threadViews, $threadid]);
   }
 
-  if ($loggedin === 'YES' && !empty($thread['title'])) {
-      $now = time();
-      $existingVisit = $db->fetchOne(
-          "SELECT id FROM ppb_visits WHERE userid = ? AND vid = ? AND type = 'Thread'",
-          [$ppbuser['id'], $threadid]
-      );
+if ($loggedin === 'YES' && !empty($thread['title'])) {
+    $now = time();
+    $existingVisit = $db->fetchOne(
+        "SELECT id FROM ppb_visits WHERE userid = ? AND vid = ? AND type = 'Thread'",
+        [$ppbuser['id'], $threadid]
+    );
 
-      if ($existingVisit !== null) {
-          $db->query('UPDATE ppb_visits SET time = ? WHERE id = ?', [$now, $existingVisit['id']]);
-      } else {
-          $db->query(
-              "INSERT INTO ppb_visits (userid, vid, time, type) VALUES (?, ?, ?, 'Thread')",
-              [$ppbuser['id'], $thread['id'], $now]
-          );
-      }
-  }
-  ?>
+    if ($existingVisit !== null) {
+        $db->query('UPDATE ppb_visits SET time = ? WHERE id = ?', [$now, $existingVisit['id']]);
+    } else {
+        $db->query(
+            "INSERT INTO ppb_visits (userid, vid, time, type) VALUES (?, ?, ?, 'Thread')",
+            [$ppbuser['id'], $thread['id'], $now]
+        );
+    }
+}
+?>
 
   <?php echo $renderPagination(); ?>
 

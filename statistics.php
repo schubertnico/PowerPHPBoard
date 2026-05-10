@@ -8,8 +8,6 @@ declare(strict_types=1);
  * MIT License - Copyright (c) 2026 PowerScripts
  */
 
-use PowerPHPBoard\Security;
-
 include __DIR__ . '/header.inc.php';
 
 $allusers = (int) ($db->fetchOne('SELECT COUNT(*) as count FROM ppb_users')['count'] ?? 0);

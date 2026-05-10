@@ -113,7 +113,7 @@ if ($row !== null && $editboard === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') 
 <?php else:
     $password = base64_decode((string) ($row['password'] ?? ''));
     $categories = $db->fetchAll('SELECT id, title FROM ppb_boards WHERE type = ? ORDER BY id', ['Boardcategory']);
-?>
+    ?>
 
   <?php if ($saved): ?>
     <div class="alert alert-success" role="alert"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Board gespeichert.</div>

@@ -75,11 +75,11 @@ include __DIR__ . '/header.inc.php';
       }
 
       if (!$showip):
-  ?>
+          ?>
     <?php default_error($lang_onlyadminscanviewip ?? 'Only administrators and moderators can view IP addresses', 'index.php', 'Home'); ?>
   <?php else:
       $post = $db->fetchOne('SELECT * FROM ppb_posts WHERE id = ?', [$postid]);
-  ?>
+      ?>
     <section class="card shadow-sm">
       <header class="card-header bg-secondary-subtle d-flex align-items-center gap-2">
         <i class="bi bi-geo-alt-fill" aria-hidden="true"></i>

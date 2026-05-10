@@ -145,7 +145,7 @@ include __DIR__ . '/header.inc.php';
       "SELECT * FROM ppb_posts WHERE type = 'Thread' AND boardid = ? ORDER BY lastreply DESC",
       [$boardid]
   );
-  ?>
+    ?>
 
   <section class="card shadow-sm mb-4">
     <header class="card-header bg-secondary-subtle d-flex flex-wrap align-items-center justify-content-between gap-2">
@@ -224,7 +224,7 @@ include __DIR__ . '/header.inc.php';
                   'SELECT COUNT(*) as count FROM ppb_posts WHERE threadid = ?',
                   [$row['id']]
               )['count'] ?? 0);
-          ?>
+              ?>
             <tr>
               <td class="text-center" title="<?php echo Security::escape($statusLabel); ?>">
                 <span class="visually-hidden"><?php echo Security::escape($statusLabel); ?></span>
@@ -232,27 +232,27 @@ include __DIR__ . '/header.inc.php';
               </td>
               <td>
                 <?php
-                if ($loggedin === 'YES') {
-                    $visit = $db->fetchOne(
-                        "SELECT time FROM ppb_visits WHERE userid = ? AND vid = ? AND type = 'Thread'",
-                        [$ppbuser['id'], $row['id']]
-                    );
-                    if ($visit !== null) {
-                        $firstUnread = $db->fetchOne(
-                            'SELECT id FROM ppb_posts WHERE (id = ? OR threadid = ?) AND `time` > ? ORDER BY `time` LIMIT 1',
-                            [$row['id'], $row['id'], $visit['time']]
+                    if ($loggedin === 'YES') {
+                        $visit = $db->fetchOne(
+                            "SELECT time FROM ppb_visits WHERE userid = ? AND vid = ? AND type = 'Thread'",
+                            [$ppbuser['id'], $row['id']]
                         );
-                        if ($firstUnread !== null) {
-                            $currentPosts = (int) floor($postCount / 25) * 25;
-                            echo '<a class="text-decoration-none me-1" href="showthread.php?threadid='
-                                . (int) $row['id'] . '&current=' . $currentPosts
-                                . '#post' . (int) $firstUnread['id'] . '" title="'
-                                . ($lang_jumptofirstunread ?? 'Jump to first unread')
-                                . '"><i class="bi bi-arrow-right-circle-fill text-primary" aria-hidden="true"></i></a>';
+                        if ($visit !== null) {
+                            $firstUnread = $db->fetchOne(
+                                'SELECT id FROM ppb_posts WHERE (id = ? OR threadid = ?) AND `time` > ? ORDER BY `time` LIMIT 1',
+                                [$row['id'], $row['id'], $visit['time']]
+                            );
+                            if ($firstUnread !== null) {
+                                $currentPosts = (int) floor($postCount / 25) * 25;
+                                echo '<a class="text-decoration-none me-1" href="showthread.php?threadid='
+                                    . (int) $row['id'] . '&current=' . $currentPosts
+                                    . '#post' . (int) $firstUnread['id'] . '" title="'
+                                    . ($lang_jumptofirstunread ?? 'Jump to first unread')
+                                    . '"><i class="bi bi-arrow-right-circle-fill text-primary" aria-hidden="true"></i></a>';
+                            }
                         }
                     }
-                }
-                ?>
+              ?>
                 <a class="link-dark fw-semibold text-decoration-none"
                    href="showthread.php?threadid=<?php echo (int) $row['id']; ?>">
                   <?php echo Security::escape((string) $row['title']); ?>
@@ -301,7 +301,7 @@ include __DIR__ . '/header.inc.php';
                             $jumpLink = 'showthread.php?threadid=' . (int) $row['id']
                                 . '&current=' . $currentPosts . '#post' . (int) $lastPost['id'];
                         }
-                ?>
+                        ?>
                   <a class="text-decoration-none" href="<?php echo Security::escape($jumpLink); ?>"
                      title="<?php echo $lang_jumptolastpost ?? 'Jump to last post'; ?>">
                     <i class="bi bi-arrow-right-circle" aria-hidden="true"></i>
@@ -335,7 +335,7 @@ include __DIR__ . '/header.inc.php';
           );
       }
   }
-  ?>
+?>
 
 <?php endif; ?>
 

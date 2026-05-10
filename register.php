@@ -23,7 +23,7 @@ $formError = '';
 
 if ($acception === 0) {
     // Display board rules acceptance page
-?>
+    ?>
   <div class="row justify-content-center">
     <div class="col-lg-9">
       <section class="card shadow-sm">
@@ -165,7 +165,7 @@ if ($acception === 0) {
     }
 
     if ($registrationDone) {
-?>
+        ?>
   <div class="row justify-content-center">
     <div class="col-md-8 col-lg-6">
       <section class="card shadow-sm border-success">
@@ -198,14 +198,14 @@ if ($acception === 0) {
     } else {
         // Repopulate fields with submitted values when validation failed
         $oldUsername = ($_SERVER['REQUEST_METHOD'] === 'POST') ? Security::getString('username', 'POST') : '';
-        $oldEmail1   = ($_SERVER['REQUEST_METHOD'] === 'POST') ? Security::getString('email1', 'POST') : '';
+        $oldEmail1 = ($_SERVER['REQUEST_METHOD'] === 'POST') ? Security::getString('email1', 'POST') : '';
         $oldHomepage = ($_SERVER['REQUEST_METHOD'] === 'POST') ? Security::getString('homepage', 'POST') : 'https://';
-        $oldIcq      = ($_SERVER['REQUEST_METHOD'] === 'POST') ? Security::getString('icq', 'POST') : '';
-        $oldBio      = ($_SERVER['REQUEST_METHOD'] === 'POST') ? Security::getString('biography', 'POST') : '';
-        $oldSig      = ($_SERVER['REQUEST_METHOD'] === 'POST') ? Security::getString('signature', 'POST') : '';
-        $oldHide     = ($_SERVER['REQUEST_METHOD'] === 'POST') ? Security::getString('hideemail', 'POST') : 'NO';
-        $oldCookie   = ($_SERVER['REQUEST_METHOD'] === 'POST') ? Security::getString('logincookie', 'POST') : 'YES';
-?>
+        $oldIcq = ($_SERVER['REQUEST_METHOD'] === 'POST') ? Security::getString('icq', 'POST') : '';
+        $oldBio = ($_SERVER['REQUEST_METHOD'] === 'POST') ? Security::getString('biography', 'POST') : '';
+        $oldSig = ($_SERVER['REQUEST_METHOD'] === 'POST') ? Security::getString('signature', 'POST') : '';
+        $oldHide = ($_SERVER['REQUEST_METHOD'] === 'POST') ? Security::getString('hideemail', 'POST') : 'NO';
+        $oldCookie = ($_SERVER['REQUEST_METHOD'] === 'POST') ? Security::getString('logincookie', 'POST') : 'YES';
+        ?>
   <div class="row justify-content-center">
     <div class="col-lg-9">
 

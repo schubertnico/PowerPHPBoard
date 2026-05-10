@@ -60,9 +60,9 @@ if ($username !== '') {
 $renderStatusBadge = static function (string $status): string {
     return match ($status) {
         'Administrator' => '<span class="badge text-bg-danger">Administrator</span>',
-        'Deactivated'   => '<span class="badge text-bg-secondary">Deaktiviert</span>',
-        'Normal user'   => '<span class="badge text-bg-success-subtle text-success-emphasis border">Normal</span>',
-        default         => '<span class="badge text-bg-light text-dark border">' . htmlspecialchars($status, ENT_QUOTES, 'UTF-8') . '</span>',
+        'Deactivated' => '<span class="badge text-bg-secondary">Deaktiviert</span>',
+        'Normal user' => '<span class="badge text-bg-success-subtle text-success-emphasis border">Normal</span>',
+        default => '<span class="badge text-bg-light text-dark border">' . htmlspecialchars($status, ENT_QUOTES, 'UTF-8') . '</span>',
     };
 };
 
@@ -181,7 +181,7 @@ $filterUrl = static function (?string $status, int $page = 1): string {
         <tbody>
           <?php foreach ($users as $row):
               $registered = (int) ($row['registered'] ?? 0);
-          ?>
+              ?>
             <tr>
               <td class="text-body-secondary small">#<?php echo (int) $row['id']; ?></td>
               <td>

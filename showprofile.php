@@ -27,13 +27,13 @@ if ($userid > 0) {
     $msg = $userid === 0
         ? ($lang_chooseuser ?? 'Please choose a user')
         : ($lang_nouserwithid ?? 'No user with this ID');
-    default_error($msg, 'index.php', $lang_boardlist ?? 'Board list');
-    ?>
+      default_error($msg, 'index.php', $lang_boardlist ?? 'Board list');
+      ?>
   <?php else:
       $rank = ($user['status'] === 'Deactivated' || $user['status'] === 'Administrator')
           ? $user['status']
           : getrank((int) $user['id'], $db);
-  ?>
+      ?>
     <section class="card shadow-sm mb-4">
       <header class="card-header bg-secondary-subtle d-flex align-items-center gap-2">
         <i class="bi bi-person-circle fs-4" aria-hidden="true"></i>

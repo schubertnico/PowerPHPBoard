@@ -63,7 +63,7 @@ if ($catid > 0) {
       <?php
       $boards = $db->fetchAll('SELECT * FROM ppb_boards WHERE type = ? AND catid = ? ORDER BY title', ['Board', $row['id']]);
       if (count($boards) === 0):
-      ?>
+          ?>
         <div class="card-body text-center text-body-secondary">
           Keine Boards in dieser Kategorie.
         </div>
@@ -86,7 +86,7 @@ if ($catid > 0) {
                   } elseif ($row2['status'] === 'Private') {
                       $statusBadge = '<span class="badge text-bg-warning"><i class="bi bi-shield-lock-fill" aria-hidden="true"></i> Private</span>';
                   }
-              ?>
+                  ?>
                 <tr>
                   <td class="text-center">
                     <?php if ($statusBadge !== ''): ?>
@@ -108,26 +108,26 @@ if ($catid > 0) {
                   </td>
                   <td>
                     <?php
-                    if (!empty($row2['mods'])) {
-                        $mods = explode(',', (string) $row2['mods']);
-                        $links = [];
-                        foreach ($mods as $modEmail) {
-                            $modEmail = trim($modEmail);
-                            if ($modEmail === '') {
-                                continue;
+                        if (!empty($row2['mods'])) {
+                            $mods = explode(',', (string) $row2['mods']);
+                            $links = [];
+                            foreach ($mods as $modEmail) {
+                                $modEmail = trim($modEmail);
+                                if ($modEmail === '') {
+                                    continue;
+                                }
+                                $modUser = $db->fetchOne('SELECT id, username FROM ppb_users WHERE email = ?', [$modEmail]);
+                                if ($modUser !== null) {
+                                    $links[] = '<a class="text-decoration-none" href="../showprofile.php?userid='
+                                        . (int) $modUser['id'] . '">'
+                                        . Security::escape((string) $modUser['username']) . '</a>';
+                                }
                             }
-                            $modUser = $db->fetchOne('SELECT id, username FROM ppb_users WHERE email = ?', [$modEmail]);
-                            if ($modUser !== null) {
-                                $links[] = '<a class="text-decoration-none" href="../showprofile.php?userid='
-                                    . (int) $modUser['id'] . '">'
-                                    . Security::escape((string) $modUser['username']) . '</a>';
-                            }
+                            echo $links === [] ? '<span class="text-body-secondary">&ndash;</span>' : implode(', ', $links);
+                        } else {
+                            echo '<span class="text-body-secondary">&ndash;</span>';
                         }
-                        echo $links === [] ? '<span class="text-body-secondary">&ndash;</span>' : implode(', ', $links);
-                    } else {
-                        echo '<span class="text-body-secondary">&ndash;</span>';
-                    }
-                    ?>
+                  ?>
                   </td>
                   <td class="text-end">
                     <a class="btn btn-outline-primary btn-sm"

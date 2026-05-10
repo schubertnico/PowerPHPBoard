@@ -239,7 +239,7 @@ if ($headerFile !== '' && file_exists(__DIR__ . '/inc/' . $headerFile)) {
 if (!empty($bcat['title'])):
     $catLink = 'index.php?catid=' . (int) ($bcat['id'] ?? $catid);
     $isLast = empty($board['title']) && empty($thread['title']);
-?>
+    ?>
     <li class="breadcrumb-item<?php echo $isLast ? ' active' : ''; ?>"<?php echo $isLast ? ' aria-current="page"' : ''; ?>>
       <?php if ($isLast): ?>
         <?php echo Security::escape((string) $bcat['title']); ?>
@@ -252,7 +252,7 @@ if (!empty($bcat['title'])):
 if (!empty($board['title'])):
     $boardLink = 'showboard.php?boardid=' . (int) $board['id'];
     $isLast = empty($thread['title']);
-?>
+    ?>
     <li class="breadcrumb-item<?php echo $isLast ? ' active' : ''; ?>"<?php echo $isLast ? ' aria-current="page"' : ''; ?>>
       <?php if ($isLast): ?>
         <?php echo Security::escape((string) $board['title']); ?>
@@ -278,7 +278,7 @@ if (!empty($board['title'])):
         <p class="text-body-secondary small mb-0">
           <?php echo $lang_moderatedby ?? 'Moderated by'; ?>:
           <?php
-          $mods = explode(',', (string) $board['mods']);
+              $mods = explode(',', (string) $board['mods']);
           $modLinks = [];
           foreach ($mods as $modEmail) {
               $modEmail = trim($modEmail);

@@ -137,15 +137,15 @@ include __DIR__ . '/header.inc.php';
       'index.php',
       $lang_boardlist ?? 'Board list'
   );
-  ?>
+    ?>
 <?php elseif (($board['status'] ?? '') === 'Closed'): ?>
   <?php
-  default_error(
-      $lang_boardclosedcannotopenthread ?? 'Board is closed, cannot create thread',
-      'showboard.php?boardid=' . (int) ($board['id'] ?? 0),
-      ($lang_backto ?? 'Back to') . ' "' . ($board['title'] ?? '') . '" ' . ($lang_board ?? 'board')
-  );
-  ?>
+    default_error(
+        $lang_boardclosedcannotopenthread ?? 'Board is closed, cannot create thread',
+        'showboard.php?boardid=' . (int) ($board['id'] ?? 0),
+        ($lang_backto ?? 'Back to') . ' "' . ($board['title'] ?? '') . '" ' . ($lang_board ?? 'board')
+    );
+        ?>
 <?php elseif ($threadCreated): ?>
   <div class="card shadow-sm border-success mb-4">
     <header class="card-header bg-success text-white">

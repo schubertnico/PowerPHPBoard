@@ -13,13 +13,13 @@ use PowerPHPBoard\Security;
 include __DIR__ . '/header.inc.php';
 
 $rows = [
-    ['[b]text[/b]',                                         $lang_bbbold       ?? 'Bold text'],
+    ['[b]text[/b]',                                         $lang_bbbold ?? 'Bold text'],
     ['[u]text[/u]',                                         $lang_bbunderlined ?? 'Underlined text'],
-    ['[i]text[/i]',                                         $lang_bbitalic     ?? 'Italic text'],
-    ['[url]www.powerscripts.org[/url]',                     $lang_bburl        ?? 'Link to URL'],
-    ['[url="http://www.powerscripts.org"]PowerScripts[/url]', $lang_bburlis    ?? 'Link with custom text'],
-    ['[email]admin@powerscripts.org[/email]',               $lang_bbemail      ?? 'Email link'],
-    ['[quote]Text[/quote]',                                 $lang_bbquote      ?? 'Quote block'],
+    ['[i]text[/i]',                                         $lang_bbitalic ?? 'Italic text'],
+    ['[url]www.powerscripts.org[/url]',                     $lang_bburl ?? 'Link to URL'],
+    ['[url="http://www.powerscripts.org"]PowerScripts[/url]', $lang_bburlis ?? 'Link with custom text'],
+    ['[email]admin@powerscripts.org[/email]',               $lang_bbemail ?? 'Email link'],
+    ['[quote]Text[/quote]',                                 $lang_bbquote ?? 'Quote block'],
 ];
 ?>
 

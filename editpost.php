@@ -207,8 +207,9 @@ include __DIR__ . '/header.inc.php';
   </div>
 
 <?php else:
+    assert($post !== null);
     $iconValue = (string) ($post['icon'] ?? '');
-?>
+    ?>
   <form action="editpost.php?postid=<?php echo (int) $post['id']; ?>&login=1&editpost=1&catid=<?php echo (int) $catid; ?>&boardid=<?php echo (int) $boardid; ?>"
         method="post" class="needs-validation" novalidate>
     <?php echo CSRF::getTokenField(); ?>
@@ -232,8 +233,8 @@ include __DIR__ . '/header.inc.php';
               <input class="form-check-input" type="checkbox" id="deletepost" name="deletepost" value="YES">
               <label class="form-check-label fw-semibold text-danger" for="deletepost">
                 <?php echo $post['type'] === 'Thread'
-                    ? ($lang_deletethread ?? 'Delete thread')
-                    : ($lang_deletepost ?? 'Delete post'); ?>
+                        ? ($lang_deletethread ?? 'Delete thread')
+                        : ($lang_deletepost ?? 'Delete post'); ?>
               </label>
               <div class="form-text">Diese Aktion kann nicht rückgängig gemacht werden.</div>
             </div>
@@ -277,7 +278,7 @@ include __DIR__ . '/header.inc.php';
             <div class="d-flex flex-wrap gap-2 align-items-center">
               <?php for ($i = 1; $i <= 14; $i++):
                   $val = 'icon' . $i . '.gif';
-              ?>
+                  ?>
                 <div class="form-check form-check-inline mb-0">
                   <input class="form-check-input" type="radio" name="icon"
                          id="icon<?php echo $i; ?>" value="<?php echo $val; ?>"

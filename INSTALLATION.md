@@ -521,7 +521,7 @@ if (file_exists(__DIR__ . '/config.local.inc.php')) {
 
 Nach der Installation im Admin-Panel unter "Allgemein" setzen:
 
-- **Boardtitel**: Name des Forums (Default: `PowerPHPBoard 1.0`)
+- **Boardtitel**: Name des Forums (Default: `PowerPHPBoard 2.2.0`)
 - **Board-URL**: Vollständige URL (für Links in E-Mails)
 - **Admin-E-Mail**: Absender-Adresse (Fallback: `$mail['from']`)
 - **Sprache**: `English`, `Deutsch-Sie` oder `Deutsch-Du` (Default ab 2.2.0: `Deutsch-Du`)

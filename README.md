@@ -701,7 +701,7 @@ das Audit-Protokoll).
   `Button "Neuer Thread"` → "Bild für 'Neuer Thread'-Button" + Größenhinweis)
 - Color-Preview-Squares neben jedem Hex-Farb-Input
 - Footer auf https://www.powerscripts.org verlinkt (statt GitHub + MIT-Link)
-- Default-Boardtitel: `PowerPHPBoard 1.0` (statt `1.0 BETA`)
+- Default-Boardtitel: `PowerPHPBoard 2.2.0` (statt `1.0 BETA`)
 
 #### Refactor
 - 18 Forum-PHP-Dateien (index, showboard, showthread, login, logout,
