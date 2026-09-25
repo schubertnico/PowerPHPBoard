@@ -109,6 +109,8 @@ infection-log.txt
 # ---------- Setup-Skripte (Security-Risk - sollen nicht auf Live) ----------
 create-admin.php
 /install.php
+# Sperrdatei, die der Web-Installer nach erfolgreicher Installation schreibt
+/install/.installed
 
 # ---------- Tool-Ausgaben / Temporaer ----------
 *.tmp

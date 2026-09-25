@@ -64,6 +64,9 @@ ServerSignature Off
     # .docker/, .github/, .idea/, .vscode/
     RewriteRule ^(includes|inc|tests|docs|todos|logs|vendor|node_modules|\.docker|\.github|\.idea|\.vscode)/ - [F,L]
 
+    # Web-Installer: nur install/index.php ist zum Aufruf gedacht
+    RewriteRule ^install/templates/ - [F,L]
+
     # composer-Artefakte und interne Tools
     RewriteRule ^(composer\.(json|lock|phar)|auth\.json)$ - [F,L]
 </IfModule>
