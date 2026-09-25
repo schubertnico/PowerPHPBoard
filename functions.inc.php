@@ -316,7 +316,8 @@ function ppb_last_reply_cell(Database $db, array $thread, int $replyCount): stri
 /**
  * Zugang zu einem Board prüfen. Ein per Formular abgeschicktes
  * Board-Passwort wird dabei geprüft (Sperre nach 10 Fehlversuchen in
- * 15 Minuten je IP-Adresse).
+ * 15 Minuten je IP-Adresse und Board; das richtige Passwort setzt den
+ * Zähler dieses Boards zurück).
  *
  * @param array<string, mixed> $board Board-Zeile (mindestens id, status, password)
  * @param array<string, mixed> $ppbuser Angemeldeter Benutzer oder []

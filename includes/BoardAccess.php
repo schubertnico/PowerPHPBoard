@@ -154,18 +154,23 @@ final class BoardAccess
         if ($submittedPassword === null) {
             return self::REQUIRED;
         }
-        if ($limiter !== null && !$limiter->check(self::RATE_LIMIT_ACTION, $clientId)) {
+
+        // Fehlversuche zählen je Board und Client: Das richtige Passwort eines
+        // Boards setzt nur dessen Zähler zurück, nie den eines anderen Boards
+        $boardId = (int) ($board['id'] ?? 0);
+        $limitKey = self::rateLimitKey($clientId, $boardId);
+        if ($limiter !== null && !$limiter->check(self::RATE_LIMIT_ACTION, $limitKey)) {
             return self::LOCKED;
         }
 
         $stored = (string) ($board['password'] ?? '');
         if (!self::verifyPassword($submittedPassword, $stored)) {
-            $limiter?->recordFailure(self::RATE_LIMIT_ACTION, $clientId);
+            $limiter?->recordFailure(self::RATE_LIMIT_ACTION, $limitKey);
 
             return self::WRONG_PASSWORD;
         }
 
-        $boardId = (int) ($board['id'] ?? 0);
+        $limiter?->recordSuccess(self::RATE_LIMIT_ACTION, $limitKey);
         if (Security::needsRehash($stored)) {
             // Base64 aus älteren Versionen durch einen echten Hash ersetzen und
             // die dabei in ppb_visits gespeicherten Passwortkopien verwerfen
@@ -177,6 +182,14 @@ final class BoardAccess
         self::grant($boardId, $stored, $user, $db);
 
         return self::GRANTED;
+    }
+
+    /**
+     * Schlüssel für den Fehlversuchszähler: Client (IP-Adresse) und Board
+     */
+    public static function rateLimitKey(string $clientId, int $boardId): string
+    {
+        return $clientId . '|board:' . $boardId;
     }
 
     /**

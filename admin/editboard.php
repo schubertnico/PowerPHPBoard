@@ -213,13 +213,14 @@ if ($row !== null && $editboard === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') 
           </div>
           <div class="col-md-6">
             <label for="password" class="form-label"><?php echo Security::escape($lang_adm_boardpassword ?? 'Board password (only for "Private")'); ?></label>
-            <input id="password" name="password" type="text" class="form-control" maxlength="100"
-                   autocomplete="off" value="" aria-describedby="passwordHelp">
+            <input id="password" name="password" type="password" class="form-control" maxlength="100"
+                   autocomplete="new-password" value="" aria-describedby="passwordHelp">
             <div id="passwordHelp" class="form-text">
               <?php if ($hasBoardPassword): ?>
-                <?php echo Security::escape($lang_adm_boardpasswordset ?? 'A password is set and only stored as a hash. Leave empty to keep it.'); ?>
+                <?php echo Security::escape($lang_adm_boardpasswordset ?? 'A password is set. It is only stored as a hash and cannot be displayed again. Leave empty to keep it.'); ?>
               <?php else: ?>
                 <?php echo Security::escape($lang_adm_boardpasswordrequired ?? 'Required if the status is "Private".'); ?>
+                <?php echo Security::escape($lang_adm_boardpasswordhashed ?? 'Only stored as a hash and cannot be displayed again.'); ?>
               <?php endif; ?>
             </div>
           </div>

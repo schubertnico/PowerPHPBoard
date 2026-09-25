@@ -174,6 +174,52 @@ final class BoardAccessTest extends TestCase
     #[Test]
     public function tooManyWrongPasswordsLockTheForm(): void
     {
+        $limiter = $this->limiter();
+        $board = $this->privateBoard('geheim123');
+
+        for ($i = 0; $i < 3; $i++) {
+            $this->assertSame(BoardAccess::WRONG_PASSWORD, BoardAccess::check($board, null, $this->db(), 'falsch', $limiter, 'ip'));
+        }
+        $this->assertSame(BoardAccess::LOCKED, BoardAccess::check($board, null, $this->db(), 'geheim123', $limiter, 'ip'));
+    }
+
+    /**
+     * Regressionstest: Ein richtiges Board-Passwort setzte den
+     * Fehlversuchszähler nicht zurück – nach gelegentlichen Tippfehlern war
+     * das Formular irgendwann gesperrt, obwohl man das Passwort kennt.
+     */
+    #[Test]
+    public function correctPasswordResetsTheFailureCounter(): void
+    {
+        $limiter = $this->limiter();
+        $board = $this->privateBoard('geheim123');
+
+        for ($round = 0; $round < 3; $round++) {
+            $_SESSION = [];
+            $this->assertSame(BoardAccess::WRONG_PASSWORD, BoardAccess::check($board, null, $this->db(), 'falsch', $limiter, 'ip'));
+            $this->assertSame(BoardAccess::WRONG_PASSWORD, BoardAccess::check($board, null, $this->db(), 'vertippt', $limiter, 'ip'));
+            $this->assertSame(BoardAccess::GRANTED, BoardAccess::check($board, null, $this->db(), 'geheim123', $limiter, 'ip'));
+        }
+    }
+
+    #[Test]
+    public function correctPasswordOfAnotherBoardDoesNotResetTheCounter(): void
+    {
+        $limiter = $this->limiter();
+        $known = $this->privateBoard('bekannt123');
+        $target = ['id' => 6] + $this->privateBoard('geheim123');
+
+        $this->assertSame(BoardAccess::WRONG_PASSWORD, BoardAccess::check($target, null, $this->db(), 'rate1', $limiter, 'ip'));
+        $this->assertSame(BoardAccess::WRONG_PASSWORD, BoardAccess::check($target, null, $this->db(), 'rate2', $limiter, 'ip'));
+        $this->assertSame(BoardAccess::GRANTED, BoardAccess::check($known, null, $this->db(), 'bekannt123', $limiter, 'ip'));
+        $this->assertSame(BoardAccess::WRONG_PASSWORD, BoardAccess::check($target, null, $this->db(), 'rate3', $limiter, 'ip'));
+
+        $this->assertSame(BoardAccess::LOCKED, BoardAccess::check($target, null, $this->db(), 'geheim123', $limiter, 'ip'));
+        $this->assertSame('ip|board:6', BoardAccess::rateLimitKey('ip', 6));
+    }
+
+    private function limiter(): RateLimiter
+    {
         $storage = new class () implements RateLimiterStorage {
             /** @var array<string, array{attempts:int, window_start:int, locked_until:int}> */
             private array $data = [];
@@ -188,13 +234,8 @@ final class BoardAccessTest extends TestCase
                 $this->data[$action . '|' . $identifier] = $state;
             }
         };
-        $limiter = new RateLimiter($storage, maxAttempts: 3, windowSeconds: 900, lockSeconds: 900);
-        $board = $this->privateBoard('geheim123');
 
-        for ($i = 0; $i < 3; $i++) {
-            $this->assertSame(BoardAccess::WRONG_PASSWORD, BoardAccess::check($board, null, $this->db(), 'falsch', $limiter, 'ip'));
-        }
-        $this->assertSame(BoardAccess::LOCKED, BoardAccess::check($board, null, $this->db(), 'geheim123', $limiter, 'ip'));
+        return new RateLimiter($storage, maxAttempts: 3, windowSeconds: 900, lockSeconds: 900);
     }
 
     /**

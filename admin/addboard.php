@@ -151,9 +151,9 @@ foreach (['header', 'footer', 'bordercolor', 'tablebg1', 'tablebg2', 'tablebg3',
         </div>
         <div class="col-md-6">
           <label for="password" class="form-label"><?php echo Security::escape($lang_adm_boardpassword ?? 'Board password (only for "Private")'); ?></label>
-          <input id="password" name="password" type="text" class="form-control" maxlength="100" autocomplete="off"
+          <input id="password" name="password" type="password" class="form-control" maxlength="100" autocomplete="new-password"
                  aria-describedby="passwordHelp">
-          <div id="passwordHelp" class="form-text"><?php echo Security::escape($lang_adm_boardpasswordhashed ?? 'Only stored as a hash.'); ?></div>
+          <div id="passwordHelp" class="form-text"><?php echo Security::escape($lang_adm_boardpasswordhashed ?? 'Only stored as a hash and cannot be displayed again.'); ?></div>
         </div>
       </div>
     </div>
