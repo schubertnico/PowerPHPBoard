@@ -130,8 +130,12 @@ class TextFormatter
         // Nicht geschlossene oder verschachtelte Tags reparieren
         $html = self::balanceTags($html);
 
-        // Convert newlines to <br>
-        return nl2br($html, false);
+        // Zeilenumbrüche als <br> – nur außerhalb von <pre> ([code]), denn dort
+        // bricht der Browser selbst um; sonst bekäme jede Code-Zeile eine Leerzeile
+        return self::mapTextSegments(
+            $html,
+            static fn (string $text, int $inLink, int $inPre): string => $inPre > 0 ? $text : nl2br($text, false)
+        );
     }
 
     /**

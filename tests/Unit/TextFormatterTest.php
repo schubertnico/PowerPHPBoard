@@ -91,6 +91,45 @@ class TextFormatterTest extends TestCase
         $this->assertStringContainsString('</pre>', $output);
     }
 
+    /**
+     * Regressionstest: nl2br wirkte auch im <pre> aus [code] – jede
+     * Code-Zeile bekam eine zusätzliche Leerzeile.
+     */
+    #[Test]
+    public function multiLineCodeKeepsLinesAndIndentationWithoutExtraBreaks(): void
+    {
+        $input = "[code]function greet() {\n    if (true) {\n\treturn 'Hallo';\n    }\n}[/code]";
+        $output = TextFormatter::formatPost($input, 'ON', 'ON', 'OFF');
+
+        $this->assertStringContainsString(
+            "<pre class=\"ppb-code\">function greet() {\n    if (true) {\n\treturn &apos;Hallo&apos;;\n    }\n}</pre>",
+            $output
+        );
+        $this->assertStringNotContainsString('<br>', $output);
+    }
+
+    #[Test]
+    public function smiliesInsideCodeAreNotReplaced(): void
+    {
+        $output = TextFormatter::formatPost("[code]\$a = [1, 2];)\necho ':)' . ':D';[/code] :)", 'ON', 'ON', 'OFF');
+
+        $code = substr($output, (int) strpos($output, '<pre'), (int) strpos($output, '</pre>') - (int) strpos($output, '<pre'));
+        $this->assertStringContainsString(';)', $code);
+        $this->assertStringContainsString(':)', $code);
+        $this->assertStringContainsString(':D', $code);
+        $this->assertStringNotContainsString('<img', $code);
+        // Hinter dem Code-Block wird der Smilie weiterhin ersetzt
+        $this->assertStringContainsString('</pre> <img src="images/smile.gif"', $output);
+    }
+
+    #[Test]
+    public function lineBreaksOutsideCodeAreKept(): void
+    {
+        $output = TextFormatter::formatPost("Zeile 1\nZeile 2\n[code]a\nb[/code]\nDanach", 'ON', 'OFF', 'OFF');
+
+        $this->assertSame("Zeile 1<br>\nZeile 2<br>\n<pre class=\"ppb-code\">a\nb</pre><br>\nDanach", $output);
+    }
+
     #[Test]
     public function bbCodeImage(): void
     {
