@@ -40,7 +40,8 @@ ServerSignature Off
 </FilesMatch>
 
 # Explizite Schutzliste fuer kritische Dateien im Root
-<FilesMatch "^(config\.inc\.php|config\.inc\.local\.php|config\.production\.php|header\.inc\.php|footer\.inc\.php|functions\.inc\.php|english\.inc\.php|deutsch-du\.inc\.php|deutsch-sie\.inc\.php|install\.sql|install_bugfix.*\.sql|create-admin\.php|install\.php|composer\.json|composer\.lock|phpstan\.neon|phpstan-baseline\.neon|psalm\.xml|phpmd\.xml|phpunit\.xml|rector\.php|infection\.json5|\.php-cs-fixer\.php|\.php-cs-fixer\.dist\.php|README\.md|README\.html|CONTRIBUTING\.md|SECURITY\.md|INSTALLATION\.md|LICENSE|Dockerfile|docker-compose\.yml)$">
+# (config.local.php enthält die Zugangsdaten aus dem Web-Installer)
+<FilesMatch "^(config\.inc\.php|config\.local\.php|config\.inc\.local\.php|config\.production\.php|header\.inc\.php|footer\.inc\.php|functions\.inc\.php|english\.inc\.php|deutsch-du\.inc\.php|deutsch-sie\.inc\.php|install\.sql|install_bugfix.*\.sql|create-admin\.php|install\.php|composer\.json|composer\.lock|phpstan\.neon|phpstan-baseline\.neon|psalm\.xml|phpmd\.xml|phpunit\.xml|rector\.php|infection\.json5|\.php-cs-fixer\.php|\.php-cs-fixer\.dist\.php|README\.md|README\.html|CONTRIBUTING\.md|SECURITY\.md|INSTALLATION\.md|LICENSE|Dockerfile|docker-compose\.yml)$">
     Require all denied
 </FilesMatch>
 

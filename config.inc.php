@@ -24,20 +24,38 @@ declare(strict_types=1);
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
  */
 
-// Database configuration - uses environment variables with fallbacks
+use PowerPHPBoard\Installer\LocalConfig;
+
+require_once __DIR__ . '/includes/Installer/LocalConfig.php';
+
+// Zugangsdaten – Rangfolge (höchste zuerst):
+//   1. config.local.php (vom Web-Installer unter install/ angelegt, nicht versioniert)
+//   2. Umgebungsvariablen PPB_DB_* und PPB_MAIL_* (Docker, SetEnv, PHP-FPM)
+//   3. Vorgaben aus LocalConfig::DEFAULT_MYSQL und LocalConfig::DEFAULT_MAIL
+// Zugangsdaten bitte nicht hier eintragen, sondern in config.local.php –
+// diese Datei wird bei jedem Update überschrieben.
 $mysql = [
-    'server'   => getenv('PPB_DB_HOST') ?: 'localhost',
-    'user'     => getenv('PPB_DB_USER') ?: 'root',
-    'password' => getenv('PPB_DB_PASS') ?: '',
-    'database' => getenv('PPB_DB_NAME') ?: 'PowerPHPBoard_v2',
+    'server'   => getenv('PPB_DB_HOST') ?: LocalConfig::DEFAULT_MYSQL['server'],
+    'port'     => (int) (getenv('PPB_DB_PORT') ?: LocalConfig::DEFAULT_MYSQL['port']),
+    'user'     => getenv('PPB_DB_USER') ?: LocalConfig::DEFAULT_MYSQL['user'],
+    'password' => getenv('PPB_DB_PASS') ?: LocalConfig::DEFAULT_MYSQL['password'],
+    'database' => getenv('PPB_DB_NAME') ?: LocalConfig::DEFAULT_MYSQL['database'],
 ];
 
 // Mail configuration (Mailpit for dev, real SMTP in production)
 $mail = [
-    'host' => getenv('PPB_MAIL_HOST') ?: 'mailpit',
-    'port' => (int) (getenv('PPB_MAIL_PORT') ?: 1025),
-    'from' => getenv('PPB_MAIL_FROM') ?: 'noreply@powerphpboard.local',
+    'host' => getenv('PPB_MAIL_HOST') ?: LocalConfig::DEFAULT_MAIL['host'],
+    'port' => (int) (getenv('PPB_MAIL_PORT') ?: LocalConfig::DEFAULT_MAIL['port']),
+    'from' => getenv('PPB_MAIL_FROM') ?: LocalConfig::DEFAULT_MAIL['from'],
 ];
+
+if (is_file(__DIR__ . '/' . LocalConfig::FILENAME)) {
+    ['mysql' => $mysql, 'mail' => $mail] = LocalConfig::apply(
+        $mysql,
+        $mail,
+        require __DIR__ . '/' . LocalConfig::FILENAME
+    );
+}
 
 // Application settings
 define('PPB_VERSION', '2.0.0');
