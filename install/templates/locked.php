@@ -37,7 +37,7 @@ return static function (string $reason): void {
     <p class="small text-body-secondary mb-0">
       Wirklich neu installieren? Dann entfernen Sie <code>config.local.php</code> und
       <code>install/.installed</code> und verwenden eine leere Datenbank. Für ein Update
-      bestehender Installationen ist der Installer nicht nötig (siehe INSTALLATION.md, Abschnitt „Update“).
+      bestehender Installationen ist der Installer nicht nötig (siehe README.md, Abschnitt „Update von 2.2.x auf 2.3.0“).
     </p>
   </div>
   <footer class="card-footer">

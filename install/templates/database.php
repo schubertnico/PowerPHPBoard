@@ -41,7 +41,7 @@ return static function (array $old, array $errors, string $message, array $table
           <?php echo Security::escape(implode(', ', $tables)); ?>
           <hr>
           Für ein <strong>Update</strong> von PowerPHPBoard 2.2.x brauchen Sie den Installer nicht –
-          siehe Abschnitt „Update“ in der INSTALLATION.md. Für eine <strong>Neuinstallation</strong>
+          siehe README.md, Abschnitt „Update von 2.2.x auf 2.3.0“. Für eine <strong>Neuinstallation</strong>
           wählen Sie bitte eine leere Datenbank oder löschen die Tabellen vorher selbst (Datensicherung!).
         </div>
       <?php endif; ?>
