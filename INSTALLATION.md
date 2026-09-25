@@ -1,6 +1,6 @@
 # Installationsanleitung
 
-Diese Anleitung beschreibt die vollständige Installation von **PowerPHPBoard 2.2.1**
+Diese Anleitung beschreibt die vollständige Installation von **PowerPHPBoard 2.3.0**
 (mit Bootstrap-5-Frontend).
 Für eine Kurzfassung siehe [README.md](README.md) Abschnitt "Schnellstart".
 
@@ -60,8 +60,8 @@ filter        Input-Validierung (Standard)
 ### Optional
 
 ```text
-opcache       Performance-Optimierung (dringend empfohlen fuer Produktion)
-gd            Spaetere Avatar-Verarbeitung
+opcache       Performance-Optimierung (dringend empfohlen für Produktion)
+gd            Spätere Avatar-Verarbeitung
 curl          HTTP-Anfragen (z. B. Webhooks)
 zip           Zip-Archive
 intl          Internationalisierung
@@ -70,7 +70,7 @@ intl          Internationalisierung
 ### Empfohlene PHP-Einstellungen (`php.ini`)
 
 ```ini
-; Ausfuehrung
+; Ausführung
 memory_limit = 128M
 max_execution_time = 30
 post_max_size = 12M
@@ -102,7 +102,7 @@ default_charset = "UTF-8"
 
 ## Schnellinstallation
 
-Fuer erfahrene Nutzer mit Docker:
+Für erfahrene Nutzer mit Docker:
 
 ```bash
 git clone https://github.com/schubertnico/PowerPHPBoard.git
@@ -112,7 +112,7 @@ cd .docker && docker compose up -d --build && cd ..
 # http://localhost:8085
 ```
 
-Fuer Produktion ohne Docker siehe [Manuelle Installation auf Live-Server](#manuelle-installation-auf-live-server).
+Für Produktion ohne Docker siehe [Manuelle Installation auf Live-Server](#manuelle-installation-auf-live-server).
 
 Für Shared Hosting und alle Server ohne Docker: Dateien hochladen, leere Datenbank
 anlegen, `/install/` im Browser aufrufen – siehe
@@ -220,7 +220,7 @@ php bin/create-admin.php --user=Admin --email=admin@example.com
 
 - Docker 20.10+
 - Docker Compose v2 (`docker compose ...`, nicht mehr `docker-compose`)
-- Composer 2.0+ (lokal, fuer Dev-Dependencies)
+- Composer 2.0+ (lokal, für Dev-Dependencies)
 - Git
 
 ### Schritte
@@ -232,7 +232,7 @@ git clone https://github.com/schubertnico/PowerPHPBoard.git
 cd PowerPHPBoard
 ```
 
-**2. Dev-Dependencies installieren (fuer Tests, Analyse):**
+**2. Dev-Dependencies installieren (für Tests, Analyse):**
 
 ```bash
 composer install
@@ -245,7 +245,7 @@ cd .docker
 docker compose up -d --build
 ```
 
-**4. Container-Status pruefen:**
+**4. Container-Status prüfen:**
 
 ```bash
 docker compose ps
@@ -260,7 +260,7 @@ powerphpboard_mailpit     Up             0.0.0.0:1032->1025/tcp, 0.0.0.0:8032->8
 powerphpboard_phpmyadmin  Up             0.0.0.0:8088->80/tcp
 ```
 
-### Verfuegbare Services
+### Verfügbare Services
 
 | Service     | URL                            | Zweck                         |
 |-------------|--------------------------------|-------------------------------|
@@ -270,7 +270,7 @@ powerphpboard_phpmyadmin  Up             0.0.0.0:8088->80/tcp
 | SMTP intern | `mailpit:1025` (Docker-Netz)   | SMTP-Ziel der App             |
 | MySQL       | `localhost:3315`               | Direkter DB-Zugriff (Dev)     |
 
-### Nuetzliche Docker-Befehle
+### Nützliche Docker-Befehle
 
 ```bash
 cd .docker
@@ -288,10 +288,10 @@ docker compose exec web bash
 # MySQL-Konsole
 docker compose exec db mysql -u powerphpboard -ppowerphpboard_secret powerphpboard
 
-# Neu bauen nach Aenderungen an Dockerfile/php.ini
+# Neu bauen nach Änderungen an Dockerfile/php.ini
 docker compose up -d --build
 
-# Komplett zuruecksetzen (loescht auch alle Daten!)
+# Komplett zurücksetzen (löscht auch alle Daten!)
 docker compose down -v
 ```
 
@@ -315,7 +315,7 @@ weil die Datenbank bereits eingerichtet ist.
 
 ### 1. Dateien bereitstellen
 
-**Option A: Sauberes Deploy-Paket via `git archive`** (empfohlen, schliesst Dev-Artefakte aus):
+**Option A: Sauberes Deploy-Paket via `git archive`** (empfohlen, schließt Dev-Artefakte aus):
 
 ```bash
 git clone https://github.com/schubertnico/PowerPHPBoard.git /tmp/ppb-src
@@ -327,10 +327,10 @@ tar -xzf /tmp/deploy.tar.gz -C /var/www
 mv /var/www/powerphpboard /var/www/forum   # oder Ziel nach Wahl
 ```
 
-Das Archiv enthaelt **nur** Live-relevante Dateien - Tests, Docker-Configs, Docs und
+Das Archiv enthält **nur** Live-relevante Dateien - Tests, Docker-Configs, Docs und
 Analyse-Configs sind via `.gitattributes export-ignore` ausgeschlossen.
 
-**Option B: Git-Clone + manuelles Aufraeumen:**
+**Option B: Git-Clone + manuelles Aufräumen:**
 
 ```bash
 cd /var/www
@@ -356,7 +356,7 @@ Ergebnis: `vendor/`-Verzeichnis nur mit Produktions-Paketen.
 ### 3. Berechtigungen
 
 ```bash
-# Ownership fuer Apache/Nginx (Debian/Ubuntu: www-data)
+# Ownership für Apache/Nginx (Debian/Ubuntu: www-data)
 chown -R www-data:www-data /var/www/forum
 
 # Verzeichnisse: 750, Dateien: 640
@@ -376,14 +376,14 @@ chmod 640 /var/www/forum/config.local.php
 
 ### 4. `.htaccess` nicht entfernen
 
-Das Repository enthaelt **neun** `.htaccess`-Dateien (Root, includes/, inc/, logs/,
+Das Repository enthält **neun** `.htaccess`-Dateien (Root, includes/, inc/, logs/,
 docs/, todos/, tests/, bin/, install/templates/). Die Root-`.htaccess` ist essenziell für:
 
 - Blockieren sensibler Dateien (config.inc.php, config.local.php, *.sql, includes/, logs/, bin/ ...)
 - Security-Header (X-Frame-Options, Referrer-Policy, ...)
 - Directory-Listing aus
 
-Achte darauf, dass dein FTP/Deploy-Tool versteckte Dateien (dotfiles) uebertraegt!
+Achte darauf, dass dein FTP/Deploy-Tool versteckte Dateien (dotfiles) überträgt!
 
 ### 5. Web-Installer aufrufen
 
@@ -437,7 +437,7 @@ systemctl restart apache2
 
 ### Nginx
 
-Nginx respektiert keine `.htaccess`-Dateien. Die aequivalenten Regeln muessen
+Nginx respektiert keine `.htaccess`-Dateien. Die äquivalenten Regeln müssen
 direkt in die `server {}`-Sektion:
 
 ```nginx
@@ -498,7 +498,7 @@ server {
         fastcgi_read_timeout 60;
     }
 
-    # Max. Upload-Groesse
+    # Max. Upload-Größe
     client_max_body_size 12m;
 }
 ```
@@ -545,17 +545,17 @@ Damit sind alle Tabellen inklusive Rate-Limit- und Password-Reset-Tokens angeleg
 außerdem die Zeile mit den Forum-Einstellungen (`ppb_config`, `id = 1`) mit sicheren
 Vorgaben: HTML in Beiträgen aus, BBCode und Smilies an.
 
-### 3. Schema-Uebersicht
+### 3. Schema-Übersicht
 
 | Tabelle                | Beschreibung                                       |
 |------------------------|----------------------------------------------------|
 | `ppb_users`            | Benutzerkonten (username UNIQUE, status enum)      |
 | `ppb_boards`           | Foren, Kategorien, Moderatoren, Board-Passwort     |
-| `ppb_posts`            | Threads und Beitraege (Spalte `type`)              |
+| `ppb_posts`            | Threads und Beiträge (Spalte `type`)              |
 | `ppb_config`           | Board-Konfiguration (Title, Farben, Sprache, ...)  |
 | `ppb_visits`           | Session-/Private-Board-Besuchsdaten                |
-| `ppb_password_resets`  | Einmal-Tokens fuer Passwort-Reset (SHA256 gehasht) |
-| `ppb_rate_limits`      | Brute-Force-Zaehler fuer Login und Reset           |
+| `ppb_password_resets`  | Einmal-Tokens für Passwort-Reset (SHA256 gehasht) |
+| `ppb_rate_limits`      | Brute-Force-Zähler für Login und Reset           |
 
 **Wichtige Constraints:**
 - `ppb_users.username` ist `UNIQUE` (seit 2.1.0).
@@ -654,7 +654,7 @@ SetEnv PPB_MAIL_PASS "PASSWORT_DES_POSTFACHS"
 SetEnv PPB_MAIL_ENCRYPTION starttls
 ```
 
-**Nginx (Umgebung ueber PHP-FPM-Pool-Config):**
+**Nginx (Umgebung über PHP-FPM-Pool-Config):**
 
 In `/etc/php/8.4/fpm/pool.d/forum.conf`:
 ```ini
@@ -676,7 +676,7 @@ Ein abweichender Datenbank-Port wird mit `PPB_DB_PORT` gesetzt (Standard `3306`)
 
 Nach der Installation im Admin-Panel unter "Allgemein" setzen:
 
-- **Boardtitel**: Name des Forums (Default: `PowerPHPBoard 2.2.1`)
+- **Boardtitel**: Name des Forums (Default: `PowerPHPBoard 2.3.0`, der Web-Installer fragt ihn ab)
 - **Board-URL**: Vollständige URL (für Links in E-Mails)
 - **Admin-E-Mail**: Kontaktadresse des Forums – Absender aller Mails, solange kein
   eigener Absender (`from` bzw. `PPB_MAIL_FROM`) eingestellt ist; sonst geht sie als
@@ -797,9 +797,9 @@ die Mitglieder bekommen aber keine Mail.
 
 ## Erste Schritte
 
-### 1. Installation pruefen
+### 1. Installation prüfen
 
-Browser oeffnen:
+Browser öffnen:
 ```text
 http://localhost:8085/          (Docker)
 http://forum.example.com/       (Produktion)
@@ -816,15 +816,15 @@ die Testkonten aus `.docker/dev-seed.sql` (siehe [Docker Installation](#docker-i
 ### 3. Erstes Board erstellen
 
 1. Als Admin eingeloggt auf `/admin/` gehen.
-2. "Board hinzufuegen" auswaehlen.
+2. "Board hinzufügen" auswählen.
 3. Kategorie, Name, Beschreibung eingeben.
 4. Speichern.
 
-### 4. Konfiguration pruefen
+### 4. Konfiguration prüfen
 
 Im Admin unter "General Settings":
 
-- `boardurl` auf die tatsaechliche URL setzen (wichtig fuer Passwort-Reset-Links!)
+- `boardurl` auf die tatsächliche URL setzen (wichtig für Passwort-Reset-Links!)
 - `adminemail` auf eine existierende Adresse setzen.
 - `language` auf bevorzugte Sprache setzen.
 
@@ -832,8 +832,8 @@ Im Admin unter "General Settings":
 
 1. Ausloggen.
 2. Auf "Register" klicken, Boardregeln akzeptieren.
-3. Formular ausfuellen, abschicken.
-4. Mailpit (Docker) bzw. echten Posteingang pruefen - Willkommensmail muss eintreffen.
+3. Formular ausfüllen, abschicken.
+4. Mailpit (Docker) bzw. echten Posteingang prüfen - Willkommensmail muss eintreffen.
 5. Login testen.
 
 ---
@@ -857,6 +857,11 @@ Datenbank und Zugangsdaten bleiben gültig.
      `encryption` eintragen bzw. `PPB_MAIL_USER`, `PPB_MAIL_PASS` und
      `PPB_MAIL_ENCRYPTION` setzen – siehe [E-Mail-Versand (SMTP)](#e-mail-versand-smtp).
      Ohne diese Angaben versendet das Forum wie bisher ohne Anmeldung.
+   - **Absender prüfen:** Ist `from` bzw. `PPB_MAIL_FROM` gesetzt, steht diese Adresse
+     ab 2.3.0 im From aller Mails (bisher immer die Admin-E-Mail); die Admin-E-Mail
+     geht dann als Antwortadresse mit. Tragen Sie dort die Adresse des Postfachs ein,
+     über das versendet wird – oder lassen Sie den Wert leer, dann bleibt die
+     Admin-E-Mail der Absender.
 3. **Dateien aktualisieren** (`git pull` bzw. Upload per FTP). Das Verzeichnis `install/`
    dabei weglassen oder direkt danach löschen.
 4. Ein altes `create-admin.php` im Forumverzeichnis löschen – es ist durch
@@ -934,14 +939,14 @@ Die Migration legt an:
 - `UNIQUE INDEX idx_users_username_unique` auf `ppb_users(username)`
   - Falls **doppelte Usernames** existieren: vor der Migration bereinigen
     (siehe Kommentar in `install_bugfix_2026-04-23.sql`)
-- `ppb_password_resets` (Tokens fuer Reset-Flow)
-- `ppb_rate_limits` (Brute-Force-Zaehler)
+- `ppb_password_resets` (Tokens für Reset-Flow)
+- `ppb_rate_limits` (Brute-Force-Zähler)
 
 **Nach dem Upgrade:**
 
-- Alle aktiven Sessions bleiben gueltig.
-- Nutzer mit alten Base64-Passwoertern werden beim ersten Login automatisch auf Argon2id migriert.
-- Mindestpasswortlaenge ist jetzt 8 Zeichen (vorher 6) - bestehende Passwoerter sind nicht betroffen.
+- Alle aktiven Sessions bleiben gültig.
+- Nutzer mit alten Base64-Passwörtern werden beim ersten Login automatisch auf Argon2id migriert.
+- Mindestpasswortlänge ist jetzt 8 Zeichen (vorher 6) - bestehende Passwörter sind nicht betroffen.
 
 ### Von v1.x auf 2.2.0 (großer Sprung)
 
@@ -977,11 +982,11 @@ Vor dem Go-Live abhaken:
 - [ ] „HTML in Beiträgen“ im Adminbereich ausgeschaltet, Board-URL eingetragen
 - [ ] Admin-Email auf existierende Adresse gesetzt
 - [ ] SMTP getestet (Passwort-Reset-Mail kommt an)
-- [ ] Rate-Limit getestet (10x falsches Login loest Lock aus)
-- [ ] DB-Backup-Strategie eingerichtet (mindestens taeglich)
+- [ ] Rate-Limit getestet (10x falsches Login löst Lock aus)
+- [ ] DB-Backup-Strategie eingerichtet (mindestens täglich)
 - [ ] Altes `create-admin.php` im Hauptverzeichnis und `install_bugfix_*.sql` **gelöscht** oder unerreichbar
 - [ ] Test: `curl -I https://forum.example.com/bin/create-admin.php` → HTTP 403
-- [ ] `logs/`-Verzeichnis ist ausserhalb des DocumentRoot oder per `.htaccess` gesperrt
+- [ ] `logs/`-Verzeichnis ist außerhalb des DocumentRoot oder per `.htaccess` gesperrt
 - [ ] Composer installiert nur Prod-Dependencies (`--no-dev`)
 - [ ] `vendor/`, `tests/`, `docs/`, `.docker/`, `.github/` sind per `.htaccess` und/oder Webserver-Config gesperrt
 
@@ -1023,7 +1028,7 @@ composer install --no-dev --optimize-autoloader
 ```
 
 Falls nur eine der neuen Klassen fehlt (`Validator`, `RateLimiter`, `Mailer`):
-`config.inc.php` muss sie laden - pruefen, ob die `require_once`-Zeilen im
+`config.inc.php` muss sie laden - prüfen, ob die `require_once`-Zeilen im
 oberen Abschnitt stehen.
 
 ### `.htaccess` wirkt nicht
@@ -1037,9 +1042,9 @@ Apache: `AllowOverride None` ist der Default! Setze in der VHost-Config:
 ```
 
 und lade Apache neu. Ohne `AllowOverride All` sind alle `.htaccess`-Schutzregeln
-wirkungslos und sensible Dateien **waeren oeffentlich erreichbar**.
+wirkungslos und sensible Dateien **wären öffentlich erreichbar**.
 
-Nginx: `.htaccess` wird generell nicht unterstuetzt. Aequivalente Regeln muessen
+Nginx: `.htaccess` wird generell nicht unterstützt. Äquivalente Regeln müssen
 in `server { ... }` (siehe [Webserver-Konfiguration](#webserver-konfiguration)).
 
 ### "Permission denied" bei Logs
@@ -1052,33 +1057,37 @@ ls -la /var/www/forum/logs
 
 ### "Connection refused" zur Datenbank
 
-1. MySQL-Service laeuft?
+1. MySQL-Service läuft?
    ```bash
    systemctl status mysql
    ```
 2. `PPB_DB_HOST`/`-USER`/`-PASS`/`-NAME` korrekt gesetzt?
-3. Rechte pruefen:
+3. Rechte prüfen:
    ```sql
    SHOW GRANTS FOR 'ppb_user'@'localhost';
    ```
 
-### Weisse Seite / HTTP 500
+### Weiße Seite / HTTP 500
 
-1. PHP-Error-Log pruefen:
+1. PHP-Error-Log prüfen:
    ```bash
    tail -f /var/www/forum/logs/php-error.log
    tail -f /var/log/apache2/error.log
    ```
-2. Temporaer `PPB_DEBUG=true` setzen, neu laden, Ausgabe analysieren, danach
-   zurueck auf `false`.
+2. Temporär `PPB_DEBUG=true` setzen, neu laden, Ausgabe analysieren, danach
+   zurück auf `false`.
 
-### Rate-Limit schiesst zu frueh / Accounts werden gesperrt
+### Rate-Limit schießt zu früh / Accounts werden gesperrt
 
 ```sql
--- Manuell Zaehler fuer eine IP zuruecksetzen
+-- Manuell Zähler für eine IP zurücksetzen
 DELETE FROM ppb_rate_limits WHERE identifier = '1.2.3.4';
 
--- Alle Zaehler loeschen
+-- Board-Passwörter zählen je IP und Board (Kennung „IP|board:ID“);
+-- das richtige Board-Passwort setzt den Zähler selbst zurück
+DELETE FROM ppb_rate_limits WHERE action = 'boardpwd' AND identifier LIKE '1.2.3.4|board:%';
+
+-- Alle Zähler löschen
 TRUNCATE TABLE ppb_rate_limits;
 ```
 
@@ -1092,7 +1101,7 @@ Limits anpassen direkt im Code (`login.php`, `sendpassword.php`) via
    und Abhilfe stehen unter [Fehlermeldungen beim Versand](#fehlermeldungen-beim-versand).
 3. `boardurl` in `ppb_config` muss gesetzt sein, sonst wird eine lokale URL aus
    `$_SERVER['HTTP_HOST']` gebaut (funktioniert hinter Reverse-Proxies evtl. nicht).
-4. Token-Gueltigkeit ist 1 Stunde - danach Status "Invalid or expired".
+4. Token-Gültigkeit ist 1 Stunde - danach Status "Invalid or expired".
 
 ### Session-Probleme
 
@@ -1101,11 +1110,11 @@ Limits anpassen direkt im Code (`login.php`, `sendpassword.php`) via
    ```bash
    php -r "echo session_save_path() . PHP_EOL;"
    ```
-3. Bei HTTPS und `session.cookie_secure=On` werden Cookies ueber HTTP nicht gesendet.
+3. Bei HTTPS und `session.cookie_secure=On` werden Cookies über HTTP nicht gesendet.
 
 ### Diagnose-Tools
 
-**DB-Verbindung testen** (temporaer!):
+**DB-Verbindung testen** (temporär!):
 
 ```bash
 docker compose exec web php -r "
@@ -1134,7 +1143,7 @@ echo \$m->lastError(), PHP_EOL;
 "
 ```
 
-**Erweiterungen pruefen**:
+**Erweiterungen prüfen**:
 
 ```bash
 php -m | grep -iE "pdo_mysql|mbstring|openssl|session|filter"
@@ -1147,10 +1156,10 @@ php -m | grep -iE "pdo_mysql|mbstring|openssl|session|filter"
 - **GitHub Issues:** [https://github.com/schubertnico/PowerPHPBoard/issues](https://github.com/schubertnico/PowerPHPBoard/issues)
 - **Projekt-Website:** [https://www.powerscripts.org](https://www.powerscripts.org)
 - **E-Mail:** info@schubertmedia.de
-- **README:** [README.md](README.md) fuer Schnellstart und Architekturueberblick
+- **README:** [README.md](README.md) für Schnellstart und Architekturüberblick
 - **Security-Policy:** [SECURITY.md](SECURITY.md)
 
 ---
 
-**Stand:** 2026-05-10
-**Version:** 2.2.1 (Bootstrap-5-Frontend + i18n)
+**Stand:** 2026-09-25
+**Version:** 2.3.0 (Web-Installer, SMTP-Anmeldung, Sicherheitskorrekturen)

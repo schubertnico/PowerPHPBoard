@@ -2,7 +2,7 @@
 
 [![PHP](https://img.shields.io/badge/PHP-8.4-blue?style=flat-square)](https://www.php.net/)
 [![Bootstrap](https://img.shields.io/badge/Bootstrap-5.3.3-7952B3?style=flat-square)](https://getbootstrap.com/)
-[![tests](https://img.shields.io/badge/tests-511%20passing-brightgreen?style=flat-square)](#testing)
+[![tests](https://img.shields.io/badge/tests-647%20passing-brightgreen?style=flat-square)](#testing)
 [![lighthouse](https://img.shields.io/badge/Lighthouse-100%2F100%2F100%2F100-brightgreen?style=flat-square)](#accessibility)
 [![license](https://img.shields.io/badge/license-MIT-yellow?style=flat-square)](LICENSE)
 
@@ -125,8 +125,9 @@ Der Installer ist für ein Update **nicht** nötig – Datenbank und Zugangsdate
 bleiben gültig, eine Datenbank-Migration ist nicht nötig. Wer Zugangsdaten direkt in
 `config.inc.php` eingetragen hatte, überträgt sie vor dem Hochladen der neuen
 Dateien in eine `config.local.php` (die neue `config.inc.php` wird überschrieben).
-Umgebungsvariablen funktionieren unverändert. Das Verzeichnis `install/` beim Update
-nicht hochladen bzw. danach löschen. Anleitung: [INSTALLATION.md](INSTALLATION.md#von-22x-auf-230-web-installer).
+Umgebungsvariablen funktionieren unverändert; ist `PPB_MAIL_FROM` bzw. `from` gesetzt,
+ist diese Adresse jetzt der Absender aller Mails (Antworten gehen an die Admin-E-Mail).
+Das Verzeichnis `install/` beim Update nicht hochladen bzw. danach löschen. Anleitung: [INSTALLATION.md](INSTALLATION.md#von-22x-auf-230-web-installer).
 
 ### Bugfix-Migration einspielen (für bestehende Installationen)
 
@@ -206,7 +207,7 @@ Bei einem "dummen" Upload (FTP/SFTP) bitte die in `.gitattributes` mit
 ### Technische Features
 - PHP 8.4 Strict Types, Match Expressions, Named Arguments, readonly
 - PSR-4 Autoloading, modulare `includes/`-Klassen
-- 198 PHPUnit-Tests (137 Unit + 61 Feature)
+- 647 PHPUnit-Tests (585 Unit + 62 Feature)
 - PHPStan Level 8, Psalm, PHP-CS-Fixer, Rector, Infection
 - Docker-Compose Dev-Stack mit Mailpit und phpMyAdmin
 - GitHub Actions CI
@@ -406,12 +407,14 @@ PowerPHPBoard/
 │   ├── DatabaseRateLimitStorage.php
 │   ├── ErrorHandler.php           # Error + Security-Logging
 │   ├── Mailer.php                 # SMTP-Versand mit STARTTLS/SSL und AUTH PLAIN/LOGIN
+│   ├── PostDeletion.php           # Themen/Antworten löschen, „Letzter Beitrag“ neu berechnen
 │   ├── RateLimiter.php            # Fenster/Lock-basiertes Rate-Limit
 │   ├── RateLimiterStorage.php     # Interface für verschiedene Backends
 │   ├── Security.php               # escape, hashPassword, verifyPassword, isValidEmail …
 │   ├── Session.php                # Session-Verwaltung (login/logout, regenerate)
 │   ├── SmtpConnection.php         # SMTP-Verbindung: Zeilen, Antworten, TLS (für Mailer)
 │   ├── TextFormatter.php          # BBCode + Smilies
+│   ├── ThreadPages.php            # Seite eines Beitrags für Sprung-Links (25 je Seite)
 │   ├── Validator.php              # Username-, Längen-, Passwortregeln
 │   └── Installer/                 # Web-Installer: LocalConfig, Schema, FormValidator,
 │                                  # Requirements, DatabaseSetup, AdminAccount,
@@ -422,8 +425,8 @@ PowerPHPBoard/
 │   └── templates/                 # Seitenvorlagen (per .htaccess gesperrt)
 ├── logs/                          # PHP- und Security-Logs (nicht versioniert)
 ├── tests/
-│   ├── Unit/                      # 137 Unit-Tests
-│   └── Feature/                   # 61 Feature-/Integrations-Tests
+│   ├── Unit/                      # 585 Unit-Tests
+│   └── Feature/                   # 62 Feature-/Integrations-Tests
 ├── config.inc.php                 # Zentrale Konfiguration (DB, Mail, Konstanten)
 ├── config.local.php               # Zugangsdaten aus dem Web-Installer (nicht versioniert)
 ├── header.inc.php / footer.inc.php
@@ -761,7 +764,7 @@ vendor/bin/phpunit --testsuite Feature
 composer test-coverage
 ```
 
-Aktueller Stand: **198 Tests** (137 Unit + 61 Feature), **362 Assertions**,
+Aktueller Stand: **647 Tests** (585 Unit + 62 Feature), **3224 Assertions**,
 0 Failures.
 
 Statische Analyse:
@@ -887,6 +890,11 @@ auf dunklem Hintergrund unleserlich werden.
 - Fehlerprotokoll mit Arbeitsschritt, SMTP-Antwortcode und Kurztext – ohne Passwort
   und Anmeldezeilen; `EHLO` mit Hostname bzw. Adressliteral, Zeitlimit auch beim Lesen
 - Systemprüfung des Installers weist auf die PHP-Erweiterung `openssl` hin
+- Ein eingestellter Absender (`from` bzw. `PPB_MAIL_FROM`, im Installer die
+  „Absenderadresse“) ist jetzt der From aller Mails und der Absender gegenüber dem
+  SMTP-Server; die Admin-E-Mail geht als `Reply-To` mit, bei Mails von Mitglied zu
+  Mitglied die Adresse des schreibenden Mitglieds. Ohne eigenen Absender bleibt die
+  Admin-E-Mail der Absender. Die Test-Mail des Installers folgt derselben Regel
 
 #### Fehlerbehebungen
 - Registrierungs-, Reset- und Benutzer-Mails kamen bei Hostern, deren Mailserver eine
@@ -902,12 +910,38 @@ auf dunklem Hintergrund unleserlich werden.
   Passwörter werden auch im Adminbereich geprüft
 - Themen-Symbole werden angezeigt; Bearbeiten und IP-Anzeige nur für Berechtigte
 - `PPB_VERSION` stimmt wieder mit dem Release überein
+- „Zum letzten Beitrag springen“ und „Zum ersten ungelesenen Beitrag springen“ führten
+  bei genau 25, 50 … Beiträgen auf eine leere Seite; nach einer Antwort springt
+  „Zurück zum Thema“ jetzt auf die Seite der neuen Antwort
+- `[code]`-Blöcke bekamen nach jeder Zeile eine zusätzliche Leerzeile
+- Nach dem Löschen eines Themas oder einer Antwort zeigten Startseite und Themenliste
+  weiter den gelöschten Beitrag als letzten an (Pfeil ins Leere)
+- Geschlossene Boards waren auch für Administratoren gesperrt: Administratoren und die
+  Moderatoren des Boards schreiben dort und in geschlossenen Themen weiterhin, etwa in
+  einem Ankündigungsboard; alle anderen sehen „Forum geschlossen“ bzw. „Thema geschlossen“
+- Ein richtiges Board-Passwort setzt den Fehlversuchszähler zurück (Zähler je
+  IP-Adresse und Board)
 
 #### Sprache & Oberfläche
 - Drei synchrone Sprachdateien in UTF-8 ohne HTML-Entitäten, einheitliches Siezen
   bzw. Duzen, Adminbereich vollständig übersetzt
 - Neutrale Forenränge („Neuling“ bis „Legende“) statt Marine-Rängen, gleiche Schwellen
 - BBCode-Hilfe zeigt die tatsächlich unterstützten Tags, gerendert mit dem TextFormatter
+- Neues Thema ohne Antworten: „Letzte Antwort“ zeigt „Keine Antworten“ statt Datum und
+  Autor des Starterbeitrags
+- „E-Mail-Adresse verbergen?“ ist bei Registrierung und „Benutzer anlegen“ auf „ja“
+  voreingestellt (Privacy by Default)
+- Kontaktformular einheitlich: Briefumschlag im Beitragskopf und „E-Mail senden“ im
+  Profil bei allen Mitgliedern, die Adresse selbst nur bei „nicht verbergen“
+- Die wirkungslose Option „Anmeldung merken?“ entfällt in Registrierung, Profil und
+  Adminbereich (die Spalte `logincookie` bleibt aus Kompatibilitätsgründen)
+- Hinweis „Forum geschlossen – Sie schreiben mit Moderationsrechten.“ bzw. „Thema
+  geschlossen – …“ für Administratoren und Moderatoren
+- Board-Passwort im Adminbereich als verdecktes Feld mit dem sachlich richtigen Hinweis
+  „Wird nur als Hash gespeichert und kann nicht wieder angezeigt werden.“
+- `INSTALLATION.md` auf 2.3.0 aktualisiert und mit echten Umlauten; die veraltete
+  `README.html` (Stand 2.1.0, ohne Generator, nicht im Release-Paket) ist entfallen –
+  maßgeblich ist diese `README.md`
 
 #### Video-Anleitungen
 - Vertonte Schritt-für-Schritt-Videos zu Installation, Einstellungen, Forenstruktur,

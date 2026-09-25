@@ -88,6 +88,3 @@ install_bugfix_*.sql export-ignore
 # IDE-Configs (falls doch mal eine versehentlich getrackt wird)
 .idea/              export-ignore
 .vscode/            export-ignore
-
-# Verschiedenes
-README.html         export-ignore
