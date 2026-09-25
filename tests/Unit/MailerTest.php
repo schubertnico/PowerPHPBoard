@@ -5,11 +5,34 @@ declare(strict_types=1);
 namespace PowerPHPBoard\Tests\Unit;
 
 use InvalidArgumentException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use PowerPHPBoard\Mailer;
 
 final class MailerTest extends TestCase
 {
+    private const string USER = 'forum@example.org';
+
+    private const string PASSWORD = 'Geh3im!Pässwort';
+
+    private string $logFile = '';
+
+    private string|false $previousErrorLog = false;
+
+    protected function setUp(): void
+    {
+        // Fehlerprotokoll des Mailers in eine eigene Datei, damit die Tests
+        // prüfen können, was dort landet (und die Ausgabe sauber bleibt).
+        $this->logFile = (string) tempnam(sys_get_temp_dir(), 'ppb-mailer-log-');
+        $this->previousErrorLog = ini_set('error_log', $this->logFile);
+    }
+
+    protected function tearDown(): void
+    {
+        ini_set('error_log', $this->previousErrorLog === false ? '' : $this->previousErrorLog);
+        @unlink($this->logFile);
+    }
+
     public function testBuildsRfc822Message(): void
     {
         $msg = Mailer::buildMessage(
@@ -83,6 +106,7 @@ final class MailerTest extends TestCase
     {
         $mailer = new Mailer('127.0.0.1', 1, 1);
         $this->assertFalse($mailer->send('to@example.com', 'from@example.com', 'x', 'y', 'not-an-email'));
+        $this->assertSame('Ungültige Antwortadresse.', $mailer->lastError());
     }
 
     public function testSendReturnsFalseForInvalidRecipient(): void
@@ -104,62 +128,442 @@ final class MailerTest extends TestCase
     public function testSendReturnsFalseWhenSmtpHostUnreachable(): void
     {
         // Port 1 ist auf 127.0.0.1 mit hoher Wahrscheinlichkeit nicht belegt.
-        // Wenn doch, gibt der Test einen False-Negative; Timeout 1s begrenzt
-        // die Wartezeit. Der Test loggt die error_log-Nachricht in den
-        // PHP-Errorlog des Test-Prozesses, das ist hier akzeptabel.
+        // Timeout 1s begrenzt die Wartezeit.
         $mailer = new Mailer('127.0.0.1', 1, 1);
         $this->assertFalse(
             $mailer->send('to@example.com', 'from@example.com', 'subject', 'body')
         );
+        $this->assertStringStartsWith('Verbindungsaufbau fehlgeschlagen: ', $mailer->lastError());
+        $this->assertStringContainsString('[Mailer] Versand über 127.0.0.1:1 (Verschlüsselung none, ohne Anmeldung) fehlgeschlagen', $this->log());
     }
 
     public function testSendCompletesSuccessfulSmtpConversation(): void
     {
-        [$port, $proc] = $this->startMockServer('ok');
-        try {
-            $mailer = new Mailer('127.0.0.1', $port, 5);
-            $result = $mailer->send(
-                'to@example.com',
-                'from@example.com',
-                'Hallo Welt',
-                "Line1\nLine2"
-            );
-            $this->assertTrue($result);
-        } finally {
-            $this->stopMockServer($proc);
-        }
+        [$result, $transcript] = $this->converse('ok', static fn (int $port): bool => new Mailer('127.0.0.1', $port, 5)->send(
+            'to@example.com',
+            'from@example.com',
+            'Hallo Welt',
+            "Line1\nLine2"
+        ));
+
+        $this->assertTrue($result);
+        $this->assertSame(
+            ['EHLO', 'MAIL FROM:<from@example.com>', 'RCPT TO:<to@example.com>', 'DATA', 'QUIT'],
+            $this->commands($transcript)
+        );
+        $this->assertSame('', $this->log());
+    }
+
+    public function testEhloUsesHostnameOrAddressLiteral(): void
+    {
+        [, $transcript] = $this->converse('ok', static fn (int $port): bool => new Mailer('127.0.0.1', $port, 5)->send('to@example.com', 'from@example.com', 's', 'b'));
+
+        $this->assertMatchesRegularExpression('/^C: EHLO (?:[a-z0-9.-]+\.[a-z0-9-]+|\[[0-9.]+\]|\[IPv6:[0-9a-f:]+\])$/m', $transcript);
+    }
+
+    public function testDotStuffingIsAppliedOnTheWire(): void
+    {
+        [$result, $transcript] = $this->converse('ok', static fn (int $port): bool => new Mailer('127.0.0.1', $port, 5)->send(
+            'to@example.com',
+            'from@example.com',
+            's',
+            "Hallo\n.\nRCPT TO:<victim@example.org>"
+        ));
+
+        $this->assertTrue($result);
+        $this->assertStringContainsString("D: ..\nD: RCPT TO:<victim@example.org>\n", $transcript);
+        $this->assertStringNotContainsString('C: RCPT TO:<victim@example.org>', $transcript);
     }
 
     public function testSendHandlesMultilineGreeting(): void
     {
-        [$port, $proc] = $this->startMockServer('multiline-220');
-        try {
-            $mailer = new Mailer('127.0.0.1', $port, 5);
-            $this->assertTrue(
-                $mailer->send('to@example.com', 'from@example.com', 's', 'b')
-            );
-        } finally {
-            $this->stopMockServer($proc);
-        }
+        [$result] = $this->converse('multiline-220', static fn (int $port): bool => new Mailer('127.0.0.1', $port, 5)->send('to@example.com', 'from@example.com', 's', 'b'));
+
+        $this->assertTrue($result);
     }
 
     public function testSendReturnsFalseOnUnexpectedSmtpResponse(): void
     {
-        [$port, $proc] = $this->startMockServer('reject-helo');
-        try {
+        $mailer = null;
+        [$result] = $this->converse('reject-helo', static function (int $port) use (&$mailer): bool {
             $mailer = new Mailer('127.0.0.1', $port, 5);
-            $this->assertFalse(
-                $mailer->send('to@example.com', 'from@example.com', 's', 'b')
-            );
-        } finally {
-            $this->stopMockServer($proc);
-        }
+
+            return $mailer->send('to@example.com', 'from@example.com', 's', 'b');
+        });
+
+        $this->assertFalse($result);
+        $this->assertInstanceOf(Mailer::class, $mailer);
+        $this->assertNotSame('', $mailer->lastError());
+    }
+
+    public function testEhloFallsBackToHeloForOldServers(): void
+    {
+        [$result, $transcript] = $this->converse('ehlo-unknown', static fn (int $port): bool => new Mailer('127.0.0.1', $port, 5)->send('to@example.com', 'from@example.com', 's', 'b'));
+
+        $this->assertTrue($result);
+        $this->assertSame(['EHLO', 'HELO', 'MAIL FROM:<from@example.com>', 'RCPT TO:<to@example.com>', 'DATA', 'QUIT'], $this->commands($transcript));
+    }
+
+    public function testEhloRejectionIsFatalWhenLoginIsNeeded(): void
+    {
+        [$result, $transcript] = $this->converse('ehlo-unknown', fn (int $port): bool => $this->mailer($port, 'none')->send('to@example.com', 'from@example.com', 's', 'b'));
+
+        $this->assertFalse($result);
+        $this->assertSame(['EHLO'], $this->commands($transcript));
+        $this->assertStringContainsString('EHLO: Server antwortet 502 5.5.1 Command not implemented', $this->log());
+    }
+
+    public function testMissingQuitReplyDoesNotFailAnAcceptedMail(): void
+    {
+        [$result] = $this->converse('no-quit', static fn (int $port): bool => new Mailer('127.0.0.1', $port, 5)->send('to@example.com', 'from@example.com', 's', 'b'));
+
+        $this->assertTrue($result);
+    }
+
+    public function testSilentServerRunsIntoTimeout(): void
+    {
+        $mailer = null;
+        [$result] = $this->converse('silent', static function (int $port) use (&$mailer): bool {
+            $mailer = new Mailer('127.0.0.1', $port, 1);
+
+            return $mailer->send('to@example.com', 'from@example.com', 's', 'b');
+        });
+
+        $this->assertFalse($result);
+        $this->assertInstanceOf(Mailer::class, $mailer);
+        $this->assertSame('Begrüßung: Zeitüberschreitung – der Server antwortet nicht.', $mailer->lastError());
+    }
+
+    // ---------------------------------------------------------------
+    //  Anmeldung (AUTH PLAIN / AUTH LOGIN)
+    // ---------------------------------------------------------------
+
+    public function testAuthPlainSendsCredentialsAfterEhlo(): void
+    {
+        [$result, $transcript] = $this->converse('auth-plain', fn (int $port): bool => $this->mailer($port, 'none')->send('to@example.com', 'from@example.com', 's', 'b'));
+
+        $this->assertTrue($result);
+        $this->assertSame(
+            ['EHLO', 'AUTH PLAIN ' . base64_encode("\0" . self::USER . "\0" . self::PASSWORD), 'MAIL FROM:<from@example.com>', 'RCPT TO:<to@example.com>', 'DATA', 'QUIT'],
+            $this->commands($transcript)
+        );
+    }
+
+    public function testAuthLoginIsUsedWhenPlainIsNotOffered(): void
+    {
+        [$result, $transcript] = $this->converse('auth-login', fn (int $port): bool => $this->mailer($port, 'none')->send('to@example.com', 'from@example.com', 's', 'b'));
+
+        $this->assertTrue($result);
+        $this->assertSame(
+            ['EHLO', 'AUTH LOGIN', base64_encode(self::USER), base64_encode(self::PASSWORD), 'MAIL FROM:<from@example.com>', 'RCPT TO:<to@example.com>', 'DATA', 'QUIT'],
+            $this->commands($transcript)
+        );
+    }
+
+    public function testLegacyAuthAnnouncementIsUnderstood(): void
+    {
+        [$result, $transcript] = $this->converse('auth-legacy', fn (int $port): bool => $this->mailer($port, 'none')->send('to@example.com', 'from@example.com', 's', 'b'));
+
+        $this->assertTrue($result);
+        $this->assertContains('AUTH LOGIN', $this->commands($transcript));
+    }
+
+    public function testNoAuthWithoutUserEvenIfServerOffersIt(): void
+    {
+        [$result, $transcript] = $this->converse('auth-optional', static fn (int $port): bool => new Mailer('127.0.0.1', $port, 5, 'none', '', 'ungenutzt')->send('to@example.com', 'from@example.com', 's', 'b'));
+
+        $this->assertTrue($result);
+        $this->assertStringNotContainsString('AUTH', $transcript);
+        $this->assertSame(['EHLO', 'MAIL FROM:<from@example.com>', 'RCPT TO:<to@example.com>', 'DATA', 'QUIT'], $this->commands($transcript));
+    }
+
+    public function testRejectedLoginIsLoggedWithCodeButWithoutCredentials(): void
+    {
+        $mailer = null;
+        [$result, $transcript] = $this->converse('auth-rejected', function (int $port) use (&$mailer): bool {
+            $mailer = $this->mailer($port, 'none');
+
+            return $mailer->send('to@example.com', 'from@example.com', 's', 'b');
+        });
+
+        $this->assertFalse($result);
+        $this->assertStringNotContainsString('MAIL FROM', $transcript);
+        $this->assertInstanceOf(Mailer::class, $mailer);
+        $this->assertSame(
+            'Anmeldung (AUTH PLAIN): Server antwortet 535 5.7.8 Authentication credentials invalid – Benutzername und Passwort prüfen.',
+            $mailer->lastError()
+        );
+
+        $log = $this->log();
+        $this->assertStringContainsString('(Verschlüsselung none, mit Anmeldung) fehlgeschlagen – Anmeldung (AUTH PLAIN): Server antwortet 535', $log);
+        $this->assertCredentialsNotIn($log);
+        $this->assertCredentialsNotIn($mailer->lastError());
+    }
+
+    public function testUnsupportedAuthMethodIsReported(): void
+    {
+        $mailer = null;
+        [$result, $transcript] = $this->converse('auth-cram', function (int $port) use (&$mailer): bool {
+            $mailer = $this->mailer($port, 'none');
+
+            return $mailer->send('to@example.com', 'from@example.com', 's', 'b');
+        });
+
+        $this->assertFalse($result);
+        $this->assertSame(['EHLO'], $this->commands($transcript));
+        $this->assertInstanceOf(Mailer::class, $mailer);
+        $this->assertSame('Anmeldung: Der Server bietet nur CRAM-MD5 an, unterstützt werden PLAIN und LOGIN.', $mailer->lastError());
+    }
+
+    public function testUserWithoutAuthSupportIsAnError(): void
+    {
+        $mailer = null;
+        [$result, $transcript] = $this->converse('no-auth', function (int $port) use (&$mailer): bool {
+            $mailer = $this->mailer($port, 'none');
+
+            return $mailer->send('to@example.com', 'from@example.com', 's', 'b');
+        });
+
+        $this->assertFalse($result);
+        $this->assertSame(['EHLO'], $this->commands($transcript));
+        $this->assertInstanceOf(Mailer::class, $mailer);
+        $this->assertStringStartsWith('Anmeldung: Der Server bietet keine Anmeldung (AUTH) an', $mailer->lastError());
+    }
+
+    // ---------------------------------------------------------------
+    //  Verschlüsselung (STARTTLS / SSL)
+    // ---------------------------------------------------------------
+
+    public function testStarttlsNotOfferedAbortsBeforeCredentialsAreSent(): void
+    {
+        $mailer = null;
+        [$result, $transcript] = $this->converse('no-starttls', function (int $port) use (&$mailer): bool {
+            $mailer = $this->mailer($port, 'starttls');
+
+            return $mailer->send('to@example.com', 'from@example.com', 's', 'b');
+        });
+
+        $this->assertFalse($result);
+        // Kein Rückfall auf eine unverschlüsselte Anmeldung
+        $this->assertSame(['EHLO'], $this->commands($transcript));
+        $this->assertCredentialsNotIn($transcript);
+        $this->assertInstanceOf(Mailer::class, $mailer);
+        $this->assertStringStartsWith('STARTTLS: Der Server bietet keine Verschlüsselung per STARTTLS an', $mailer->lastError());
+        $this->assertStringContainsString('(Verschlüsselung starttls, mit Anmeldung) fehlgeschlagen – STARTTLS:', $this->log());
+    }
+
+    public function testStarttlsIsRequestedAndFailedHandshakeIsHandled(): void
+    {
+        $mailer = null;
+        [$result, $transcript] = $this->converse('starttls-broken', function (int $port) use (&$mailer): bool {
+            $mailer = $this->mailer($port, 'starttls');
+
+            return $mailer->send('to@example.com', 'from@example.com', 's', 'b');
+        });
+
+        $this->assertFalse($result);
+        $this->assertSame(['EHLO', 'STARTTLS'], $this->commands($transcript));
+        $this->assertCredentialsNotIn($transcript);
+        $this->assertInstanceOf(Mailer::class, $mailer);
+        $this->assertStringStartsWith('STARTTLS: TLS-Aushandlung fehlgeschlagen: ', $mailer->lastError());
+        $this->assertCredentialsNotIn($this->log());
+    }
+
+    public function testStarttlsRefusedByServer(): void
+    {
+        $mailer = null;
+        [$result, $transcript] = $this->converse('starttls-refused', function (int $port) use (&$mailer): bool {
+            $mailer = $this->mailer($port, 'starttls');
+
+            return $mailer->send('to@example.com', 'from@example.com', 's', 'b');
+        });
+
+        $this->assertFalse($result);
+        $this->assertSame(['EHLO', 'STARTTLS'], $this->commands($transcript));
+        $this->assertInstanceOf(Mailer::class, $mailer);
+        $this->assertSame('STARTTLS: Server antwortet 454 4.7.0 TLS not available due to temporary reason', $mailer->lastError());
+    }
+
+    public function testStarttlsIsUsedWithoutLoginToo(): void
+    {
+        [$result, $transcript] = $this->converse('starttls-broken', static fn (int $port): bool => new Mailer('127.0.0.1', $port, 5, 'starttls')->send('to@example.com', 'from@example.com', 's', 'b'));
+
+        $this->assertFalse($result);
+        $this->assertSame(['EHLO', 'STARTTLS'], $this->commands($transcript));
+    }
+
+    public function testImplicitTlsAgainstPlainServerFailsCleanly(): void
+    {
+        $mailer = null;
+        [$result, $transcript] = $this->converse('ok', function (int $port) use (&$mailer): bool {
+            $mailer = $this->mailer($port, 'ssl');
+
+            return $mailer->send('to@example.com', 'from@example.com', 's', 'b');
+        });
+
+        $this->assertFalse($result);
+        $this->assertStringNotContainsString('EHLO', $transcript);
+        $this->assertCredentialsNotIn($transcript);
+        $this->assertInstanceOf(Mailer::class, $mailer);
+        $this->assertStringStartsWith('SSL/TLS-Verbindung fehlgeschlagen: ', $mailer->lastError());
+        $this->assertStringContainsString('(Verschlüsselung ssl, mit Anmeldung) fehlgeschlagen', $this->log());
+    }
+
+    public function testUnknownEncryptionIsNeverSentUnencrypted(): void
+    {
+        $mailer = new Mailer('127.0.0.1', 1, 1, 'tls-irgendwie', self::USER, self::PASSWORD);
+
+        $this->assertFalse($mailer->send('to@example.com', 'from@example.com', 's', 'b'));
+        $this->assertSame('Unbekannte Verschlüsselung „tls-irgendwie“ – erlaubt sind none, starttls und ssl.', $mailer->lastError());
+        $this->assertCredentialsNotIn($this->log());
+    }
+
+    public function testFromConfigReadsCredentialsAndEncryption(): void
+    {
+        $mailer = null;
+        [$result, $transcript] = $this->converse('no-starttls', static function (int $port) use (&$mailer): bool {
+            $mailer = Mailer::fromConfig([
+                'host' => '127.0.0.1',
+                'port' => (string) $port,
+                'user' => self::USER,
+                'password' => self::PASSWORD,
+                'encryption' => ' STARTTLS ',
+            ]);
+
+            return $mailer->send('to@example.com', 'from@example.com', 's', 'b');
+        });
+
+        $this->assertFalse($result);
+        $this->assertSame(['EHLO'], $this->commands($transcript));
+        $this->assertInstanceOf(Mailer::class, $mailer);
+        $this->assertStringStartsWith('STARTTLS:', $mailer->lastError());
+    }
+
+    public function testFromConfigWithInvalidEncryptionTypeDoesNotSend(): void
+    {
+        $mailer = Mailer::fromConfig(['host' => '127.0.0.1', 'port' => 1, 'encryption' => true]);
+
+        $this->assertFalse($mailer->send('to@example.com', 'from@example.com', 's', 'b'));
+        $this->assertStringStartsWith('Unbekannte Verschlüsselung', $mailer->lastError());
     }
 
     /**
-     * @return array{0:int, 1:resource}
+     * @return array<string, array{string, string|null}>
      */
-    private function startMockServer(string $scenario): array
+    public static function encryptions(): array
+    {
+        return [
+            'none' => ['none', 'none'],
+            'leer' => ['', 'none'],
+            'starttls' => ['starttls', 'starttls'],
+            'Großbuchstaben und Leerzeichen' => [' STARTTLS ', 'starttls'],
+            'ssl' => ['ssl', 'ssl'],
+            'tls ist mehrdeutig' => ['tls', null],
+            'Tippfehler' => ['startls', null],
+        ];
+    }
+
+    #[DataProvider('encryptions')]
+    public function testNormalizeEncryption(string $value, ?string $expected): void
+    {
+        $this->assertSame($expected, Mailer::normalizeEncryption($value));
+    }
+
+    public function testDefaultPortsMatchTheEncryptions(): void
+    {
+        $this->assertSame(['none' => 25, 'starttls' => 587, 'ssl' => 465], Mailer::DEFAULT_PORTS);
+    }
+
+    public function testParseExtensions(): void
+    {
+        $extensions = Mailer::parseExtensions([
+            '250-mail.example.com Hello [10.0.0.5]',
+            '250-SIZE 35882577',
+            '250-auth login plain',
+            '250-AUTH=LOGIN',
+            '250-STARTTLS',
+            '250 8BITMIME',
+        ]);
+
+        $this->assertSame(['SIZE', 'AUTH', 'STARTTLS', '8BITMIME'], array_keys($extensions));
+        $this->assertSame(['LOGIN', 'PLAIN'], $extensions['AUTH']);
+        $this->assertSame([], $extensions['STARTTLS']);
+        $this->assertSame([], Mailer::parseExtensions(['250 mail.example.com']));
+    }
+
+    /**
+     * @return array<string, array{array<string, string>, string|false, string|false, string}>
+     */
+    public static function heloNames(): array
+    {
+        return [
+            'Servername der Website' => [['SERVER_NAME' => 'Forum.Example.com'], 'web01', '10.0.0.5:41234', 'forum.example.com'],
+            'Hostname des Servers' => [['SERVER_NAME' => 'localhost'], 'web01.hoster.example', '10.0.0.5:41234', 'web01.hoster.example'],
+            'IPv4-Adressliteral' => [[], 'a1b2c3d4', '10.0.0.5:41234', '[10.0.0.5]'],
+            'IPv6-Adressliteral' => [[], false, '[2001:db8::5]:41234', '[IPv6:2001:db8::5]'],
+            'Schadcode im Host-Header' => [['SERVER_NAME' => "evil.example\r\nRCPT TO:<x@y.z>"], false, false, 'localhost.localdomain'],
+            'nichts bekannt' => [[], false, false, 'localhost.localdomain'],
+        ];
+    }
+
+    /**
+     * @param array<string, string> $server
+     */
+    #[DataProvider('heloNames')]
+    public function testHeloName(array $server, string|false $hostname, string|false $localAddress, string $expected): void
+    {
+        $this->assertSame($expected, Mailer::heloName($server, $hostname, $localAddress));
+    }
+
+    public function testWithTlsOptionsReturnsCopy(): void
+    {
+        $mailer = new Mailer('127.0.0.1', 1, 1);
+
+        $this->assertNotSame($mailer, $mailer->withTlsOptions(['cafile' => '/tmp/ca.pem']));
+    }
+
+    private function mailer(int $port, string $encryption): Mailer
+    {
+        return new Mailer('127.0.0.1', $port, 5, $encryption, self::USER, self::PASSWORD);
+    }
+
+    private function log(): string
+    {
+        return (string) file_get_contents($this->logFile);
+    }
+
+    private function assertCredentialsNotIn(string $text): void
+    {
+        $this->assertStringNotContainsString(self::PASSWORD, $text);
+        $this->assertStringNotContainsString(base64_encode(self::PASSWORD), $text);
+        $this->assertStringNotContainsString(base64_encode("\0" . self::USER . "\0" . self::PASSWORD), $text);
+        $this->assertStringNotContainsString('AUTH PLAIN ', $text);
+    }
+
+    /**
+     * Befehle aus dem Mitschnitt; EHLO/HELO ohne Namen.
+     *
+     * @return list<string>
+     */
+    private function commands(string $transcript): array
+    {
+        preg_match_all('/^C: (.*)$/m', $transcript, $matches);
+
+        return array_map(
+            static fn (string $line): string => (string) preg_replace('/^(EHLO|HELO) .*/', '$1', $line),
+            $matches[1]
+        );
+    }
+
+    /**
+     * Startet den Mock-SMTP-Server, führt $send aus und liefert das Ergebnis
+     * samt Mitschnitt der vom Mailer gesendeten Zeilen.
+     *
+     * @param callable(int): bool $send
+     *
+     * @return array{0: bool, 1: string}
+     */
+    private function converse(string $scenario, callable $send): array
     {
         $script = __DIR__ . '/../Helpers/mock-smtp-server.php';
         $proc = proc_open(
@@ -175,38 +579,29 @@ final class MailerTest extends TestCase
             $this->fail('Konnte Mock-SMTP-Server nicht starten');
         }
 
-        // Erste Zeile aus stdout enthaelt den effektiven Port. fgets blockt,
-        // bis der Server den Port ausgegeben hat - also nach erfolgreichem
-        // stream_socket_server-Bind. Damit ist der Server beim Verbinden
-        // garantiert lauschbereit.
-        $portLine = fgets($pipes[1]);
-        if ($portLine === false) {
-            $stderr = stream_get_contents($pipes[2]);
-            proc_terminate($proc);
+        try {
+            // Die erste Zeile enthält den Port. fgets blockiert, bis der Server
+            // gebunden hat – beim Verbinden lauscht er also garantiert.
+            $portLine = fgets($pipes[1]);
+            $port = $portLine === false ? 0 : (int) trim($portLine);
+            if ($port <= 0) {
+                $this->fail('Mock-Server lieferte keinen Port. STDERR: ' . (string) stream_get_contents($pipes[2]));
+            }
+
+            $result = $send($port);
+
+            // Der Server beendet sich nach dem Gespräch selbst (spätestens nach 5 s ohne Daten).
+            $transcript = (string) stream_get_contents($pipes[1]);
+        } finally {
+            foreach ($pipes as $pipe) {
+                fclose($pipe);
+            }
+            if (proc_get_status($proc)['running']) {
+                proc_terminate($proc);
+            }
             proc_close($proc);
-            $this->fail('Mock-Server lieferte keinen Port. STDERR: ' . (string) $stderr);
-        }
-        $port = (int) trim($portLine);
-        if ($port <= 0) {
-            proc_terminate($proc);
-            proc_close($proc);
-            $this->fail('Mock-Server lieferte ungueltigen Port: ' . $portLine);
         }
 
-        return [$port, $proc];
-    }
-
-    /**
-     * @param resource $proc
-     */
-    private function stopMockServer($proc): void
-    {
-        // Server beendet sich nach einer Konversation selbst. Falls nicht
-        // (Test-Fehlpfad), gewaltsam abbrechen.
-        $status = proc_get_status($proc);
-        if ($status['running']) {
-            proc_terminate($proc);
-        }
-        proc_close($proc);
+        return [$result, $transcript];
     }
 }

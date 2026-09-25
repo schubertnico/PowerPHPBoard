@@ -71,6 +71,7 @@ require_once __DIR__ . '/includes/Security.php';
 require_once __DIR__ . '/includes/TextFormatter.php';
 require_once __DIR__ . '/includes/ErrorHandler.php';
 require_once __DIR__ . '/includes/Validator.php';
+require_once __DIR__ . '/includes/SmtpConnection.php';
 require_once __DIR__ . '/includes/Mailer.php';
 require_once __DIR__ . '/includes/RateLimiterStorage.php';
 require_once __DIR__ . '/includes/RateLimiter.php';
