@@ -37,8 +37,10 @@ cd ..
 #    http://localhost:8085  -> Forum
 ```
 
-Beim ersten Start wird `install.sql` automatisch in die MySQL-DB geladen.
-Ein Admin-Account "Gott" wird angelegt (Passwort steht in `install.sql` – nach erstem Login sofort ändern!).
+Beim ersten Start lädt MySQL automatisch das Schema aus `install.sql` und danach
+die Testkonten aus `.docker/dev-seed.sql`. `install.sql` selbst legt seit 2.3.0
+**keinen** Administrator mehr an – im Docker-Stack übernimmt das der Dev-Seed,
+auf echten Servern der [Web-Installer](#schnellstart-ohne-docker-web-installer).
 
 | Service       | URL                            | Zweck                            |
 |---------------|--------------------------------|----------------------------------|
@@ -48,11 +50,12 @@ Ein Admin-Account "Gott" wird angelegt (Passwort steht in `install.sql` – nach
 | Mailpit SMTP  | mailpit:1025 (intern)          | SMTP-Ziel der App                |
 | MySQL         | localhost:3315                 | Direkter DB-Zugriff (Dev)        |
 
-### Test-Accounts (Dev-Stack, Bootstrap-Refactor)
+### Test-Accounts (Dev-Stack, nur lokal)
 
-Nach dem ersten Start sind folgende Test-Accounts vorhanden – die Passwörter
-sind nur für die lokale Entwicklung gedacht und müssen produktiv geändert
-oder gelöscht werden:
+Nach dem ersten Start sind folgende Test-Accounts vorhanden. Sie stammen aus
+`.docker/dev-seed.sql` (Argon2id-Hashes) und sind **ausschließlich für die lokale
+Entwicklung** gedacht – die Datei gehört nie auf einen Live-Server und ist per
+`.gitattributes` aus dem Release-Paket ausgeschlossen:
 
 | Benutzer      | Rolle          | E-Mail                       | Passwort     |
 |---------------|----------------|------------------------------|--------------|
@@ -72,22 +75,56 @@ docker compose -f .docker/docker-compose.yml up -d --build
 docker compose -f .docker/docker-compose.yml down -v
 ```
 
-### Schnellstart ohne Docker
+### Schnellstart ohne Docker (Web-Installer)
+
+Seit Version 2.3.0 richtet ein Web-Installer das Forum ein – ohne Kommandozeile
+und ohne Zugangsdaten im PHP-Code. Das passt auch für Shared Hosting:
+
+1. **Dateien hochladen** – das Release-Paket entpacken und per FTP/SFTP in das
+   gewünschte Verzeichnis kopieren (versteckte `.htaccess`-Dateien mit übertragen).
+2. **Leere Datenbank anlegen** – im Kundenmenü des Hosters (MySQL 8 oder
+   MariaDB 10.5+, Zeichensatz `utf8mb4`). Server, Name, Benutzer und Passwort notieren.
+3. **Installer aufrufen** – `https://ihre-domain.de/forum/install/` im Browser
+   öffnen (wer die Startseite des noch leeren Forums aufruft, landet automatisch dort).
+   Der Assistent führt durch fünf Schritte: Systemprüfung, Datenbank, Forum,
+   Administrator, Abschluss. Er legt die Tabellen an, erstellt Ihr
+   Administrator-Konto (Argon2id) und schreibt die Zugangsdaten in `config.local.php`.
+4. **`install/` löschen** – danach ist der Installer ohnehin gesperrt, gehört
+   aber nicht auf ein laufendes Forum.
+
+Details, Schritt-für-Schritt-Anleitung und Sonderfälle (Verzeichnis nicht
+beschreibbar, bestehende Tabellen, Neuinstallation) stehen in
+[INSTALLATION.md](INSTALLATION.md#installation-mit-dem-web-installer).
+
+Lokal zum Ausprobieren ohne Docker:
 
 ```bash
 git clone https://github.com/schubertnico/PowerPHPBoard.git
 cd PowerPHPBoard
-composer install
+composer install          # nur für Tests und Analyse-Werkzeuge nötig
 
-# MySQL-DB anlegen und Schema importieren
 mysql -u root -p -e "CREATE DATABASE PowerPHPBoard_v2 CHARACTER SET utf8mb4;"
-mysql -u root -p PowerPHPBoard_v2 < install.sql
-
-# config.inc.php anpassen (Zugangsdaten, SMTP)
-# Dann Webserver auf das Projekt-Verzeichnis zeigen lassen,
-# oder PHP-Builtin:
-php -S localhost:8085
+php -S localhost:8085     # dann http://localhost:8085/install/ aufrufen
 ```
+
+> Der PHP-Entwicklungsserver wertet keine `.htaccess`-Dateien aus – für einen
+> öffentlich erreichbaren Server immer Apache (oder nginx mit den Regeln aus
+> INSTALLATION.md) verwenden.
+
+**Notfall-Werkzeug:** Hat kein Administrator mehr Zugang, legt
+`php bin/create-admin.php --user=Name --email=adresse@example.com` auf der
+Kommandozeile einen neuen an (das Passwort wird abgefragt, unter Linux/macOS
+verdeckt; `--update` macht ein bestehendes Konto zum Administrator). Über das
+Web ist das Skript gesperrt.
+
+### Update von 2.2.x auf 2.3.0
+
+Der Installer ist für ein Update **nicht** nötig – Datenbank und Zugangsdaten
+bleiben gültig, eine Datenbank-Migration ist nicht nötig. Wer Zugangsdaten direkt in
+`config.inc.php` eingetragen hatte, überträgt sie vor dem Hochladen der neuen
+Dateien in eine `config.local.php` (die neue `config.inc.php` wird überschrieben).
+Umgebungsvariablen funktionieren unverändert. Das Verzeichnis `install/` beim Update
+nicht hochladen bzw. danach löschen. Anleitung: [INSTALLATION.md](INSTALLATION.md#von-22x-auf-230-web-installer).
 
 ### Bugfix-Migration einspielen (für bestehende Installationen)
 
@@ -226,11 +263,51 @@ Seit Version 2.2.0 nutzt PowerPHPBoard ein durchgängiges **Bootstrap-5.3.3-Fron
 
 ## Konfiguration
 
+Zugangsdaten für Datenbank und Mailversand werden in dieser Rangfolge gelesen
+(höchste zuerst):
+
+1. **`config.local.php`** – schreibt der Web-Installer; kann auch von Hand
+   angelegt werden. Nicht versioniert (`.gitignore`), per `.htaccess` gesperrt.
+2. **Umgebungsvariablen** `PPB_DB_*` / `PPB_MAIL_*` – für Docker, `SetEnv` oder PHP-FPM.
+3. **Vorgaben** aus `LocalConfig::DEFAULT_MYSQL` / `DEFAULT_MAIL`.
+
+Die Datei `config.local.php` gewinnt, weil sie die ausdrückliche Einstellung
+genau dieser Installation ist; im Docker-Stack gibt es sie nicht, dort greifen
+die Umgebungsvariablen. Einzelne Schlüssel dürfen fehlen – dann gilt der Wert
+der nächsten Stufe.
+
+### `config.local.php`
+
+```php
+<?php
+
+declare(strict_types=1);
+
+return [
+    'mysql' => [
+        'server' => 'localhost',
+        'port' => 3306,
+        'user' => 'forum_user',
+        'password' => 'GEHEIMES_PASSWORT',
+        'database' => 'forum_db',
+    ],
+    'mail' => [            // optional
+        'host' => 'localhost',
+        'port' => 25,
+        'from' => 'noreply@example.com',
+    ],
+];
+```
+
+Die Datei liefert nur ein Array zurück und setzt keine Variablen. Rechte
+möglichst auf `640` (bzw. `600`) setzen.
+
 ### Environment-Variablen
 
 | Variable         | Beschreibung           | Standard                      |
 |------------------|------------------------|-------------------------------|
 | `PPB_DB_HOST`    | Datenbank-Host         | `localhost`                   |
+| `PPB_DB_PORT`    | Datenbank-Port         | `3306`                        |
 | `PPB_DB_USER`    | Datenbank-Benutzer     | `root`                        |
 | `PPB_DB_PASS`    | Datenbank-Passwort     | (leer)                        |
 | `PPB_DB_NAME`    | Datenbank-Name         | `PowerPHPBoard_v2`            |
@@ -245,26 +322,26 @@ Seit Version 2.2.0 nutzt PowerPHPBoard ein durchgängiges **Bootstrap-5.3.3-Fron
 <?php
 declare(strict_types=1);
 
+use PowerPHPBoard\Installer\LocalConfig;
+
 $mysql = [
-    'server'   => getenv('PPB_DB_HOST') ?: 'localhost',
-    'user'     => getenv('PPB_DB_USER') ?: 'root',
-    'password' => getenv('PPB_DB_PASS') ?: '',
-    'database' => getenv('PPB_DB_NAME') ?: 'PowerPHPBoard_v2',
+    'server'   => getenv('PPB_DB_HOST') ?: LocalConfig::DEFAULT_MYSQL['server'],
+    'port'     => (int) (getenv('PPB_DB_PORT') ?: LocalConfig::DEFAULT_MYSQL['port']),
+    'user'     => getenv('PPB_DB_USER') ?: LocalConfig::DEFAULT_MYSQL['user'],
+    'password' => getenv('PPB_DB_PASS') ?: LocalConfig::DEFAULT_MYSQL['password'],
+    'database' => getenv('PPB_DB_NAME') ?: LocalConfig::DEFAULT_MYSQL['database'],
 ];
+$mail = [ /* analog mit PPB_MAIL_* und LocalConfig::DEFAULT_MAIL */ ];
 
-$mail = [
-    'host' => getenv('PPB_MAIL_HOST') ?: 'mailpit',
-    'port' => (int) (getenv('PPB_MAIL_PORT') ?: 1025),
-    'from' => getenv('PPB_MAIL_FROM') ?: 'noreply@powerphpboard.local',
-];
-
-define('PPB_VERSION', '2.2.1');
-define('PPB_SESSION_LIFETIME', 3600);
-define('PPB_CSRF_ENABLED', true);
-define('PPB_DEBUG', (bool) (getenv('PPB_DEBUG') ?: false));
+// config.local.php hat Vorrang
+if (is_file(__DIR__ . '/config.local.php')) {
+    ['mysql' => $mysql, 'mail' => $mail] = LocalConfig::apply($mysql, $mail, require __DIR__ . '/config.local.php');
+}
 ```
 
-Nach Änderungen am Config-Schema nicht vergessen, Zugangsdaten der Produktions-Instanz entsprechend zu setzen.
+`config.inc.php` selbst enthält keine Zugangsdaten mehr und wird bei jedem
+Update überschrieben – eigene Werte gehören in `config.local.php` oder in
+Umgebungsvariablen.
 
 ### Sprache
 
@@ -283,6 +360,7 @@ UPDATE ppb_config SET language = 'Deutsch-Du' WHERE id = 1;
 ```
 PowerPHPBoard/
 ├── .docker/                       # Dev-Stack (Apache+PHP, MySQL, Mailpit, phpMyAdmin)
+│   └── dev-seed.sql               # Testkonten für den Docker-Stack (nur lokal)
 ├── .github/workflows/             # CI
 ├── admin/                         # Admin-Panel (Bootstrap, eigene Navbar)
 │   ├── header.inc.php             # Bootstrap-Layout mit bg-danger Navbar + Admin-Guard
@@ -293,6 +371,8 @@ PowerPHPBoard/
 │   ├── addboardcategory.php / editboardcategory.php
 │   ├── boarddesign.php
 │   └── user.php / adduser.php / edituser.php
+├── bin/
+│   └── create-admin.php           # CLI-Notfallwerkzeug: Administrator anlegen/befördern
 ├── docs/                          # Audit-Berichte, Pläne, Dokumentation
 ├── images/                        # Smilies, UI-Grafiken (Icons jetzt via Bootstrap Icons CDN)
 ├── inc/                           # HTML5-Layout-Templates (öffnen/schließen Body+Bootstrap-CSS/JS)
@@ -309,12 +389,20 @@ PowerPHPBoard/
 │   ├── Security.php               # escape, hashPassword, verifyPassword, isValidEmail …
 │   ├── Session.php                # Session-Verwaltung (login/logout, regenerate)
 │   ├── TextFormatter.php          # BBCode + Smilies
-│   └── Validator.php              # Username-, Längen-, Passwortregeln
+│   ├── Validator.php              # Username-, Längen-, Passwortregeln
+│   └── Installer/                 # Web-Installer: LocalConfig, Schema, FormValidator,
+│                                  # Requirements, DatabaseSetup, AdminAccount,
+│                                  # InstallState (Sperre), Wizard, Html
+├── install/                       # Web-Installer (nach der Installation löschen)
+│   ├── index.php                  # Einstieg mit PHP-Versionsprüfung
+│   ├── installer.php              # Ablaufsteuerung der fünf Schritte
+│   └── templates/                 # Seitenvorlagen (per .htaccess gesperrt)
 ├── logs/                          # PHP- und Security-Logs (nicht versioniert)
 ├── tests/
 │   ├── Unit/                      # 137 Unit-Tests
 │   └── Feature/                   # 61 Feature-/Integrations-Tests
 ├── config.inc.php                 # Zentrale Konfiguration (DB, Mail, Konstanten)
+├── config.local.php               # Zugangsdaten aus dem Web-Installer (nicht versioniert)
 ├── header.inc.php / footer.inc.php
 │                                  # Bootstrap-Wrapper für jedes Frontend-Skript
 ├── functions.inc.php              # default_error (Bootstrap-Card-Alert), getrank,
@@ -334,7 +422,7 @@ PowerPHPBoard/
 ├── english.inc.php                # Sprachdateien
 ├── deutsch-sie.inc.php
 ├── deutsch-du.inc.php
-├── install.sql                    # DB-Schema + Default-Daten
+├── install.sql                    # DB-Schema + Forum-Einstellungen (ohne Admin-Konto)
 ├── install_bugfix_2026-04-23.sql  # Migration für bestehende Installationen
 ├── composer.json / composer.lock
 └── phpunit.xml / phpstan.neon / psalm.xml / rector.php / infection.json5
@@ -411,6 +499,21 @@ Validator::withinLength($bio, Validator::BIOGRAPHY_MAX); // 1000
 Validator::withinLength($sig, Validator::SIGNATURE_MAX); // 500
 Validator::withinLength($post, Validator::POST_MAX);     // 65000
 ```
+
+### Web-Installer (`PowerPHPBoard\Installer\*`)
+
+Die Logik des Installers liegt testbar in `includes/Installer/`, die Oberfläche in `install/`:
+
+| Klasse          | Aufgabe                                                                 |
+|-----------------|-------------------------------------------------------------------------|
+| `LocalConfig`   | `config.local.php` erzeugen (`var_export`, sicher für Sonderzeichen), einlesen, Vorgaben |
+| `Schema`        | `install.sql` in Anweisungen zerlegen – eine Schemaquelle für Installer und `mysql < install.sql` |
+| `FormValidator` | Eingaben der Schritte 2–4 prüfen (gleiche Regeln wie `Validator`/Registrierung) |
+| `Requirements`  | Systemprüfung (PHP, Erweiterungen, Schreibrechte, HTTPS)                |
+| `DatabaseSetup` | Verbindungstest, verständliche Fehlermeldungen, Schema + Admin einspielen mit Aufräumen bei Fehlern |
+| `InstallState`  | Sperre des Installers und Weiterleitung der Startseite                  |
+| `Wizard`        | Fortschritt in der Session (Admin-Passwort nur als Hash)                |
+| `AdminAccount`  | Administrator anlegen/befördern (auch für `bin/create-admin.php`)       |
 
 ### `RateLimiter`
 
@@ -504,6 +607,12 @@ Siehe [docs/SECURITY.md](docs/SECURITY.md) für Details. Kurzfassung:
   1 h Gültigkeit, einmalig einlösbar. Keine Preisgabe, ob eine E-Mail existiert.
 - **Logout**: nur per POST mit CSRF-Token (keine GET-CSRF-Angriffe mehr).
 - **Adminbereich**: Eigener Guard mit Early-Return-Bootstrap-Alert.
+- **Installation**: Kein Standard-Administrator mit bekanntem Passwort mehr.
+  Der Web-Installer ist CSRF-geschützt, schreibt nur per POST und sperrt sich
+  nach Abschluss (Sperrdatei `install/.installed`, vorhandene `config.local.php`
+  oder eingerichtete Datenbank). Fällt die Datenbank eines eingerichteten Forums
+  aus, bleibt er ebenfalls gesperrt. Zugangsdaten erscheinen weder in Logs noch
+  in Fehlermeldungen; HTML in Beiträgen ist nach der Installation ausgeschaltet.
 - **Lösch-Funktionen** (Boards, Kategorien): Mehrstufige Bestätigung im
   "Gefahrenzone"-Card. Kategorien können nur gelöscht werden, wenn sie
   keine Boards mehr enthalten. Boards mit Threads erfordern eine separate
@@ -530,7 +639,8 @@ Siehe [docs/SECURITY.md](docs/SECURITY.md) für Details. Kurzfassung:
 
 ### Test-Accounts
 
-Im Dev-Stack sind nach dem ersten Start folgende Accounts verfügbar:
+Im Dev-Stack sind nach dem ersten Start folgende Accounts verfügbar
+(aus `.docker/dev-seed.sql`, nur lokal):
 
 | Benutzer      | Rolle          | E-Mail                       | Passwort     |
 |---------------|----------------|------------------------------|--------------|
@@ -672,6 +782,38 @@ auf dunklem Hintergrund unleserlich werden.
 ---
 
 ## Changelog
+
+### Version 2.3.0 – 2026-09-25
+
+#### Web-Installer
+- Neuer Web-Installer unter `install/` in fünf Schritten (Systemprüfung, Datenbank,
+  Forum, Administrator, Abschluss) mit Bootstrap-5-Oberfläche, CSRF-Schutz und
+  Post/Redirect/Get – schreibende Aktionen nur per POST
+- Verbindungstest mit verständlichen Fehlermeldungen ohne Zugangsdaten; vorhandene
+  `ppb_`-Tabellen werden gemeldet statt still überschrieben; schlägt die Installation
+  fehl, entfernt der Installer die in diesem Lauf angelegten Tabellen wieder
+- Board-URL wird aus der Anfrage vorbelegt, muss aber bestätigt werden und eine
+  http(s)-Adresse sein; HTML in Beiträgen ist nach der Installation ausgeschaltet
+- Administrator-Konto nach denselben Regeln wie die Registrierung, Passwort als Argon2id-Hash
+- Zugangsdaten landen in `config.local.php` (Werte per `var_export`, sicher für
+  Sonderzeichen in Passwörtern); ist das Forumverzeichnis nicht beschreibbar, bietet
+  der Installer die Datei zum Herunterladen an
+- Sperre nach der Installation: `install/.installed`, vorhandene `config.local.php`
+  oder eingerichtete Datenbank; auch bei ausgefallener Datenbank eines konfigurierten
+  Forums startet der Installer nicht
+- Startseite leitet ein noch nicht installiertes Forum auf `install/` weiter statt
+  einen Datenbankfehler zu zeigen
+- `config.inc.php`: Rangfolge `config.local.php` > Umgebungsvariablen > Vorgaben,
+  neuer Datenbank-Port (`PPB_DB_PORT` bzw. `'port'`); `config.local.php` per `.htaccess` gesperrt
+- `install.sql`: kein Standard-Administrator „Gott“ mit bekanntem Passwort mehr,
+  Kommentare in sauberem UTF-8, Forum-Einstellungen mit sicheren Vorgaben
+  (HTML aus, BBCode und Smilies an, Farben wie im Adminbereich)
+- Docker-Stack: `.docker/dev-seed.sql` legt die Testkonten `RalphAdmin` und
+  `RalphUser` an (nur lokal, nicht im Release-Paket)
+- `bin/create-admin.php`: CLI-Notfallwerkzeug mit Argumenten statt Code-Änderung
+  (`--user`, `--email`, `--update`, `--password-stdin`), ersetzt das alte `create-admin.php`
+- 212 neue Unit-Tests für Validierung, Erzeugung von `config.local.php` inklusive
+  Sonderzeichen, Sperrlogik, Schema-Aufteilung und Datenbank-Einrichtung
 
 ### Version 2.2.1 – 2026-05-10 (i18n + CI)
 
