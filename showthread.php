@@ -9,7 +9,7 @@ declare(strict_types=1);
  */
 
 use PowerPHPBoard\Auth;
-use PowerPHPBoard\CSRF;
+use PowerPHPBoard\BoardAccess;
 use PowerPHPBoard\Database;
 use PowerPHPBoard\Security;
 use PowerPHPBoard\Session;
@@ -17,6 +17,7 @@ use PowerPHPBoard\TextFormatter;
 
 require_once __DIR__ . '/config.inc.php';
 require_once __DIR__ . '/includes/autoload.php';
+require_once __DIR__ . '/functions.inc.php';
 
 Session::start();
 
@@ -28,6 +29,7 @@ try {
 } catch (PDOException $e) {
     die('Database connection failed');
 }
+
 // Angemeldeter Benutzer (deaktivierte Konten gelten als abgemeldet)
 $ppbuser = Auth::currentUser($db) ?? [];
 $loggedin = $ppbuser !== [] ? 'YES' : 'NO';
@@ -58,52 +60,10 @@ if ($boardid > 0) {
     }
 }
 
-$boardpassword = Security::getString('boardpassword', 'POST');
-$hasAccess = false;
-
-if (!empty($board['id'])) {
-    if ($loggedin === 'YES') {
-        $userId = (int) $ppbuser['id'];
-        $visit = $db->fetchOne(
-            "SELECT password FROM ppb_visits WHERE userid = ? AND vid = ? AND type = 'Board'",
-            [$userId, $board['id']]
-        );
-        if ($visit !== null && $visit['password'] === $board['password']) {
-            $boardpassword = base64_decode((string) $visit['password']);
-            $hasAccess = true;
-        }
-    }
-
-    $boardpasswordCoded = base64_encode($boardpassword);
-    if ($board['status'] === 'Private' && $boardpasswordCoded === $board['password']) {
-        $hasAccess = true;
-
-        if ($loggedin === 'YES') {
-            $userId = (int) $ppbuser['id'];
-            $existingVisit = $db->fetchOne(
-                "SELECT id, password FROM ppb_visits WHERE userid = ? AND vid = ? AND type = 'Board'",
-                [$userId, $board['id']]
-            );
-
-            if ($existingVisit !== null) {
-                if (empty($existingVisit['password']) || $existingVisit['password'] !== $board['password']) {
-                    $db->query(
-                        'UPDATE ppb_visits SET password = ? WHERE id = ?',
-                        [$boardpasswordCoded, $existingVisit['id']]
-                    );
-                }
-            } else {
-                $now = time();
-                $db->query(
-                    "INSERT INTO ppb_visits (userid, vid, time, type, password) VALUES (?, ?, ?, 'Board', ?)",
-                    [$userId, $board['id'], $now, $boardpasswordCoded]
-                );
-            }
-        }
-    } elseif ($board['status'] !== 'Private') {
-        $hasAccess = true;
-    }
-}
+// Zugang zu privaten Boards: Passwort nur per Formular, gespeichert wird
+// ein Zugangsnachweis statt des Passworts (siehe BoardAccess)
+$accessState = ppb_board_access($board, $ppbuser, $db);
+$hasAccess = $accessState === BoardAccess::GRANTED;
 
 $settings = $db->fetchOne('SELECT * FROM ppb_config WHERE id = ?', [1]) ?? [];
 
@@ -113,7 +73,6 @@ $langFile = match ($settings['language'] ?? 'English') {
     default => 'english.inc.php',
 };
 require_once __DIR__ . '/' . $langFile;
-require_once __DIR__ . '/functions.inc.php';
 
 $current2 = $current + 25;
 $current3 = $current - 25;
@@ -168,36 +127,12 @@ $renderPagination = static function () use ($thread, $db, $current, $current2, $
 };
 ?>
 
-<?php if (($board['status'] ?? '') === 'Private' && !$hasAccess): ?>
-  <section class="card shadow-sm mb-4 border-warning">
-    <header class="card-header bg-warning-subtle">
-      <h2 class="h6 mb-0">
-        <i class="bi bi-shield-lock-fill" aria-hidden="true"></i>
-        <?php echo $lang_threadrequirespwd ?? 'This thread requires a board password'; ?>
-      </h2>
-    </header>
-    <div class="card-body">
-      <form action="showthread.php?threadid=<?php echo (int) $thread['id']; ?>"
-            method="post" class="needs-validation row g-2" novalidate>
-        <?php echo CSRF::getTokenField(); ?>
-        <div class="col-sm-8">
-          <label for="boardpassword" class="form-label fw-semibold">
-            <?php echo $lang_password ?? 'Password'; ?>
-          </label>
-          <input id="boardpassword" name="boardpassword" type="password"
-                 class="form-control" maxlength="25" required autocomplete="off">
-        </div>
-        <div class="col-sm-4 d-flex align-items-end">
-          <button type="submit" class="btn btn-primary w-100">
-            <i class="bi bi-unlock" aria-hidden="true"></i> Zugang anfordern
-          </button>
-        </div>
-        <div class="col-12">
-          <div class="form-text mt-0">Bitte gib das Forum-Passwort ein, um diesen Thread zu lesen.</div>
-        </div>
-      </form>
-    </div>
-  </section>
+<?php if (!$hasAccess): ?>
+  <?php echo ppb_board_password_form(
+      'showthread.php?threadid=' . (int) ($thread['id'] ?? 0),
+      $accessState,
+      $lang_threadrequirespwd ?? 'This thread requires a password'
+  ); ?>
 <?php else: ?>
 
   <h2 class="h5 text-body-secondary mb-3">
@@ -209,13 +144,13 @@ $renderPagination = static function () use ($thread, $db, $current, $current2, $
 
   <?php
   $posts = [];
-    if (!empty($thread['id'])) {
-        $posts = $db->fetchAll(
-            'SELECT * FROM ppb_posts WHERE threadid = ? OR id = ? ORDER BY id LIMIT ?, 25',
-            [$thread['id'], $thread['id'], $current]
-        );
-    }
-    ?>
+      if (!empty($thread['id'])) {
+          $posts = $db->fetchAll(
+              'SELECT * FROM ppb_posts WHERE threadid = ? OR id = ? ORDER BY id LIMIT ?, 25',
+              [$thread['id'], $thread['id'], $current]
+          );
+      }
+      ?>
 
   <?php if (empty($thread['id'])): ?>
     <?php echo ppb_alert($lang_nothreadwithid ?? 'No thread with this ID', 'warning'); ?>

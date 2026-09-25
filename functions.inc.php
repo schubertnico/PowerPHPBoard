@@ -8,9 +8,109 @@ declare(strict_types=1);
  * MIT License - Copyright (c) 2026 PowerScripts
  */
 
+use PowerPHPBoard\BoardAccess;
+use PowerPHPBoard\CSRF;
 use PowerPHPBoard\Database;
+use PowerPHPBoard\DatabaseRateLimitStorage;
+use PowerPHPBoard\RateLimiter;
 use PowerPHPBoard\Security;
 use PowerPHPBoard\TextFormatter;
+
+/**
+ * Sprachtext aus der geladenen Sprachdatei ($lang_…) mit Ersatztext.
+ *
+ * @param string $key Schlüssel ohne "lang_"-Präfix
+ * @param string $fallback Text, falls der Schlüssel fehlt
+ */
+function ppb_lang(string $key, string $fallback): string
+{
+    $value = $GLOBALS['lang_' . $key] ?? null;
+
+    return is_string($value) && $value !== '' ? $value : $fallback;
+}
+
+/**
+ * Zugang zu einem Board prüfen. Ein per Formular abgeschicktes
+ * Board-Passwort wird dabei geprüft (Sperre nach 10 Fehlversuchen in
+ * 15 Minuten je IP-Adresse).
+ *
+ * @param array<string, mixed> $board Board-Zeile (mindestens id, status, password)
+ * @param array<string, mixed> $ppbuser Angemeldeter Benutzer oder []
+ *
+ * @return string BoardAccess::GRANTED, REQUIRED, WRONG_PASSWORD oder LOCKED
+ */
+function ppb_board_access(array $board, array $ppbuser, Database $db): string
+{
+    if ($board === []) {
+        return BoardAccess::GRANTED;
+    }
+
+    $submitted = null;
+    if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && isset($_POST['boardpassword'])) {
+        $submitted = Security::getString('boardpassword', 'POST');
+    }
+    $limiter = new RateLimiter(
+        new DatabaseRateLimitStorage($db),
+        maxAttempts: 10,
+        windowSeconds: 900,
+        lockSeconds: 900
+    );
+
+    return BoardAccess::check(
+        $board,
+        $ppbuser !== [] ? $ppbuser : null,
+        $db,
+        $submitted,
+        $limiter,
+        (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown')
+    );
+}
+
+/**
+ * Passwortabfrage für ein privates Board als Bootstrap-Karte.
+ *
+ * @param string $action Formularziel (in der Regel die aufgerufene Seite)
+ * @param string $state Ergebnis von ppb_board_access()
+ * @param string $heading Überschrift der Karte
+ *
+ * @return string HTML
+ */
+function ppb_board_password_form(string $action, string $state, string $heading): string
+{
+    $error = match ($state) {
+        BoardAccess::WRONG_PASSWORD => ppb_lang('bpwdnotcorrect', 'The board password is not correct.'),
+        BoardAccess::LOCKED => ppb_lang('toomanyattempts', 'Too many attempts. Please try again later.'),
+        default => '',
+    };
+
+    $html = '<section class="card shadow-sm mb-4 border-warning">'
+        . '<header class="card-header bg-warning-subtle"><h2 class="h6 mb-0">'
+        . '<i class="bi bi-shield-lock-fill" aria-hidden="true"></i> ' . Security::escape($heading)
+        . '</h2></header><div class="card-body">';
+    if ($error !== '') {
+        $html .= '<div class="alert alert-danger" role="alert">'
+            . '<i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i> '
+            . Security::escape($error) . '</div>';
+    }
+
+    return $html
+        . '<form action="' . Security::escape($action) . '" method="post" class="needs-validation row g-2" novalidate>'
+        . CSRF::getTokenField()
+        . '<div class="col-sm-8">'
+        . '<label for="boardpassword" class="form-label fw-semibold">'
+        . Security::escape(ppb_lang('boardpassword', 'Board password')) . '</label>'
+        . '<input id="boardpassword" name="boardpassword" type="password" class="form-control"'
+        . ' maxlength="100" required autocomplete="off" aria-describedby="boardpasswordHelp">'
+        . '<div class="invalid-feedback">' . Security::escape(ppb_lang('insertboardpwd', 'Please enter the board password.')) . '</div>'
+        . '</div>'
+        . '<div class="col-sm-4 d-flex align-items-start pt-sm-4 mt-sm-2">'
+        . '<button type="submit" class="btn btn-primary w-100">'
+        . '<i class="bi bi-unlock" aria-hidden="true"></i> '
+        . Security::escape(ppb_lang('requestaccess', 'Unlock')) . '</button></div>'
+        . '<div class="col-12"><div id="boardpasswordHelp" class="form-text mt-0">'
+        . Security::escape(ppb_lang('boardpasswordhelp', 'Please enter the board password to access this area.'))
+        . '</div></div></form></div></section>';
+}
 
 /**
  * Display default error message as Bootstrap alert with "back" link.

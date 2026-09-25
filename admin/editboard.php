@@ -8,6 +8,7 @@ declare(strict_types=1);
  * MIT License - Copyright (c) 2026 PowerScripts
  */
 
+use PowerPHPBoard\BoardAccess;
 use PowerPHPBoard\CSRF;
 use PowerPHPBoard\Security;
 
@@ -73,7 +74,19 @@ if ($row !== null && $editboard === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') 
         $newthread = Security::getString('newthread', 'POST');
         $newpost = Security::getString('newpost', 'POST');
 
-        if ($status === 'Private' && $password === '') {
+        if (!in_array($status, ['Open', 'Closed', 'Private'], true)) {
+            $status = 'Open';
+        }
+        // Board-Passwort nur als Hash speichern; leeres Feld behält das
+        // bisherige Passwort, ohne Status "Private" wird es gelöscht.
+        $passwordHash = (string) $row['password'];
+        if ($status !== 'Private') {
+            $passwordHash = '';
+        } elseif ($password !== '') {
+            $passwordHash = BoardAccess::hashPassword($password);
+        }
+
+        if ($status === 'Private' && $passwordHash === '') {
             $formError = 'Wenn der Status "Private" gewählt ist, muss ein Passwort gesetzt werden.';
         } elseif ($title === '' || $description === '' || $bordercolor === '' || $catidPost === 0) {
             $formError = 'Bitte fülle alle Pflichtfelder aus.';
@@ -81,12 +94,15 @@ if ($row !== null && $editboard === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') 
             $title = strip_tags($title);
             $description = strip_tags($description);
             $mods = trim($mods);
-            $passwordEncoded = base64_encode($password);
 
             $db->execute(
                 'UPDATE ppb_boards SET title = ?, description = ?, mods = ?, catid = ?, status = ?, password = ?, header = ?, footer = ?, bordercolor = ?, tablebg1 = ?, tablebg2 = ?, tablebg3 = ?, newthread = ?, newpost = ? WHERE id = ?',
-                [$title, $description, $mods, $catidPost, $status, $passwordEncoded, $header, $footer, $bordercolor, $tablebg1, $tablebg2, $tablebg3, $newthread, $newpost, $boardid]
+                [$title, $description, $mods, $catidPost, $status, $passwordHash, $header, $footer, $bordercolor, $tablebg1, $tablebg2, $tablebg3, $newthread, $newpost, $boardid]
             );
+            // Neues oder entferntes Passwort: bisherige Zugangsnachweise verwerfen
+            if ($passwordHash !== (string) $row['password']) {
+                BoardAccess::revokeAll($boardid, $db);
+            }
             CSRF::regenerate();
             $saved = true;
             $row = $db->fetchOne('SELECT * FROM ppb_boards WHERE id = ?', [$boardid]) ?? $row;
@@ -111,7 +127,7 @@ if ($row !== null && $editboard === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') 
     <a class="alert-link" href="boards.php">Zurück zur Board-Verwaltung</a>.
   </div>
 <?php else:
-    $password = base64_decode((string) ($row['password'] ?? ''));
+    $hasBoardPassword = (string) ($row['password'] ?? '') !== '';
     $categories = $db->fetchAll('SELECT id, title FROM ppb_boards WHERE type = ? ORDER BY id', ['Boardcategory']);
     ?>
 
@@ -169,8 +185,15 @@ if ($row !== null && $editboard === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') 
           </div>
           <div class="col-md-6">
             <label for="password" class="form-label">Board-Passwort (nur bei "Private")</label>
-            <input id="password" name="password" type="text" class="form-control" maxlength="25"
-                   value="<?php echo Security::escape($password); ?>">
+            <input id="password" name="password" type="text" class="form-control" maxlength="100"
+                   autocomplete="off" value="" aria-describedby="passwordHelp">
+            <div id="passwordHelp" class="form-text">
+              <?php if ($hasBoardPassword): ?>
+                Ein Passwort ist gesetzt und wird nur verschlüsselt gespeichert. Leer lassen, um es beizubehalten.
+              <?php else: ?>
+                Pflichtfeld, wenn der Status "Private" ist.
+              <?php endif; ?>
+            </div>
           </div>
         </div>
       </div>

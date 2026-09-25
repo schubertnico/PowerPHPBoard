@@ -9,13 +9,14 @@ declare(strict_types=1);
  */
 
 use PowerPHPBoard\Auth;
-use PowerPHPBoard\CSRF;
+use PowerPHPBoard\BoardAccess;
 use PowerPHPBoard\Database;
 use PowerPHPBoard\Security;
 use PowerPHPBoard\Session;
 
 require_once __DIR__ . '/config.inc.php';
 require_once __DIR__ . '/includes/autoload.php';
+require_once __DIR__ . '/functions.inc.php';
 
 Session::start();
 
@@ -26,6 +27,7 @@ try {
 } catch (PDOException $e) {
     die('Database connection failed');
 }
+
 // Angemeldeter Benutzer (deaktivierte Konten gelten als abgemeldet)
 $ppbuser = Auth::currentUser($db) ?? [];
 $loggedin = $ppbuser !== [] ? 'YES' : 'NO';
@@ -41,52 +43,10 @@ if ($boardid > 0) {
     }
 }
 
-$boardpassword = Security::getString('boardpassword', 'POST');
-$hasAccess = false;
-
-if (!empty($board['id'])) {
-    if ($loggedin === 'YES') {
-        $userId = (int) $ppbuser['id'];
-        $visit = $db->fetchOne(
-            "SELECT password FROM ppb_visits WHERE userid = ? AND vid = ? AND type = 'Board'",
-            [$userId, $board['id']]
-        );
-        if ($visit !== null && $visit['password'] === $board['password']) {
-            $boardpassword = base64_decode((string) $visit['password']);
-            $hasAccess = true;
-        }
-    }
-
-    $boardpasswordCoded = base64_encode($boardpassword);
-    if ($board['status'] === 'Private' && $boardpasswordCoded === $board['password']) {
-        $hasAccess = true;
-
-        if ($loggedin === 'YES') {
-            $userId = (int) $ppbuser['id'];
-            $existingVisit = $db->fetchOne(
-                "SELECT id, password FROM ppb_visits WHERE userid = ? AND vid = ? AND type = 'Board'",
-                [$userId, $board['id']]
-            );
-
-            if ($existingVisit !== null) {
-                if (empty($existingVisit['password']) || $existingVisit['password'] !== $board['password']) {
-                    $db->query(
-                        'UPDATE ppb_visits SET password = ? WHERE id = ?',
-                        [$boardpasswordCoded, $existingVisit['id']]
-                    );
-                }
-            } else {
-                $now = time();
-                $db->query(
-                    "INSERT INTO ppb_visits (userid, vid, time, type, password) VALUES (?, ?, ?, 'Board', ?)",
-                    [$userId, $board['id'], $now, $boardpasswordCoded]
-                );
-            }
-        }
-    } elseif ($board['status'] !== 'Private') {
-        $hasAccess = true;
-    }
-}
+// Zugang zu privaten Boards: Passwort nur per Formular, gespeichert wird
+// ein Zugangsnachweis statt des Passworts (siehe BoardAccess)
+$accessState = ppb_board_access($board, $ppbuser, $db);
+$hasAccess = $accessState === BoardAccess::GRANTED;
 
 $settings = $db->fetchOne('SELECT * FROM ppb_config WHERE id = ?', [1]) ?? [];
 
@@ -100,44 +60,21 @@ require_once __DIR__ . '/' . $langFile;
 include __DIR__ . '/header.inc.php';
 ?>
 
-<?php if ($board['status'] === 'Private' && !$hasAccess): ?>
-  <section class="card shadow-sm mb-4 border-warning">
-    <header class="card-header bg-warning-subtle">
-      <h2 class="h6 mb-0">
-        <i class="bi bi-shield-lock-fill" aria-hidden="true"></i>
-        <?php echo $lang_thisboardrequirespwd ?? 'This board requires a password'; ?>
-      </h2>
-    </header>
-    <div class="card-body">
-      <form action="showboard.php?boardid=<?php echo (int) $board['id']; ?>"
-            method="post" class="needs-validation row g-2" novalidate>
-        <?php echo CSRF::getTokenField(); ?>
-        <div class="col-sm-8">
-          <label for="boardpassword" class="form-label fw-semibold">
-            <?php echo $lang_password ?? 'Password'; ?>
-          </label>
-          <input id="boardpassword" name="boardpassword" type="password"
-                 class="form-control" maxlength="25" required autocomplete="off">
-          <div class="invalid-feedback">Bitte ein Passwort eingeben.</div>
-        </div>
-        <div class="col-sm-4 d-flex align-items-end">
-          <button type="submit" class="btn btn-primary w-100">
-            <i class="bi bi-unlock" aria-hidden="true"></i> Zugang anfordern
-          </button>
-        </div>
-        <div class="col-12">
-          <div class="form-text mt-0">Bitte gib das Forum-Passwort ein, um diesen Bereich zu betreten.</div>
-        </div>
-      </form>
-    </div>
-  </section>
+<?php if ($board === []): ?>
+  <?php default_error($lang_chooseboard ?? 'Please select a board', 'index.php', $lang_boardlist ?? 'Board list'); ?>
+<?php elseif (!$hasAccess): ?>
+  <?php echo ppb_board_password_form(
+      'showboard.php?boardid=' . (int) $board['id'],
+      $accessState,
+      $lang_thisboardrequirespwd ?? 'This board requires a password'
+  ); ?>
 <?php else: ?>
   <?php
   $threads = $db->fetchAll(
       "SELECT * FROM ppb_posts WHERE type = 'Thread' AND boardid = ? ORDER BY lastreply DESC",
       [$boardid]
   );
-    ?>
+      ?>
 
   <section class="card shadow-sm mb-4">
     <header class="card-header bg-secondary-subtle d-flex flex-wrap align-items-center justify-content-between gap-2">

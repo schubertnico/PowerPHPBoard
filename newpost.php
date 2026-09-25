@@ -9,6 +9,7 @@ declare(strict_types=1);
  */
 
 use PowerPHPBoard\Auth;
+use PowerPHPBoard\BoardAccess;
 use PowerPHPBoard\CSRF;
 use PowerPHPBoard\Database;
 use PowerPHPBoard\Security;
@@ -17,6 +18,7 @@ use PowerPHPBoard\Validator;
 
 require_once __DIR__ . '/config.inc.php';
 require_once __DIR__ . '/includes/autoload.php';
+require_once __DIR__ . '/functions.inc.php';
 
 Session::start();
 
@@ -30,6 +32,7 @@ try {
 } catch (PDOException $e) {
     die('Database connection failed');
 }
+
 // Angemeldeter Benutzer (deaktivierte Konten gelten als abgemeldet)
 $ppbuser = Auth::currentUser($db) ?? [];
 $loggedin = $ppbuser !== [] ? 'YES' : 'NO';
@@ -60,19 +63,10 @@ if ($boardid > 0) {
     }
 }
 
-$boardpassword = Security::getString('boardpassword', 'POST');
-$boardpassworddb = '';
-
-if ($loggedin === 'YES' && ($board['status'] ?? '') === 'Private') {
-    $userId = (int) $ppbuser['id'];
-    $visit = $db->fetchOne(
-        "SELECT password FROM ppb_visits WHERE userid = ? AND vid = ? AND type = 'Board'",
-        [$userId, $board['id'] ?? 0]
-    );
-    if ($visit !== null) {
-        $boardpassworddb = base64_decode((string) $visit['password']);
-    }
-}
+// Zugang zu privaten Boards: ohne Freischaltung weder Formular noch
+// Zitat, noch Speichern (siehe BoardAccess)
+$accessState = ppb_board_access($board, $ppbuser, $db);
+$hasAccess = $accessState === BoardAccess::GRANTED;
 
 $settings = $db->fetchOne('SELECT * FROM ppb_config WHERE id = ?', [1]) ?? [];
 
@@ -82,62 +76,60 @@ $langFile = match ($settings['language'] ?? 'English') {
     default => 'english.inc.php',
 };
 require_once __DIR__ . '/' . $langFile;
-require_once __DIR__ . '/functions.inc.php';
 
 $formError = '';
 $postCreated = false;
 $newPostId = 0;
 
-if (!empty($board['title']) && !empty($thread['title'])
+if (!empty($board['title']) && !empty($thread['title']) && $hasAccess
     && ($board['status'] ?? '') !== 'Closed' && ($thread['status'] ?? '') !== 'Closed'
     && $_SERVER['REQUEST_METHOD'] === 'POST' && $newpost === 1) {
     if (!CSRF::validateFromPost()) {
         $formError = 'Security token invalid. Please try again.';
     } else {
-        $boardpasswordCoded = base64_encode($boardpassword);
-        if (($board['status'] ?? '') === 'Private' && $boardpasswordCoded !== $board['password']) {
-            $formError = $lang_bpwdnotcorrect ?? 'Board password incorrect';
+        $text = Security::getString('text', 'POST');
+
+        if ($text === '') {
+            $formError = $lang_insertvaluesforall ?? 'Please fill in all fields';
+        } elseif (!Validator::withinLength($text, Validator::POST_MAX)) {
+            $formError = $lang_posttoolong ?? 'Post text is too long.';
+        } elseif ($loggedin !== 'YES') {
+            $formError = $lang_loginfirst ?? 'You have to log in first';
         } else {
-            $text = Security::getString('text', 'POST');
+            $text = trim($text);
+            $now = time();
+            $ip = $_SERVER['REMOTE_ADDR'] ?? '';
 
-            if ($text === '') {
-                $formError = $lang_insertvaluesforall ?? 'Please fill in all fields';
-            } elseif (!Validator::withinLength($text, Validator::POST_MAX)) {
-                $formError = $lang_posttoolong ?? 'Post text is too long.';
-            } elseif ($loggedin !== 'YES') {
-                $formError = $lang_loginfirst ?? 'You have to log in first';
-            } else {
-                $text = trim($text);
-                $now = time();
-                $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+            $db->query(
+                "INSERT INTO ppb_posts (boardid, threadid, type, time, author, text, ip) VALUES (?, ?, 'Post', ?, ?, ?, ?)",
+                [$board['id'], $thread['id'], $now, $ppbuser['id'], $text, $ip]
+            );
+            $newPostId = (int) $db->lastInsertId();
 
-                $db->query(
-                    "INSERT INTO ppb_posts (boardid, threadid, type, time, author, text, ip) VALUES (?, ?, 'Post', ?, ?, ?, ?)",
-                    [$board['id'], $thread['id'], $now, $ppbuser['id'], $text, $ip]
-                );
-                $newPostId = (int) $db->lastInsertId();
+            $db->query(
+                'UPDATE ppb_boards SET lastchange = ?, lastauthor = ? WHERE id = ?',
+                [$now, $ppbuser['id'], $board['id']]
+            );
+            $db->query(
+                'UPDATE ppb_posts SET lastreply = ?, lastauthor = ? WHERE id = ?',
+                [$now, $ppbuser['id'], $thread['id']]
+            );
 
-                $db->query(
-                    'UPDATE ppb_boards SET lastchange = ?, lastauthor = ? WHERE id = ?',
-                    [$now, $ppbuser['id'], $board['id']]
-                );
-                $db->query(
-                    'UPDATE ppb_posts SET lastreply = ?, lastauthor = ? WHERE id = ?',
-                    [$now, $ppbuser['id'], $thread['id']]
-                );
-
-                CSRF::regenerate();
-                $postCreated = true;
-            }
+            CSRF::regenerate();
+            $postCreated = true;
         }
     }
 }
 
 include __DIR__ . '/header.inc.php';
 
+// Zitat nur mit Zugang zum Board und nur aus demselben Thema
 $quoteText = '';
-if ($postid > 0 && !$postCreated) {
-    $quotePost = $db->fetchOne('SELECT text FROM ppb_posts WHERE id = ?', [$postid]);
+if ($postid > 0 && !$postCreated && $hasAccess && !empty($thread['id'])) {
+    $quotePost = $db->fetchOne(
+        'SELECT text FROM ppb_posts WHERE id = ? AND (id = ? OR threadid = ?)',
+        [$postid, $thread['id'], $thread['id']]
+    );
     if ($quotePost !== null) {
         $quoteText = '[quote]' . $quotePost['text'] . "[/quote]\n";
     }
@@ -152,14 +144,20 @@ if ($postid > 0 && !$postCreated) {
       $lang_boardlist ?? 'Board list'
   );
     ?>
+<?php elseif (!$hasAccess): ?>
+  <?php echo ppb_board_password_form(
+      'newpost.php?' . http_build_query(['threadid' => (int) $thread['id'], 'postid' => $postid, 'current' => $current]),
+      $accessState,
+      $lang_threadrequirespwd ?? 'This thread requires a password'
+  ); ?>
 <?php elseif (($board['status'] ?? '') === 'Closed' || ($thread['status'] ?? '') === 'Closed'): ?>
   <?php
-    default_error(
-        $lang_threadclosedcannotpost ?? 'Thread is closed, cannot post',
-        'showboard.php?boardid=' . (int) ($board['id'] ?? 0) . '&current=' . (int) $current,
-        ($lang_backto ?? 'Back to') . ' "' . ($board['title'] ?? '') . '" ' . ($lang_board ?? 'board')
-    );
-        ?>
+  default_error(
+      $lang_threadclosedcannotpost ?? 'Thread is closed, cannot post',
+      'showboard.php?boardid=' . (int) ($board['id'] ?? 0) . '&current=' . (int) $current,
+      ($lang_backto ?? 'Back to') . ' "' . ($board['title'] ?? '') . '" ' . ($lang_board ?? 'board')
+  );
+      ?>
 <?php elseif ($postCreated): ?>
   <div class="card shadow-sm border-success mb-4">
     <header class="card-header bg-success text-white">
@@ -213,18 +211,6 @@ if ($postid > 0 && !$postCreated) {
                 <?php echo $lang_login ?? 'Login'; ?>
               </a>
             </div>
-          </div>
-        <?php endif; ?>
-
-        <?php if (($board['status'] ?? '') === 'Private'): ?>
-          <div class="mb-3">
-            <label for="boardpassword" class="form-label fw-semibold">
-              <?php echo $lang_boardpassword ?? 'Board Password'; ?>
-            </label>
-            <input id="boardpassword" name="boardpassword" type="password"
-                   class="form-control" maxlength="25"
-                   value="<?php echo Security::escape($boardpassworddb); ?>">
-            <div class="form-text">Wird benötigt, weil dieser Bereich privat ist.</div>
           </div>
         <?php endif; ?>
 

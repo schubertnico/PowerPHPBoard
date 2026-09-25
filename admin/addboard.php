@@ -8,6 +8,7 @@ declare(strict_types=1);
  * MIT License - Copyright (c) 2026 PowerScripts
  */
 
+use PowerPHPBoard\BoardAccess;
 use PowerPHPBoard\CSRF;
 use PowerPHPBoard\Security;
 
@@ -20,10 +21,19 @@ $formError = '';
 if ($addboard === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
     CSRF::validateOrDie();
     $title = Security::getString('title', 'POST');
+    $status = Security::getString('status', 'POST', 'Open');
+    if (!in_array($status, ['Open', 'Closed', 'Private'], true)) {
+        $status = 'Open';
+    }
+    $password = Security::getString('password', 'POST');
 
     if ($title === '') {
         $formError = 'Bitte einen Boardtitel angeben.';
+    } elseif ($status === 'Private' && $password === '') {
+        $formError = 'Wenn der Status "Private" gewählt ist, muss ein Passwort gesetzt werden.';
     } else {
+        // Board-Passwort nur als Hash speichern
+        $passwordHash = $status === 'Private' ? BoardAccess::hashPassword($password) : '';
         $description = Security::getString('description', 'POST');
         $mods = trim(Security::getString('mods', 'POST'));
         $catidPost = Security::getInt('catid', 'POST', 0);
@@ -44,8 +54,8 @@ if ($addboard === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $description = strip_tags($description);
 
         $db->execute(
-            "INSERT INTO ppb_boards (title, description, type, mods, catid, header, footer, bordercolor, tablebg1, tablebg2, tablebg3, newthread, newpost) VALUES (?, ?, 'Board', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            [$title, $description, $mods, $catidPost, $header, $footer, $bordercolor, $tablebg1, $tablebg2, $tablebg3, $newthread, $newpost]
+            "INSERT INTO ppb_boards (title, description, type, mods, catid, status, password, header, footer, bordercolor, tablebg1, tablebg2, tablebg3, newthread, newpost) VALUES (?, ?, 'Board', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [$title, $description, $mods, $catidPost, $status, $passwordHash, $header, $footer, $bordercolor, $tablebg1, $tablebg2, $tablebg3, $newthread, $newpost]
         );
         CSRF::regenerate();
         $saved = true;
@@ -107,6 +117,20 @@ $categories = $db->fetchAll('SELECT * FROM ppb_boards WHERE type = ? ORDER BY id
               <?php endforeach; ?>
             </select>
           <?php endif; ?>
+        </div>
+        <div class="col-md-6">
+          <label for="status" class="form-label fw-semibold">Status</label>
+          <select id="status" name="status" class="form-select">
+            <?php foreach (['Open', 'Closed', 'Private'] as $s): ?>
+              <option value="<?php echo $s; ?>"><?php echo $s; ?></option>
+            <?php endforeach; ?>
+          </select>
+          <div class="form-text">"Closed" deaktiviert neue Threads. "Private" verlangt ein Passwort.</div>
+        </div>
+        <div class="col-md-6">
+          <label for="password" class="form-label">Board-Passwort (nur bei "Private")</label>
+          <input id="password" name="password" type="text" class="form-control" maxlength="100" autocomplete="off">
+          <div class="form-text">Wird nur verschlüsselt gespeichert.</div>
         </div>
       </div>
     </div>

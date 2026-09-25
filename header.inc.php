@@ -9,6 +9,7 @@ declare(strict_types=1);
  */
 
 use PowerPHPBoard\Auth;
+use PowerPHPBoard\BoardAccess;
 use PowerPHPBoard\Database;
 use PowerPHPBoard\Security;
 use PowerPHPBoard\Session;
@@ -119,6 +120,12 @@ if ($catid > 0) {
 // Check user authentication via session (deaktivierte Konten werden abgemeldet)
 $ppbuser = Auth::currentUser($db) ?? [];
 $loggedin = $ppbuser !== [] ? 'YES' : 'NO';
+
+// Titel von Themen in privaten Boards nur mit Zugang zeigen
+$threadTitle = '';
+if (!empty($thread['title']) && BoardAccess::hasAccess($board, $ppbuser !== [] ? $ppbuser : null, $db)) {
+    $threadTitle = (string) $thread['title'];
+}
 
 // Include functions
 require_once __DIR__ . '/functions.inc.php';
@@ -232,7 +239,7 @@ if ($headerFile !== '' && file_exists(__DIR__ . '/inc/' . $headerFile)) {
 <?php
 if (!empty($bcat['title'])):
     $catLink = 'index.php?catid=' . (int) ($bcat['id'] ?? $catid);
-    $isLast = empty($board['title']) && empty($thread['title']);
+    $isLast = empty($board['title']) && $threadTitle === '';
     ?>
     <li class="breadcrumb-item<?php echo $isLast ? ' active' : ''; ?>"<?php echo $isLast ? ' aria-current="page"' : ''; ?>>
       <?php if ($isLast): ?>
@@ -245,7 +252,7 @@ if (!empty($bcat['title'])):
 <?php
 if (!empty($board['title'])):
     $boardLink = 'showboard.php?boardid=' . (int) $board['id'];
-    $isLast = empty($thread['title']);
+    $isLast = $threadTitle === '';
     ?>
     <li class="breadcrumb-item<?php echo $isLast ? ' active' : ''; ?>"<?php echo $isLast ? ' aria-current="page"' : ''; ?>>
       <?php if ($isLast): ?>
@@ -255,9 +262,9 @@ if (!empty($board['title'])):
       <?php endif; ?>
     </li>
 <?php endif; ?>
-<?php if (!empty($thread['title'])): ?>
+<?php if ($threadTitle !== ''): ?>
     <li class="breadcrumb-item active" aria-current="page">
-      <?php echo Security::escape((string) $thread['title']); ?>
+      <?php echo Security::escape($threadTitle); ?>
     </li>
 <?php endif; ?>
   </ol>
@@ -300,7 +307,7 @@ if (!empty($board['title'])):
         echo '<a class="btn btn-primary btn-sm" href="newthread.php?boardid='
             . (int) $board['id'] . '"><i class="bi bi-plus-circle" aria-hidden="true"></i> '
             . ($lang_newthread ?? 'New Thread') . '</a>';
-        if (!empty($thread['title'])) {
+        if ($threadTitle !== '') {
             if (($thread['status'] ?? '') !== 'Closed') {
                 echo '<a class="btn btn-success btn-sm" href="newpost.php?threadid='
                     . (int) $thread['id'] . '&current=' . (int) $current

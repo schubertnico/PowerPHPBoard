@@ -42,10 +42,15 @@ $boardid = Security::getInt('boardid');
 $threadid = Security::getInt('threadid');
 $postid = Security::getInt('postid');
 
-$board = [];
-if ($boardid > 0) {
-    $board = $db->fetchOne('SELECT * FROM ppb_boards WHERE id = ?', [$boardid]) ?? [];
+// Rechte am Board des Beitrags prüfen, nicht am frei wählbaren
+// boardid-Parameter (sonst sähe ein Moderator IPs aus fremden Boards)
+$post = $postid > 0 ? $db->fetchOne('SELECT * FROM ppb_posts WHERE id = ?', [$postid]) : null;
+$postBoard = [];
+if ($post !== null) {
+    $postBoard = $db->fetchOne('SELECT * FROM ppb_boards WHERE id = ?', [(int) $post['boardid']]) ?? [];
 }
+$currentUser = $ppbuser !== [] ? $ppbuser : null;
+$showip = $post !== null ? Auth::canModerate($currentUser, $postBoard) : Auth::isAdmin($currentUser);
 
 include __DIR__ . '/header.inc.php';
 ?>
@@ -55,26 +60,9 @@ include __DIR__ . '/header.inc.php';
 
   <?php if ($threadid === 0 || $postid === 0): ?>
     <?php default_error($lang_choosepost ?? 'Please choose a post', 'index.php', 'Home'); ?>
-  <?php else:
-      $showip = false;
-      if (($ppbuser['status'] ?? '') === 'Administrator') {
-          $showip = true;
-      } else {
-          $mods = explode(',', (string) ($board['mods'] ?? ''));
-          foreach ($mods as $modEmail) {
-              if (($ppbuser['email'] ?? '') === trim($modEmail)) {
-                  $showip = true;
-                  break;
-              }
-          }
-      }
-
-      if (!$showip):
-          ?>
+  <?php elseif (!$showip): ?>
     <?php default_error($lang_onlyadminscanviewip ?? 'Only administrators and moderators can view IP addresses', 'index.php', 'Home'); ?>
-  <?php else:
-      $post = $db->fetchOne('SELECT * FROM ppb_posts WHERE id = ?', [$postid]);
-      ?>
+  <?php else: ?>
     <section class="card shadow-sm">
       <header class="card-header bg-secondary-subtle d-flex align-items-center gap-2">
         <i class="bi bi-geo-alt-fill" aria-hidden="true"></i>
@@ -105,7 +93,7 @@ include __DIR__ . '/header.inc.php';
         </a>
       </footer>
     </section>
-  <?php endif; endif; ?>
+  <?php endif; ?>
 
   </div>
 </div>
