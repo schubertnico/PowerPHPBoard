@@ -167,6 +167,8 @@ $renderPagination = static function () use ($thread, $db, $current, $current2, $
       // für Moderator und Administrator
       $currentUser = $ppbuser !== [] ? $ppbuser : null;
       $canModerate = Auth::canModerate($currentUser, $board);
+      // Zitieren nur, wo man auch antworten darf (geschlossen: nur Admin/Moderation)
+      $canReply = Auth::canReplyInThread($currentUser, $board, $thread);
       $formatLabels = ['quote' => $lang_quote ?? 'Quote:', 'image' => $lang_image ?? 'Image'];
       ?>
     <?php foreach ($posts as $row):
@@ -277,11 +279,13 @@ $renderPagination = static function () use ($thread, $db, $current, $current2, $
                     <i class="bi bi-pencil" aria-hidden="true"></i>
                   </a>
                 <?php endif; ?>
-                <a class="btn btn-outline-secondary"
-                   href="newpost.php?threadid=<?php echo (int) $thread['id']; ?>&postid=<?php echo (int) $row['id']; ?>"
-                   title="<?php echo Security::escape($lang_writequotedanswer ?? 'Quote reply'); ?>">
-                  <i class="bi bi-chat-quote" aria-hidden="true"></i>
-                </a>
+                <?php if ($canReply): ?>
+                  <a class="btn btn-outline-secondary"
+                     href="newpost.php?threadid=<?php echo (int) $thread['id']; ?>&postid=<?php echo (int) $row['id']; ?>"
+                     title="<?php echo Security::escape($lang_writequotedanswer ?? 'Quote reply'); ?>">
+                    <i class="bi bi-chat-quote" aria-hidden="true"></i>
+                  </a>
+                <?php endif; ?>
               </div>
             </header>
 
@@ -349,25 +353,13 @@ if ($loggedin === 'YES' && !empty($thread['title'])) {
 
   <?php if (!empty($board['title'])): ?>
     <div class="d-flex flex-wrap justify-content-end gap-2 mb-4">
-      <?php if (($board['status'] ?? '') === 'Closed'): ?>
-        <span class="badge text-bg-secondary"><?php echo Security::escape($lang_boardclosed ?? 'Board closed'); ?></span>
-      <?php else: ?>
-        <a href="newthread.php?boardid=<?php echo (int) $board['id']; ?>" class="btn btn-primary">
-          <i class="bi bi-plus-circle" aria-hidden="true"></i>
-          <?php echo Security::escape($lang_newthread ?? 'New Thread'); ?>
-        </a>
-        <?php if (!empty($thread['title'])): ?>
-          <?php if (($thread['status'] ?? '') !== 'Closed'): ?>
-            <a href="newpost.php?threadid=<?php echo (int) $thread['id']; ?>&current=<?php echo (int) $current; ?>"
-               class="btn btn-success">
-              <i class="bi bi-reply" aria-hidden="true"></i>
-              <?php echo Security::escape($lang_newpost ?? 'New Post'); ?>
-            </a>
-          <?php else: ?>
-            <span class="badge text-bg-secondary"><?php echo Security::escape($lang_threadclosed ?? 'Thread closed'); ?></span>
-          <?php endif; ?>
-        <?php endif; ?>
-      <?php endif; ?>
+      <?php echo ppb_write_actions(
+          $board,
+          !empty($thread['title']) ? $thread : [],
+          $ppbuser !== [] ? $ppbuser : null,
+          $current,
+          false
+      ); ?>
     </div>
   <?php endif; ?>
 

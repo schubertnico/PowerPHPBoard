@@ -297,26 +297,15 @@ if (!empty($board['title'])):
     </div>
     <div class="d-flex gap-2 flex-wrap" role="group" aria-label="<?php echo Security::escape($lang_actions ?? 'Actions'); ?>">
 <?php
-    if (($board['status'] ?? '') === 'Closed') {
-        echo '<span class="badge text-bg-secondary align-self-center">'
-            . Security::escape($lang_boardclosed ?? 'Board closed') . '</span>';
-    } else {
-        echo '<a class="btn btn-primary btn-sm" href="newthread.php?boardid='
-            . (int) $board['id'] . '"><i class="bi bi-plus-circle" aria-hidden="true"></i> '
-            . Security::escape($lang_newthread ?? 'New thread') . '</a>';
-        if ($threadTitle !== '') {
-            if (($thread['status'] ?? '') !== 'Closed') {
-                echo '<a class="btn btn-success btn-sm" href="newpost.php?threadid='
-                    . (int) $thread['id'] . '&current=' . (int) $current
-                    . '"><i class="bi bi-reply" aria-hidden="true"></i> '
-                    . Security::escape($lang_newpost ?? 'New post') . '</a>';
-            } else {
-                echo '<span class="badge text-bg-secondary align-self-center">'
-                    . Security::escape($lang_threadclosed ?? 'Thread closed') . '</span>';
-            }
-        }
-    }
-?>
+    // Geschlossene Boards/Themen: nur Administratoren und Moderatoren dieses Boards schreiben
+    echo ppb_write_actions(
+        $board,
+        $threadTitle !== '' ? $thread : [],
+        $ppbuser !== [] ? $ppbuser : null,
+        (int) $current,
+        true
+    );
+    ?>
     </div>
   </div>
 </header>

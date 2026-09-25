@@ -144,6 +144,59 @@ final class AuthTest extends TestCase
     }
 
     /**
+     * Regressionstest: Geschlossene Boards waren für alle gesperrt, auch für
+     * Administratoren – ein Ankündigungsboard war damit unbenutzbar.
+     */
+    #[Test]
+    public function adminsAndModeratorsOfTheBoardMayWriteInClosedBoards(): void
+    {
+        $closed = ['id' => 3, 'status' => 'Closed', 'mods' => 'Mod@Example.org, other@example.org'];
+        $open = ['id' => 4, 'status' => 'Open', 'mods' => ''];
+
+        $admin = ['id' => 1, 'status' => 'Administrator', 'email' => 'admin@example.org'];
+        $moderator = ['id' => 2, 'status' => 'Normal user', 'email' => 'mod@example.org'];
+        $member = ['id' => 5, 'status' => 'Normal user', 'email' => 'member@example.org'];
+        $deactivatedModerator = ['id' => 6, 'status' => 'Deactivated', 'email' => 'mod@example.org'];
+
+        $this->assertTrue(Auth::canWriteInBoard($admin, $closed));
+        $this->assertTrue(Auth::canWriteInBoard($moderator, $closed));
+        $this->assertFalse(Auth::canWriteInBoard($member, $closed));
+        $this->assertFalse(Auth::canWriteInBoard(null, $closed));
+        $this->assertFalse(Auth::canWriteInBoard($deactivatedModerator, $closed));
+
+        // Moderator eines anderen Boards hat hier keine Sonderrechte
+        $this->assertFalse(Auth::canWriteInBoard($moderator, ['id' => 7, 'status' => 'Closed', 'mods' => 'jemand@example.org']));
+
+        // Offene Boards: wie bisher für alle (die Anmeldung prüft das Formular)
+        $this->assertTrue(Auth::canWriteInBoard($member, $open));
+        $this->assertTrue(Auth::canWriteInBoard(null, $open));
+    }
+
+    #[Test]
+    public function closedThreadsAcceptRepliesOnlyFromAdminsAndModerators(): void
+    {
+        $board = ['id' => 3, 'status' => 'Open', 'mods' => 'mod@example.org'];
+        $closedBoard = ['status' => 'Closed'] + $board;
+        $open = ['id' => 10, 'status' => 'Open'];
+        $closed = ['id' => 11, 'status' => 'Closed'];
+
+        $admin = ['id' => 1, 'status' => 'Administrator', 'email' => 'admin@example.org'];
+        $moderator = ['id' => 2, 'status' => 'Normal user', 'email' => 'mod@example.org'];
+        $member = ['id' => 5, 'status' => 'Normal user', 'email' => 'member@example.org'];
+
+        $this->assertTrue(Auth::canReplyInThread($member, $board, $open));
+        $this->assertFalse(Auth::canReplyInThread($member, $board, $closed));
+        $this->assertFalse(Auth::canReplyInThread($member, $closedBoard, $open), 'Geschlossenes Board sperrt auch offene Themen');
+        $this->assertFalse(Auth::canReplyInThread(null, $board, $closed));
+
+        foreach ([$admin, $moderator] as $user) {
+            $this->assertTrue(Auth::canReplyInThread($user, $board, $closed));
+            $this->assertTrue(Auth::canReplyInThread($user, $closedBoard, $closed));
+        }
+        $this->assertFalse(Auth::canReplyInThread($moderator, ['id' => 8, 'status' => 'Open', 'mods' => ''], $closed));
+    }
+
+    /**
      * @param array<string, mixed>|null $row
      */
     private function dbReturning(?array $row): Database

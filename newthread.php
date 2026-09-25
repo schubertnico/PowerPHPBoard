@@ -62,8 +62,10 @@ require_once __DIR__ . '/' . $langFile;
 
 $formError = '';
 $threadCreated = false;
+// Geschlossenes Board: nur Administratoren und Moderatoren dieses Boards
+$canWrite = Auth::canWriteInBoard($ppbuser !== [] ? $ppbuser : null, $board);
 
-if (!empty($board['title']) && $hasAccess && ($board['status'] ?? '') !== 'Closed'
+if (!empty($board['title']) && $hasAccess && $canWrite
     && $_SERVER['REQUEST_METHOD'] === 'POST' && $newthread === 1) {
     if (!CSRF::validateFromPost()) {
         $formError = $lang_csrfinvalid ?? 'The security token is invalid. Please reload the page and try again.';
@@ -124,7 +126,7 @@ include __DIR__ . '/header.inc.php';
       $accessState,
       $lang_thisboardrequirespwd ?? 'This board requires a password'
   ); ?>
-<?php elseif (($board['status'] ?? '') === 'Closed'): ?>
+<?php elseif (!$canWrite): ?>
   <?php
   default_error(
       $lang_boardclosedcannotopenthread ?? 'Board is closed, cannot create thread',
@@ -172,6 +174,8 @@ include __DIR__ . '/header.inc.php';
         </h1>
       </header>
       <div class="card-body">
+
+        <?php echo ppb_closed_write_notice($board, []); ?>
 
         <?php if ($loggedin !== 'YES'): ?>
           <div class="alert alert-warning small d-flex align-items-center gap-2" role="alert">

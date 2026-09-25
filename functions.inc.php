@@ -8,6 +8,7 @@ declare(strict_types=1);
  * MIT License - Copyright (c) 2026 PowerScripts
  */
 
+use PowerPHPBoard\Auth;
 use PowerPHPBoard\BoardAccess;
 use PowerPHPBoard\BoardUrl;
 use PowerPHPBoard\CSRF;
@@ -159,6 +160,83 @@ function ppb_welcome_mail_text(array $settings, string $username, string $email,
     $lines[] = ppb_lang('donotanswertoautomail', 'Please do not reply to this automatically generated email.');
 
     return implode("\n", $lines);
+}
+
+/**
+ * Schaltflächen „Neues Thema“ und „Neuer Beitrag“ bzw. die Hinweise
+ * „Forum geschlossen“ und „Thema geschlossen“ (Kopf von Themenliste und
+ * Thema, Fuß des Themas).
+ *
+ * Geschlossene Boards und Themen sind für normale Mitglieder gesperrt.
+ * Administratoren und die Moderatoren dieses Boards sehen die
+ * Schaltflächen weiterhin, mit einem dezenten Hinweis, dass sie mit
+ * Moderationsrechten schreiben.
+ *
+ * @param array<string, mixed> $board Board-Zeile
+ * @param array<string, mixed> $thread Thema oder [] (Themenliste, Thema ohne Zugang)
+ * @param array<string, mixed>|null $user Angemeldeter Benutzer oder null
+ * @param int $current Aktuelle Seite im Thema (für den Rückweg aus dem Antwortformular)
+ * @param bool $small Kleine Schaltflächen (Kopfbereich)
+ *
+ * @return string HTML
+ */
+function ppb_write_actions(array $board, array $thread, ?array $user, int $current, bool $small): string
+{
+    $size = $small ? ' btn-sm' : '';
+    $badge = static fn (string $key, string $fallback): string => '<span class="badge text-bg-secondary align-self-center">'
+        . Security::escape(ppb_lang($key, $fallback)) . '</span>';
+    $hint = static fn (string $key, string $fallback): string => '<span class="ppb-mod-hint small text-body-secondary align-self-center">'
+        . '<i class="bi bi-shield-check" aria-hidden="true"></i> ' . Security::escape(ppb_lang($key, $fallback)) . '</span>';
+
+    if (!Auth::canWriteInBoard($user, $board)) {
+        return $badge('boardclosed', 'Board closed');
+    }
+
+    $html = Auth::isBoardClosed($board)
+        ? $hint('boardclosedmodhint', 'Board closed – you are posting with moderator rights.')
+        : '';
+    $html .= '<a class="btn btn-primary' . $size . '" href="newthread.php?boardid=' . (int) ($board['id'] ?? 0) . '">'
+        . '<i class="bi bi-plus-circle" aria-hidden="true"></i> '
+        . Security::escape(ppb_lang('newthread', 'New thread')) . '</a>';
+
+    if ($thread === []) {
+        return $html;
+    }
+    if (!Auth::canReplyInThread($user, $board, $thread)) {
+        return $html . $badge('threadclosed', 'Thread closed');
+    }
+    if (($thread['status'] ?? '') === 'Closed' && !Auth::isBoardClosed($board)) {
+        $html = $hint('threadclosedmodhint', 'Thread closed – you are replying with moderator rights.') . $html;
+    }
+
+    return $html . '<a class="btn btn-success' . $size . '" href="newpost.php?threadid=' . (int) ($thread['id'] ?? 0)
+        . '&current=' . $current . '">'
+        . '<i class="bi bi-reply" aria-hidden="true"></i> '
+        . Security::escape(ppb_lang('newpost', 'New post')) . '</a>';
+}
+
+/**
+ * Hinweis im Formular „Neues Thema“ bzw. „Neuer Beitrag“, wenn ein
+ * Administrator oder Moderator in einem geschlossenen Board oder Thema
+ * schreibt; sonst ''.
+ *
+ * @param array<string, mixed> $board
+ * @param array<string, mixed> $thread [] beim Formular „Neues Thema“
+ *
+ * @return string HTML
+ */
+function ppb_closed_write_notice(array $board, array $thread): string
+{
+    if (Auth::isBoardClosed($board)) {
+        $text = ppb_lang('boardclosedmodhint', 'Board closed – you are posting with moderator rights.');
+    } elseif ($thread !== [] && ($thread['status'] ?? '') === 'Closed') {
+        $text = ppb_lang('threadclosedmodhint', 'Thread closed – you are replying with moderator rights.');
+    } else {
+        return '';
+    }
+
+    return '<div class="alert alert-secondary small d-flex align-items-center gap-2 ppb-mod-hint" role="note">'
+        . '<i class="bi bi-shield-check" aria-hidden="true"></i><div>' . Security::escape($text) . '</div></div>';
 }
 
 /**

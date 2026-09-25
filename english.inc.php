@@ -80,6 +80,8 @@ $lang_newthread = 'New thread';
 $lang_newpost = 'New post';
 $lang_boardclosed = 'Board closed';
 $lang_threadclosed = 'Thread closed';
+$lang_boardclosedmodhint = 'Board closed – you are posting with moderator rights.';
+$lang_threadclosedmodhint = 'Thread closed – you are replying with moderator rights.';
 
 // Private boards
 $lang_thisboardrequirespwd = 'This board requires a password.';

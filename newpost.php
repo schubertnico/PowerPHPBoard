@@ -81,9 +81,10 @@ require_once __DIR__ . '/' . $langFile;
 $formError = '';
 $postCreated = false;
 $newPostId = 0;
+// Geschlossenes Board oder Thema: nur Administratoren und Moderatoren dieses Boards
+$canReply = Auth::canReplyInThread($ppbuser !== [] ? $ppbuser : null, $board, $thread);
 
-if (!empty($board['title']) && !empty($thread['title']) && $hasAccess
-    && ($board['status'] ?? '') !== 'Closed' && ($thread['status'] ?? '') !== 'Closed'
+if (!empty($board['title']) && !empty($thread['title']) && $hasAccess && $canReply
     && $_SERVER['REQUEST_METHOD'] === 'POST' && $newpost === 1) {
     if (!CSRF::validateFromPost()) {
         $formError = $lang_csrfinvalid ?? 'The security token is invalid. Please reload the page and try again.';
@@ -152,7 +153,7 @@ if ($postid > 0 && !$postCreated && $formError === '' && $hasAccess && !empty($t
       $accessState,
       $lang_threadrequirespwd ?? 'This thread requires a password'
   ); ?>
-<?php elseif (($board['status'] ?? '') === 'Closed' || ($thread['status'] ?? '') === 'Closed'): ?>
+<?php elseif (!$canReply): ?>
   <?php
   default_error(
       $lang_threadclosedcannotpost ?? 'Thread is closed, cannot post',
@@ -201,6 +202,8 @@ if ($postid > 0 && !$postCreated && $formError === '' && $hasAccess && !empty($t
         </h1>
       </header>
       <div class="card-body">
+
+        <?php echo ppb_closed_write_notice($board, $thread); ?>
 
         <?php if ($loggedin !== 'YES'): ?>
           <div class="alert alert-warning small d-flex align-items-center gap-2" role="alert">

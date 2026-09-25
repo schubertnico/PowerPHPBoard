@@ -80,6 +80,8 @@ $lang_newthread = 'Neues Thema';
 $lang_newpost = 'Neuer Beitrag';
 $lang_boardclosed = 'Forum geschlossen';
 $lang_threadclosed = 'Thema geschlossen';
+$lang_boardclosedmodhint = 'Forum geschlossen – du schreibst mit Moderationsrechten.';
+$lang_threadclosedmodhint = 'Thema geschlossen – du antwortest mit Moderationsrechten.';
 
 // Private Foren
 $lang_thisboardrequirespwd = 'Für dieses Forum benötigst du ein Passwort.';

@@ -109,6 +109,45 @@ final class Auth
     }
 
     /**
+     * Board ist geschlossen („Closed“)
+     *
+     * @param array<string, mixed> $board
+     */
+    public static function isBoardClosed(array $board): bool
+    {
+        return ($board['status'] ?? '') === 'Closed';
+    }
+
+    /**
+     * Darf im Board neue Themen eröffnen: Ein geschlossenes Board ist für
+     * normale Mitglieder gesperrt, Administratoren und die Moderatoren dieses
+     * Boards schreiben dort weiterhin (z. B. in einem Ankündigungsboard).
+     * Ob jemand angemeldet ist, prüfen die Formulare selbst.
+     *
+     * @param array<string, mixed>|null $user
+     * @param array<string, mixed> $board
+     */
+    public static function canWriteInBoard(?array $user, array $board): bool
+    {
+        return !self::isBoardClosed($board) || self::canModerate($user, $board);
+    }
+
+    /**
+     * Darf im Thema antworten: gesperrt, wenn Board oder Thema geschlossen
+     * sind – außer für Administratoren und die Moderatoren dieses Boards.
+     *
+     * @param array<string, mixed>|null $user
+     * @param array<string, mixed> $board
+     * @param array<string, mixed> $thread
+     */
+    public static function canReplyInThread(?array $user, array $board, array $thread): bool
+    {
+        $locked = self::isBoardClosed($board) || ($thread['status'] ?? '') === 'Closed';
+
+        return !$locked || self::canModerate($user, $board);
+    }
+
+    /**
      * Prüft eine Statusänderung im Adminbereich.
      *
      * Ein Administrator darf sich nicht selbst herabstufen oder deaktivieren
