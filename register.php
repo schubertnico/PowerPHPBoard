@@ -19,7 +19,6 @@ include __DIR__ . '/header.inc.php';
 $acception = Security::getInt('acception', 'REQUEST');
 $register = Security::getInt('register', 'POST');
 $registrationDone = false;
-$registrationLogin = false;
 $registrationMailSent = true;
 $formError = '';
 
@@ -76,7 +75,6 @@ if ($acception === 0) {
             $biography = Security::getString('biography', 'POST');
             $signature = Security::getString('signature', 'POST');
             $hideemail = Security::getString('hideemail', 'POST');
-            $logincookie = Security::getString('logincookie', 'POST');
 
             if ($username === '' || $username === '0' || ($email1 === '' || $email1 === '0') || ($email2 === '' || $email2 === '0') || ($password1 === '' || $password1 === '0') || ($password2 === '' || $password2 === '0')) {
                 $formError = $lang_insertvaluesforall ?? 'Please fill in all required fields';
@@ -126,16 +124,15 @@ if ($acception === 0) {
                         $signature = strip_tags($signature, '<b><i><u><strong><em><br><a>');
                         $homepage = (string) Validator::normalizeHomepage($homepage);
                         $hideemail = ppb_hide_email($hideemail);
-                        $logincookie = in_array($logincookie, ['YES', 'NO'], true) ? $logincookie : 'YES';
 
                         $now = time();
 
                         try {
                             $db->query(
                                 "INSERT INTO ppb_users
-                                 (username, email, password, homepage, icq, biography, signature, hideemail, logincookie, status, registered)
-                                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Normal user', ?)",
-                                [$username, $email1, $passwordHash, $homepage, $icqNum, $biography, $signature, $hideemail, $logincookie, $now]
+                                 (username, email, password, homepage, icq, biography, signature, hideemail, status, registered)
+                                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Normal user', ?)",
+                                [$username, $email1, $passwordHash, $homepage, $icqNum, $biography, $signature, $hideemail, $now]
                             );
 
                             $subject = ($settings['boardtitle'] ?? 'PowerPHPBoard') . ' – ' . ($lang_registration ?? 'Registration');
@@ -151,7 +148,6 @@ if ($acception === 0) {
                             }
 
                             $registrationDone = true;
-                            $registrationLogin = ($logincookie === 'YES');
                         } catch (PDOException) {
                             $formError = $lang_errorwhilereg ?? 'An error occurred during registration';
                         }
@@ -181,17 +177,11 @@ if ($acception === 0) {
               <?php echo Security::escape($lang_confirmationmailfailed ?? 'The confirmation email could not be sent. You can still log in.'); ?>
             </div>
           <?php endif; ?>
-          <?php if ($registrationLogin): ?>
-            <a href="login.php?catid=<?php echo (int) $catid; ?>&boardid=<?php echo (int) $boardid; ?>"
-               class="btn btn-primary">
-              <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
-              <?php echo Security::escape($lang_login ?? 'Login'); ?>
-            </a>
-          <?php else: ?>
-            <a href="index.php" class="btn btn-primary">
-              <i class="bi bi-house-door" aria-hidden="true"></i> <?php echo Security::escape($lang_home ?? 'Home'); ?>
-            </a>
-          <?php endif; ?>
+          <a href="login.php?catid=<?php echo (int) $catid; ?>&boardid=<?php echo (int) $boardid; ?>"
+             class="btn btn-primary">
+            <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
+            <?php echo Security::escape($lang_login ?? 'Login'); ?>
+          </a>
         </div>
       </section>
     </div>
@@ -208,7 +198,6 @@ if ($acception === 0) {
         $oldSig = ($_SERVER['REQUEST_METHOD'] === 'POST') ? Security::getString('signature', 'POST') : '';
         // Neues Formular: Adresse verbergen ist vorausgewählt
         $oldHide = ppb_hide_email(($_SERVER['REQUEST_METHOD'] === 'POST') ? Security::getString('hideemail', 'POST') : '');
-        $oldCookie = ($_SERVER['REQUEST_METHOD'] === 'POST') ? Security::getString('logincookie', 'POST') : 'YES';
         ?>
   <div class="row justify-content-center">
     <div class="col-lg-9">
@@ -370,7 +359,7 @@ if ($acception === 0) {
               </div>
             </div>
 
-            <fieldset class="mb-3">
+            <fieldset class="mb-1">
               <legend class="form-label fw-semibold mb-1 fs-6"><?php echo Security::escape($lang_hideemail ?? 'Hide Email'); ?></legend>
               <div class="form-check form-check-inline">
                 <input class="form-check-input" type="radio" name="hideemail" id="hideemailYes" value="YES" <?php echo $oldHide === 'YES' ? 'checked' : ''; ?>>
@@ -383,17 +372,6 @@ if ($acception === 0) {
               <div class="form-text"><?php echo Security::escape($lang_hideemailhelp ?? 'If enabled, other users cannot see your email address.'); ?></div>
             </fieldset>
 
-            <fieldset class="mb-1">
-              <legend class="form-label fw-semibold mb-1 fs-6"><?php echo Security::escape($lang_saveloginincookie ?? 'Remember Login'); ?></legend>
-              <div class="form-check form-check-inline">
-                <input class="form-check-input" type="radio" name="logincookie" id="cookieYes" value="YES" <?php echo $oldCookie !== 'NO' ? 'checked' : ''; ?>>
-                <label class="form-check-label" for="cookieYes"><?php echo Security::escape($lang_yes ?? 'ja'); ?></label>
-              </div>
-              <div class="form-check form-check-inline">
-                <input class="form-check-input" type="radio" name="logincookie" id="cookieNo" value="NO" <?php echo $oldCookie === 'NO' ? 'checked' : ''; ?>>
-                <label class="form-check-label" for="cookieNo"><?php echo Security::escape($lang_no ?? 'nein'); ?></label>
-              </div>
-            </fieldset>
           </div>
         </section>
 

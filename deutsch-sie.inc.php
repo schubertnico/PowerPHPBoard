@@ -222,7 +222,6 @@ $lang_writesomethingaboutyou = 'Schreiben Sie etwas über sich';
 $lang_signature = 'Signatur';
 $lang_hideemail = 'E-Mail-Adresse verbergen?';
 $lang_hideemailhelp = 'Wenn aktiviert, sehen andere Benutzer Ihre E-Mail-Adresse nicht.';
-$lang_saveloginincookie = 'Anmeldung merken?';
 $lang_inputstoolong = 'Mindestens ein Feld ist zu lang.';
 $lang_errorwhilereg = 'Bei der Registrierung ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.';
 $lang_registrationsuccessfull = 'Ihre Registrierung war erfolgreich. Sie können sich jetzt einloggen.';

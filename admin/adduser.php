@@ -34,8 +34,6 @@ if ($adduser === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $biography = Security::getString('biography', 'POST');
     $signature = Security::getString('signature', 'POST');
     $hideemail = ppb_hide_email(Security::getString('hideemail', 'POST'));
-    $logincookie = Security::getString('logincookie', 'POST', 'YES');
-    $logincookie = $logincookie === 'NO' ? 'NO' : 'YES';
 
     if ($username === '' || $email1 === '' || $email2 === '' || $password1 === '' || $password2 === '') {
         $formError = $lang_adm_fillrequired ?? 'Please fill in all required fields.';
@@ -65,8 +63,8 @@ if ($adduser === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $now = time();
             try {
                 $db->execute(
-                    "INSERT INTO ppb_users (username, email, password, homepage, icq, biography, signature, hideemail, logincookie, status, registered) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Normal user', ?)",
-                    [$username, $email1, $passwordHash, $homepage, $icqInt, $biography, $signature, $hideemail, $logincookie, $now]
+                    "INSERT INTO ppb_users (username, email, password, homepage, icq, biography, signature, hideemail, status, registered) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Normal user', ?)",
+                    [$username, $email1, $passwordHash, $homepage, $icqInt, $biography, $signature, $hideemail, $now]
                 );
                 CSRF::regenerate();
                 // Benachrichtigung über SMTP; das Passwort steht nicht in der Mail
@@ -196,19 +194,6 @@ $hideChoice = ppb_hide_email($old('hideemail'));
             <div class="form-check form-check-inline">
               <input class="form-check-input" type="radio" id="hideN" name="hideemail" value="NO" <?php echo $hideChoice === 'NO' ? 'checked' : ''; ?>>
               <label class="form-check-label" for="hideN"><?php echo Security::escape($lang_no ?? 'no'); ?></label>
-            </div>
-          </fieldset>
-        </div>
-        <div class="col-md-6">
-          <fieldset>
-            <legend class="form-label fw-semibold mb-1 fs-6"><?php echo Security::escape($lang_saveloginincookie ?? 'Remember login?'); ?></legend>
-            <div class="form-check form-check-inline">
-              <input class="form-check-input" type="radio" id="cookY" name="logincookie" value="YES" <?php echo $old('logincookie', 'YES') !== 'NO' ? 'checked' : ''; ?>>
-              <label class="form-check-label" for="cookY"><?php echo Security::escape($lang_yes ?? 'yes'); ?></label>
-            </div>
-            <div class="form-check form-check-inline">
-              <input class="form-check-input" type="radio" id="cookN" name="logincookie" value="NO" <?php echo $old('logincookie', 'YES') === 'NO' ? 'checked' : ''; ?>>
-              <label class="form-check-label" for="cookN"><?php echo Security::escape($lang_no ?? 'no'); ?></label>
             </div>
           </fieldset>
         </div>

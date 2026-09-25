@@ -70,7 +70,6 @@ if ($loggedin === 'YES' && $_SERVER['REQUEST_METHOD'] === 'POST' && $editprofile
         $biography = Security::getString('biography', 'POST');
         $signature = Security::getString('signature', 'POST');
         $hideemail = Security::getString('hideemail', 'POST');
-        $logincookie = Security::getString('logincookie', 'POST');
 
         $passwordWillChange = $password1 !== '' || $password2 !== '';
         $emailWillChange = $email1 !== $user['email'];
@@ -124,7 +123,7 @@ if ($loggedin === 'YES' && $_SERVER['REQUEST_METHOD'] === 'POST' && $editprofile
 
             try {
                 $db->query(
-                    'UPDATE ppb_users SET username = ?, email = ?, password = ?, homepage = ?, icq = ?, biography = ?, signature = ?, hideemail = ?, logincookie = ? WHERE id = ?',
+                    'UPDATE ppb_users SET username = ?, email = ?, password = ?, homepage = ?, icq = ?, biography = ?, signature = ?, hideemail = ? WHERE id = ?',
                     [
                         $username,
                         $email1,
@@ -134,7 +133,6 @@ if ($loggedin === 'YES' && $_SERVER['REQUEST_METHOD'] === 'POST' && $editprofile
                         strip_tags($biography),
                         $signature,
                         $hideemail === 'YES' ? 'YES' : 'NO',
-                        $logincookie === 'YES' ? 'YES' : 'NO',
                         $user['id'],
                     ]
                 );
@@ -178,14 +176,13 @@ include __DIR__ . '/header.inc.php';
     $email2Value = (string) $user['email'];
     if ($formError !== '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         // Nach einem Fehler die Eingaben statt der gespeicherten Werte zeigen
-        foreach (['username', 'homepage', 'icq', 'biography', 'signature', 'hideemail', 'logincookie'] as $field) {
+        foreach (['username', 'homepage', 'icq', 'biography', 'signature', 'hideemail'] as $field) {
             $user[$field] = Security::getString($field, 'POST');
         }
         $user['email'] = Security::getString('email1', 'POST');
         $email2Value = Security::getString('email2', 'POST');
     }
     $hideEmailValue = $user['hideemail'] === 'YES' ? 'YES' : 'NO';
-    $cookieValue = $user['logincookie'] === 'NO' ? 'NO' : 'YES';
     ?>
 
   <?php if ($updated): ?>
@@ -353,7 +350,7 @@ include __DIR__ . '/header.inc.php';
                   <strong><?php echo Security::escape(ppb_onoff_label($settings['smilies'] ?? 'ON')); ?></strong></a>.
               </div>
             </div>
-            <fieldset class="mb-3">
+            <fieldset>
               <legend class="form-label fw-semibold mb-1 fs-6"><?php echo Security::escape($lang_hideemail ?? 'Hide email'); ?></legend>
               <div class="form-check form-check-inline">
                 <input class="form-check-input" type="radio" name="hideemail" id="hideemailYes" value="YES"
@@ -364,19 +361,6 @@ include __DIR__ . '/header.inc.php';
                 <input class="form-check-input" type="radio" name="hideemail" id="hideemailNo" value="NO"
                        <?php echo $hideEmailValue !== 'YES' ? 'checked' : ''; ?>>
                 <label class="form-check-label" for="hideemailNo"><?php echo Security::escape($lang_no ?? 'nein'); ?></label>
-              </div>
-            </fieldset>
-            <fieldset>
-              <legend class="form-label fw-semibold mb-1 fs-6"><?php echo Security::escape($lang_saveloginincookie ?? 'Remember login'); ?></legend>
-              <div class="form-check form-check-inline">
-                <input class="form-check-input" type="radio" name="logincookie" id="cookieYes" value="YES"
-                       <?php echo $cookieValue !== 'NO' ? 'checked' : ''; ?>>
-                <label class="form-check-label" for="cookieYes"><?php echo Security::escape($lang_yes ?? 'ja'); ?></label>
-              </div>
-              <div class="form-check form-check-inline">
-                <input class="form-check-input" type="radio" name="logincookie" id="cookieNo" value="NO"
-                       <?php echo $cookieValue === 'NO' ? 'checked' : ''; ?>>
-                <label class="form-check-label" for="cookieNo"><?php echo Security::escape($lang_no ?? 'nein'); ?></label>
               </div>
             </fieldset>
           </div>

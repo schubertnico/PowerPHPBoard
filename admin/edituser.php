@@ -42,13 +42,11 @@ if ($row !== null && $edituser === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $biography = Security::getString('biography', 'POST');
     $signature = Security::getString('signature', 'POST');
     $hideemail = Security::getString('hideemail', 'POST', 'NO');
-    $logincookie = Security::getString('logincookie', 'POST', 'YES');
     $status = Security::getString('status', 'POST', 'Normal user');
     if (!array_key_exists($status, $statusLabels)) {
         $status = Auth::STATUS_NORMAL;
     }
     $hideemail = $hideemail === 'YES' ? 'YES' : 'NO';
-    $logincookie = $logincookie === 'NO' ? 'NO' : 'YES';
 
     $passwordWillChange = $password1 !== '' || $password2 !== '';
     $adminCount = (int) ($db->fetchOne("SELECT COUNT(*) c FROM ppb_users WHERE status = 'Administrator'")['c'] ?? 0);
@@ -91,8 +89,8 @@ if ($row !== null && $edituser === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
             try {
                 $db->execute(
-                    'UPDATE ppb_users SET username = ?, email = ?, password = ?, homepage = ?, icq = ?, biography = ?, signature = ?, hideemail = ?, logincookie = ?, status = ? WHERE id = ?',
-                    [$username, $email1, $finalPassword, $homepage, $icqInt, $biography, $signature, $hideemail, $logincookie, $status, $row['id']]
+                    'UPDATE ppb_users SET username = ?, email = ?, password = ?, homepage = ?, icq = ?, biography = ?, signature = ?, hideemail = ?, status = ? WHERE id = ?',
+                    [$username, $email1, $finalPassword, $homepage, $icqInt, $biography, $signature, $hideemail, $status, $row['id']]
                 );
                 CSRF::regenerate();
                 $saved = true;
@@ -109,7 +107,7 @@ if ($row !== null && $edituser === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($statusError !== null) {
             $status = (string) $row['status'];
         }
-        $row = array_merge($row, compact('username', 'homepage', 'icq', 'biography', 'signature', 'hideemail', 'logincookie', 'status'));
+        $row = array_merge($row, compact('username', 'homepage', 'icq', 'biography', 'signature', 'hideemail', 'status'));
         $row['email'] = $email1;
     }
 }
@@ -229,19 +227,6 @@ $email2Value = $row !== null ? (string) ($formError !== '' ? Security::getString
               <div class="form-check form-check-inline">
                 <input class="form-check-input" type="radio" id="hideN" name="hideemail" value="NO" <?php echo $row['hideemail'] !== 'YES' ? 'checked' : ''; ?>>
                 <label class="form-check-label" for="hideN"><?php echo Security::escape($lang_no ?? 'no'); ?></label>
-              </div>
-            </fieldset>
-          </div>
-          <div class="col-md-6">
-            <fieldset>
-              <legend class="form-label fw-semibold mb-1 fs-6"><?php echo Security::escape($lang_saveloginincookie ?? 'Remember login?'); ?></legend>
-              <div class="form-check form-check-inline">
-                <input class="form-check-input" type="radio" id="cookY" name="logincookie" value="YES" <?php echo $row['logincookie'] !== 'NO' ? 'checked' : ''; ?>>
-                <label class="form-check-label" for="cookY"><?php echo Security::escape($lang_yes ?? 'yes'); ?></label>
-              </div>
-              <div class="form-check form-check-inline">
-                <input class="form-check-input" type="radio" id="cookN" name="logincookie" value="NO" <?php echo $row['logincookie'] === 'NO' ? 'checked' : ''; ?>>
-                <label class="form-check-label" for="cookN"><?php echo Security::escape($lang_no ?? 'no'); ?></label>
               </div>
             </fieldset>
           </div>
