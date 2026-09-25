@@ -30,6 +30,7 @@ final class Requirements
         $phpOk = self::phpVersionOk($phpVersion);
         $pdoOk = extension_loaded('pdo_mysql');
         $mbOk = extension_loaded('mbstring');
+        $sslOk = extension_loaded('openssl');
         $schemaOk = is_readable($rootDir . '/' . Schema::FILENAME);
         $logsOk = is_dir($rootDir . '/logs') && is_writable($rootDir . '/logs');
         $configOk = self::canWriteLocalConfig($rootDir);
@@ -56,6 +57,15 @@ final class Requirements
                 'ok' => $mbOk,
                 'required' => true,
                 'detail' => $mbOk ? 'Vorhanden.' : 'Fehlt – bitte beim Hoster bzw. in der php.ini aktivieren.',
+            ],
+            [
+                'id' => 'openssl',
+                'label' => 'PHP-Erweiterung openssl (verschlüsselter Mailversand)',
+                'ok' => $sslOk,
+                'required' => false,
+                'detail' => $sslOk
+                    ? 'Vorhanden – E-Mails können per STARTTLS oder SSL/TLS verschlüsselt verschickt werden.'
+                    : 'Fehlt – E-Mails lassen sich dann nur unverschlüsselt verschicken, was die meisten Mailserver ablehnen. Bitte beim Hoster bzw. in der php.ini aktivieren.',
             ],
             [
                 'id' => 'schema',

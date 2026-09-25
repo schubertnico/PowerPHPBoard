@@ -68,6 +68,18 @@ final class HtmlTest extends TestCase
         $this->assertStringContainsString('<option value="Deutsch-Du" selected>Deutsch &lt;Du&gt;</option>', $html);
         $this->assertStringContainsString('<option value="English">English</option>', $html);
         $this->assertStringContainsString('id="board_language" name="board_language"', $html);
+        $this->assertStringContainsString('" required', $html);
+        $this->assertStringContainsString('<span class="text-danger-aa" aria-hidden="true">*</span>', $html);
+    }
+
+    public function testOptionalSelectHasNoRequiredMarker(): void
+    {
+        $html = Html::select('smtp_encryption', 'Verschlüsselung', ['none' => 'Keine', 'ssl' => 'SSL/TLS'], 'ssl', [], 'Hilfe', false);
+
+        $this->assertStringNotContainsString('required', $html);
+        $this->assertStringNotContainsString('*</span>', $html);
+        $this->assertStringContainsString('<option value="ssl" selected>SSL/TLS</option>', $html);
+        $this->assertStringContainsString('aria-describedby="smtp_encryption-help"', $html);
     }
 
     public function testAlert(): void

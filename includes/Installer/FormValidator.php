@@ -255,6 +255,39 @@ final class FormValidator
         if (!self::isHostname($host)) {
             $errors['smtp_host'] = 'Der SMTP-Server enthält ungültige Zeichen.';
         }
+
+        $from = self::text($input, 'smtp_from');
+        if ($from !== '' && !self::isEmail($from)) {
+            $errors['smtp_from'] = 'Bitte geben Sie eine gültige Absenderadresse an oder lassen Sie das Feld leer.';
+        }
+
+        [$encryption, $port, $transportErrors] = self::smtpTransport($input, $encryption);
+        [$password, $credentialErrors] = self::smtpPassword($input, $user, $previous);
+
+        return [
+            [
+                'host' => $host,
+                'port' => $port,
+                'from' => $from !== '' ? $from : $boardEmail,
+                'user' => $user,
+                'password' => $password,
+                'encryption' => $encryption,
+            ],
+            $errors + $transportErrors + $credentialErrors,
+        ];
+    }
+
+    /**
+     * Verschlüsselung und Port. Ein leerer Port ergibt den üblichen Port
+     * der Verschlüsselung (25, 587 bzw. 465).
+     *
+     * @param array<array-key, mixed> $input
+     *
+     * @return array{0: string, 1: int, 2: array<string, string>} Verschlüsselung, Port und Fehler
+     */
+    private static function smtpTransport(array $input, ?string $encryption): array
+    {
+        $errors = [];
         if ($encryption === null) {
             $errors['smtp_encryption'] = 'Bitte wählen Sie eine Verschlüsselung aus der Liste.';
             $encryption = Mailer::ENCRYPTION_NONE;
@@ -266,26 +299,7 @@ final class FormValidator
             $errors['smtp_port'] = 'Der SMTP-Port muss eine Zahl zwischen 1 und 65535 sein.';
         }
 
-        $from = self::text($input, 'smtp_from');
-        if ($from === '') {
-            $from = $boardEmail;
-        } elseif (!self::isEmail($from)) {
-            $errors['smtp_from'] = 'Bitte geben Sie eine gültige Absenderadresse an oder lassen Sie das Feld leer.';
-        }
-
-        [$password, $credentialErrors] = self::smtpPassword($input, $user, $previous);
-
-        return [
-            [
-                'host' => $host,
-                'port' => $port ?? $defaultPort,
-                'from' => $from,
-                'user' => $user,
-                'password' => $password,
-                'encryption' => $encryption,
-            ],
-            $errors + $credentialErrors,
-        ];
+        return [$encryption, $port ?? $defaultPort, $errors];
     }
 
     /**

@@ -80,13 +80,14 @@ final class RequirementsTest extends TestCase
 
     #[RequiresPhpExtension('pdo_mysql')]
     #[RequiresPhpExtension('mbstring')]
+    #[RequiresPhpExtension('openssl')]
     public function testAllRequirementsMetOnPreparedDirectory(): void
     {
         $checks = Requirements::check($this->root, ['HTTPS' => 'on'], '8.4.1');
 
         $this->assertTrue(Requirements::allRequiredMet($checks));
         $this->assertSame(
-            ['php', 'pdo_mysql', 'mbstring', 'schema', 'logs', 'config', 'https'],
+            ['php', 'pdo_mysql', 'mbstring', 'openssl', 'schema', 'logs', 'config', 'https'],
             array_column($checks, 'id')
         );
         foreach ($checks as $check) {
@@ -125,6 +126,8 @@ final class RequirementsTest extends TestCase
         $this->assertFalse($this->find($checks, 'config')['required']);
         $this->assertFalse($this->find($checks, 'https')['ok']);
         $this->assertFalse($this->find($checks, 'https')['required']);
+        // Ohne openssl nur unverschlüsselter Mailversand – ein Hinweis, kein Hindernis
+        $this->assertFalse($this->find($checks, 'openssl')['required']);
     }
 
     public function testCanWriteLocalConfig(): void

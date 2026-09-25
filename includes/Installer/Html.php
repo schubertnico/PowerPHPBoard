@@ -55,6 +55,7 @@ final class Html
      *
      * @param array<string, string> $options Wert => Beschriftung
      * @param array<string, string> $errors
+     * @param bool $required false bei optionalen Angaben (ohne Pflicht-Sternchen)
      */
     public static function select(
         string $name,
@@ -62,13 +63,14 @@ final class Html
         array $options,
         string $selected,
         array $errors,
-        string $help = ''
+        string $help = '',
+        bool $required = true
     ): string {
         $error = $errors[$name] ?? '';
         $html = '<div class="mb-3">'
-            . self::label($name, $label, true)
+            . self::label($name, $label, $required)
             . '<select id="' . Security::escapeAttr($name) . '" name="' . Security::escapeAttr($name) . '"'
-            . ' class="form-select' . ($error !== '' ? ' is-invalid' : '') . '" required'
+            . ' class="form-select' . ($error !== '' ? ' is-invalid' : '') . '"' . ($required ? ' required' : '')
             . self::describedBy($name, $help, $error) . '>';
 
         foreach ($options as $value => $text) {

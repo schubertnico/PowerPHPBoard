@@ -26,7 +26,9 @@ use PowerPHPBoard\Installer\InstallState;
 use PowerPHPBoard\Installer\LocalConfig;
 use PowerPHPBoard\Installer\Requirements;
 use PowerPHPBoard\Installer\Schema;
+use PowerPHPBoard\Installer\SmtpCheck;
 use PowerPHPBoard\Installer\Wizard;
+use PowerPHPBoard\Mailer;
 use PowerPHPBoard\Security;
 use PowerPHPBoard\Session;
 
@@ -41,6 +43,7 @@ require_once $rootDir . '/includes/Installer/DatabaseSetup.php';
 require_once $rootDir . '/includes/Installer/InstallState.php';
 require_once $rootDir . '/includes/Installer/Wizard.php';
 require_once $rootDir . '/includes/Installer/Html.php';
+require_once $rootDir . '/includes/Installer/SmtpCheck.php';
 
 header('Content-Type: text/html; charset=utf-8');
 header('Cache-Control: no-store, max-age=0');
@@ -112,6 +115,7 @@ if ($isPost) {
             'requirements' => installer_handle_requirements($wizard, $rootDir),
             'database' => installer_handle_database($wizard),
             'forum' => installer_handle_forum($wizard),
+            Wizard::ACTION_SMTP_TEST => installer_handle_smtp_test($wizard),
             'admin' => installer_handle_admin($wizard),
             default => installer_handle_finish($wizard, $rootDir),
         };
@@ -135,6 +139,8 @@ if ($step === Wizard::STEP_FORUM) {
         'old' => installer_old_forum($wizard, $isPost),
         'errors' => $result['errors'],
         'message' => $result['message'],
+        'passwordStored' => ($wizard->forum()['mail']['password'] ?? '') !== '',
+        'notice' => $isPost ? null : $wizard->takeNotice(),
     ]);
 }
 
@@ -212,13 +218,50 @@ function installer_handle_database(Wizard $wizard): array
  */
 function installer_handle_forum(Wizard $wizard): array
 {
-    $result = FormValidator::forum($_POST);
+    $result = FormValidator::forum($_POST, $wizard->forum()['mail'] ?? null);
     if ($result['errors'] !== []) {
         return installer_failure('Bitte prüfen Sie die markierten Felder.', $result['errors']);
     }
 
     $wizard->storeForum($result['values']);
     installer_redirect($wizard, Wizard::STEP_ADMIN);
+}
+
+/**
+ * „Test-Mail senden“: speichert die geprüften Angaben aus Schritt 3 und
+ * schickt eine Test-Mail an die E-Mail-Adresse des Forums. Das Ergebnis
+ * erscheint nach der Weiterleitung wieder in Schritt 3.
+ *
+ * @return array{errors: array<string, string>, message: string, tables: list<string>}
+ */
+function installer_handle_smtp_test(Wizard $wizard): array
+{
+    $result = FormValidator::forum($_POST, $wizard->forum()['mail'] ?? null);
+    if ($result['errors'] !== []) {
+        return installer_failure('Bitte prüfen Sie die markierten Felder.', $result['errors']);
+    }
+    if (!$wizard->countSmtpTest()) {
+        return installer_failure(
+            'In dieser Sitzung wurden bereits ' . Wizard::MAX_SMTP_TESTS . ' Test-Mails verschickt. '
+            . 'Bitte prüfen Sie die Angaben ohne weiteren Test oder fahren Sie fort.'
+        );
+    }
+
+    $forum = $result['values'];
+    $wizard->storeForum($forum);
+
+    // Ohne eigenen SMTP-Server gelten später die Umgebungsvariablen bzw. Vorgaben – genau die werden getestet
+    $mail = $forum['mail'] ?? LocalConfig::mailFromEnvironment(static fn (string $name): string|false => getenv($name));
+    $outcome = SmtpCheck::send(
+        Mailer::fromConfig($mail),
+        $mail,
+        $forum['adminemail'],
+        Mailer::senderAddress(['adminemail' => $forum['adminemail']], $mail)
+    );
+    ErrorHandler::logSecurityEvent('INSTALLER_SMTP_TEST', ['accepted' => $outcome['ok']]);
+
+    $wizard->setNotice($outcome['ok'] ? 'success' : 'danger', $outcome['message']);
+    installer_redirect($wizard, Wizard::STEP_FORUM);
 }
 
 /**
@@ -347,7 +390,11 @@ function installer_old_database(Wizard $wizard, bool $isPost): array
 function installer_old_forum(Wizard $wizard, bool $isPost): array
 {
     if ($isPost) {
-        return installer_post_values(['board_title', 'board_url', 'board_email', 'board_language', 'smtp_host', 'smtp_port', 'smtp_from']);
+        // Das SMTP-Passwort wird nie wieder ausgegeben
+        return installer_post_values([
+            'board_title', 'board_url', 'board_email', 'board_language',
+            'smtp_host', 'smtp_port', 'smtp_encryption', 'smtp_user', 'smtp_from',
+        ]);
     }
 
     $forum = $wizard->forum();
@@ -359,6 +406,8 @@ function installer_old_forum(Wizard $wizard, bool $isPost): array
             'board_language' => $forum['language'],
             'smtp_host' => $forum['mail']['host'] ?? '',
             'smtp_port' => isset($forum['mail']) ? (string) $forum['mail']['port'] : '25',
+            'smtp_encryption' => $forum['mail']['encryption'] ?? Mailer::ENCRYPTION_NONE,
+            'smtp_user' => $forum['mail']['user'] ?? '',
             'smtp_from' => $forum['mail']['from'] ?? '',
         ];
     }
@@ -372,6 +421,8 @@ function installer_old_forum(Wizard $wizard, bool $isPost): array
         'board_language' => 'Deutsch-Du',
         'smtp_host' => 'localhost',
         'smtp_port' => '25',
+        'smtp_encryption' => Mailer::ENCRYPTION_NONE,
+        'smtp_user' => '',
         'smtp_from' => Wizard::suggestSender($boardUrl),
     ];
 }

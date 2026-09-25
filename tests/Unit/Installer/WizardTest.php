@@ -242,7 +242,52 @@ final class WizardTest extends TestCase
 
     public function testActionsMapToSteps(): void
     {
-        $this->assertSame(array_keys(Wizard::STEPS), array_values(Wizard::ACTIONS));
+        // Jeder Schritt hat seine Aktion; „Test-Mail senden“ gehört zu Schritt 3
+        $this->assertSame(array_keys(Wizard::STEPS), array_values(array_unique(Wizard::ACTIONS)));
+        $this->assertSame(Wizard::STEP_FORUM, Wizard::ACTIONS[Wizard::ACTION_SMTP_TEST]);
+    }
+
+    public function testSmtpTestsAreLimitedPerSession(): void
+    {
+        $wizard = Wizard::fromSession(null);
+        for ($i = 0; $i < Wizard::MAX_SMTP_TESTS; ++$i) {
+            $this->assertTrue($wizard->countSmtpTest());
+        }
+
+        $restored = Wizard::fromSession($wizard->toSession());
+
+        $this->assertFalse($restored->countSmtpTest());
+        $this->assertSame(Wizard::MAX_SMTP_TESTS, $restored->toSession()['smtp_tests']);
+    }
+
+    public function testNoticeIsShownOnlyOnce(): void
+    {
+        $wizard = Wizard::fromSession(null);
+        $wizard->setNotice('success', 'Test-Mail angenommen');
+
+        $restored = Wizard::fromSession($wizard->toSession());
+
+        $this->assertSame(['type' => 'success', 'message' => 'Test-Mail angenommen'], $restored->takeNotice());
+        $this->assertNull($restored->takeNotice());
+        $this->assertNull(Wizard::fromSession($restored->toSession())->takeNotice());
+    }
+
+    /**
+     * @return array<string, array{mixed}>
+     */
+    public static function brokenNotices(): array
+    {
+        return [
+            'kein Array' => ['Meldung'],
+            'unbekannter Typ' => [['type' => 'script', 'message' => 'x']],
+            'Meldung fehlt' => [['type' => 'success']],
+        ];
+    }
+
+    #[DataProvider('brokenNotices')]
+    public function testBrokenNoticeIsIgnored(mixed $notice): void
+    {
+        $this->assertNull(Wizard::fromSession(['notice' => $notice])->takeNotice());
     }
 
     private function completeWizard(): Wizard

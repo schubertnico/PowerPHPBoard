@@ -26,6 +26,7 @@ use SensitiveParameter;
  *
  * @phpstan-type AdminData array{username: string, email: string, password_hash: string}
  * @phpstan-type DoneInfo array{config_written: bool, config_source: string, admin_username: string, admin_email: string, board_url: string}
+ * @phpstan-type Notice array{type: string, message: string}
  */
 final class Wizard
 {
@@ -56,11 +57,30 @@ final class Wizard
         'requirements' => self::STEP_REQUIREMENTS,
         'database' => self::STEP_DATABASE,
         'forum' => self::STEP_FORUM,
+        self::ACTION_SMTP_TEST => self::STEP_FORUM,
         'admin' => self::STEP_ADMIN,
         'finish' => self::STEP_FINISH,
     ];
 
+    /**
+     * „Test-Mail senden“ in Schritt 3.
+     */
+    public const string ACTION_SMTP_TEST = 'smtp_test';
+
+    /**
+     * Höchstzahl der Test-Mails je Sitzung – der Installer soll kein
+     * Werkzeug für Massenmails sein.
+     */
+    public const int MAX_SMTP_TESTS = 10;
+
+    private const array NOTICE_TYPES = ['success', 'danger', 'warning', 'info'];
+
     private int $completed = 0;
+
+    private int $smtpTests = 0;
+
+    /** @var Notice|null einmalige Meldung nach einer Weiterleitung */
+    private ?array $notice = null;
 
     /** @var MysqlConfig|null */
     private ?array $database = null;
@@ -92,11 +112,19 @@ final class Wizard
         $wizard->admin = self::parseAdmin($data['admin'] ?? null);
         $wizard->done = self::parseDone($data['done'] ?? null);
 
+        $smtpTests = $data['smtp_tests'] ?? 0;
+        $wizard->smtpTests = is_int($smtpTests) ? max(0, $smtpTests) : 0;
+        $notice = $data['notice'] ?? null;
+        $wizard->notice = is_array($notice) && in_array($notice['type'] ?? null, self::NOTICE_TYPES, true)
+            && is_string($notice['type']) && is_string($notice['message'] ?? null)
+            ? ['type' => $notice['type'], 'message' => $notice['message']]
+            : null;
+
         return $wizard;
     }
 
     /**
-     * @return array{completed: int, database: MysqlConfig|null, forum: ForumSettings|null, admin: AdminData|null, done: DoneInfo|null}
+     * @return array{completed: int, database: MysqlConfig|null, forum: ForumSettings|null, admin: AdminData|null, done: DoneInfo|null, smtp_tests: int, notice: Notice|null}
      */
     public function toSession(): array
     {
@@ -106,7 +134,45 @@ final class Wizard
             'forum' => $this->forum,
             'admin' => $this->admin,
             'done' => $this->done,
+            'smtp_tests' => $this->smtpTests,
+            'notice' => $this->notice,
         ];
+    }
+
+    /**
+     * Zählt eine Test-Mail; false, wenn das Limit dieser Sitzung erreicht ist.
+     */
+    public function countSmtpTest(): bool
+    {
+        if ($this->smtpTests >= self::MAX_SMTP_TESTS) {
+            return false;
+        }
+        ++$this->smtpTests;
+
+        return true;
+    }
+
+    /**
+     * Meldung für die nächste Seite (nach der Weiterleitung).
+     *
+     * @param 'success'|'danger'|'warning'|'info' $type
+     */
+    public function setNotice(string $type, string $message): void
+    {
+        $this->notice = ['type' => $type, 'message' => $message];
+    }
+
+    /**
+     * Liefert die Meldung einmal und vergisst sie dann.
+     *
+     * @return Notice|null
+     */
+    public function takeNotice(): ?array
+    {
+        $notice = $this->notice;
+        $this->notice = null;
+
+        return $notice;
     }
 
     /**

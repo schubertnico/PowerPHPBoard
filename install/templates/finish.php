@@ -11,6 +11,7 @@ declare(strict_types=1);
 use PowerPHPBoard\CSRF;
 use PowerPHPBoard\Installer\FormValidator;
 use PowerPHPBoard\Installer\Html;
+use PowerPHPBoard\Installer\SmtpCheck;
 use PowerPHPBoard\Installer\Wizard;
 use PowerPHPBoard\Security;
 
@@ -78,7 +79,7 @@ return static function (Wizard $wizard, bool $configWritable, string $message): 
           <?php if ($mail === null): ?>
             Standardwerte
           <?php else: ?>
-            <?php echo Security::escape($mail['host'] . ':' . $mail['port'] . ', Absender ' . $mail['from']); ?>
+            <?php echo Security::escape(SmtpCheck::describe($mail) . ', Absender ' . $mail['from']); ?>
           <?php endif; ?>
         </dd>
       </dl>

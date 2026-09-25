@@ -8,9 +8,12 @@ use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use PowerPHPBoard\Mailer;
+use PowerPHPBoard\Tests\Helpers\MockSmtpServer;
 
 final class MailerTest extends TestCase
 {
+    use MockSmtpServer;
+
     private const string USER = 'forum@example.org';
 
     private const string PASSWORD = 'Geh3im!Pässwort';
@@ -538,70 +541,5 @@ final class MailerTest extends TestCase
         $this->assertStringNotContainsString(base64_encode(self::PASSWORD), $text);
         $this->assertStringNotContainsString(base64_encode("\0" . self::USER . "\0" . self::PASSWORD), $text);
         $this->assertStringNotContainsString('AUTH PLAIN ', $text);
-    }
-
-    /**
-     * Befehle aus dem Mitschnitt; EHLO/HELO ohne Namen.
-     *
-     * @return list<string>
-     */
-    private function commands(string $transcript): array
-    {
-        preg_match_all('/^C: (.*)$/m', $transcript, $matches);
-
-        return array_map(
-            static fn (string $line): string => (string) preg_replace('/^(EHLO|HELO) .*/', '$1', $line),
-            $matches[1]
-        );
-    }
-
-    /**
-     * Startet den Mock-SMTP-Server, führt $send aus und liefert das Ergebnis
-     * samt Mitschnitt der vom Mailer gesendeten Zeilen.
-     *
-     * @param callable(int): bool $send
-     *
-     * @return array{0: bool, 1: string}
-     */
-    private function converse(string $scenario, callable $send): array
-    {
-        $script = __DIR__ . '/../Helpers/mock-smtp-server.php';
-        $proc = proc_open(
-            [PHP_BINARY, $script, '0', $scenario],
-            [
-                0 => ['pipe', 'r'],
-                1 => ['pipe', 'w'],
-                2 => ['pipe', 'w'],
-            ],
-            $pipes
-        );
-        if (!is_resource($proc)) {
-            $this->fail('Konnte Mock-SMTP-Server nicht starten');
-        }
-
-        try {
-            // Die erste Zeile enthält den Port. fgets blockiert, bis der Server
-            // gebunden hat – beim Verbinden lauscht er also garantiert.
-            $portLine = fgets($pipes[1]);
-            $port = $portLine === false ? 0 : (int) trim($portLine);
-            if ($port <= 0) {
-                $this->fail('Mock-Server lieferte keinen Port. STDERR: ' . (string) stream_get_contents($pipes[2]));
-            }
-
-            $result = $send($port);
-
-            // Der Server beendet sich nach dem Gespräch selbst (spätestens nach 5 s ohne Daten).
-            $transcript = (string) stream_get_contents($pipes[1]);
-        } finally {
-            foreach ($pipes as $pipe) {
-                fclose($pipe);
-            }
-            if (proc_get_status($proc)['running']) {
-                proc_terminate($proc);
-            }
-            proc_close($proc);
-        }
-
-        return [$result, $transcript];
     }
 }
