@@ -78,10 +78,12 @@ infection.json5     export-ignore
 # aber auf dem Live-Server BENOETIGT - NICHT ausschliessen!
 
 # Setup-Skripte (sollten nur einmalig lokal laufen)
-create-admin.php    export-ignore
+/create-admin.php   export-ignore
 install_bugfix_*.sql export-ignore
-# Hinweis: install.sql wird oft fuer die Erst-Installation gebraucht,
-# bleibt daher absichtlich NICHT ausgeschlossen.
+# Hinweis: install.sql liest der Web-Installer (install/) ein, es bleibt
+# daher absichtlich im Paket – ebenso install/ selbst und das
+# CLI-Werkzeug bin/create-admin.php (per .htaccess und PHP_SAPI-Prüfung
+# gegen Aufrufe über das Web geschützt).
 
 # IDE-Configs (falls doch mal eine versehentlich getrackt wird)
 .idea/              export-ignore

@@ -107,7 +107,9 @@ infection-log.txt
 /infection-cache/
 
 # ---------- Setup-Skripte (Security-Risk - sollen nicht auf Live) ----------
-create-admin.php
+# Altes Setup-Skript mit Zugangsdaten im Code (ersetzt durch den Web-Installer
+# und das CLI-Werkzeug bin/create-admin.php, das versioniert bleibt).
+/create-admin.php
 /install.php
 # Sperrdatei, die der Web-Installer nach erfolgreicher Installation schreibt
 /install/.installed
