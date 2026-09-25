@@ -33,9 +33,8 @@ if ($adduser === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $icq = Security::getString('icq', 'POST');
     $biography = Security::getString('biography', 'POST');
     $signature = Security::getString('signature', 'POST');
-    $hideemail = Security::getString('hideemail', 'POST', 'NO');
+    $hideemail = ppb_hide_email(Security::getString('hideemail', 'POST'));
     $logincookie = Security::getString('logincookie', 'POST', 'YES');
-    $hideemail = $hideemail === 'YES' ? 'YES' : 'NO';
     $logincookie = $logincookie === 'NO' ? 'NO' : 'YES';
 
     if ($username === '' || $email1 === '' || $email2 === '' || $password1 === '' || $password2 === '') {
@@ -93,6 +92,8 @@ if ($adduser === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
 $old = static fn (string $field, string $default = ''): string => ($formError !== '' && !$saved)
     ? Security::getString($field, 'POST', $default)
     : $default;
+// Neues Formular: Adresse verbergen ist vorausgewählt
+$hideChoice = ppb_hide_email($old('hideemail'));
 ?>
 
 <header class="mb-3">
@@ -189,11 +190,11 @@ $old = static fn (string $field, string $default = ''): string => ($formError !=
           <fieldset>
             <legend class="form-label fw-semibold mb-1 fs-6"><?php echo Security::escape($lang_hideemail ?? 'Hide email address?'); ?></legend>
             <div class="form-check form-check-inline">
-              <input class="form-check-input" type="radio" id="hideY" name="hideemail" value="YES" <?php echo $old('hideemail', 'NO') === 'YES' ? 'checked' : ''; ?>>
+              <input class="form-check-input" type="radio" id="hideY" name="hideemail" value="YES" <?php echo $hideChoice === 'YES' ? 'checked' : ''; ?>>
               <label class="form-check-label" for="hideY"><?php echo Security::escape($lang_yes ?? 'yes'); ?></label>
             </div>
             <div class="form-check form-check-inline">
-              <input class="form-check-input" type="radio" id="hideN" name="hideemail" value="NO" <?php echo $old('hideemail', 'NO') !== 'YES' ? 'checked' : ''; ?>>
+              <input class="form-check-input" type="radio" id="hideN" name="hideemail" value="NO" <?php echo $hideChoice === 'NO' ? 'checked' : ''; ?>>
               <label class="form-check-label" for="hideN"><?php echo Security::escape($lang_no ?? 'no'); ?></label>
             </div>
           </fieldset>

@@ -125,6 +125,19 @@ function ppb_admin_design_fields(array $values, string $note): string
 }
 
 /**
+ * Einstellung „E-Mail-Adresse verbergen?“ aus einer Eingabe: Nur ein
+ * ausdrückliches „NO“ macht die Adresse sichtbar. Fehlt die Angabe (neues
+ * Formular, manipulierte Anfrage), bleibt sie verborgen – Privacy by Default
+ * bei der Registrierung und bei „Benutzer anlegen“.
+ *
+ * @return 'YES'|'NO'
+ */
+function ppb_hide_email(string $value): string
+{
+    return $value === 'NO' ? 'NO' : 'YES';
+}
+
+/**
  * Text der Begrüßungsmail nach der Registrierung oder nach „Benutzer
  * anlegen“ im Adminbereich. Das Passwort steht bewusst nie in der Mail.
  *

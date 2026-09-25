@@ -125,7 +125,7 @@ if ($acception === 0) {
                         $biography = strip_tags($biography);
                         $signature = strip_tags($signature, '<b><i><u><strong><em><br><a>');
                         $homepage = (string) Validator::normalizeHomepage($homepage);
-                        $hideemail = in_array($hideemail, ['YES', 'NO'], true) ? $hideemail : 'NO';
+                        $hideemail = ppb_hide_email($hideemail);
                         $logincookie = in_array($logincookie, ['YES', 'NO'], true) ? $logincookie : 'YES';
 
                         $now = time();
@@ -206,7 +206,8 @@ if ($acception === 0) {
         $oldIcq = ($_SERVER['REQUEST_METHOD'] === 'POST') ? Security::getString('icq', 'POST') : '';
         $oldBio = ($_SERVER['REQUEST_METHOD'] === 'POST') ? Security::getString('biography', 'POST') : '';
         $oldSig = ($_SERVER['REQUEST_METHOD'] === 'POST') ? Security::getString('signature', 'POST') : '';
-        $oldHide = ($_SERVER['REQUEST_METHOD'] === 'POST') ? Security::getString('hideemail', 'POST') : 'NO';
+        // Neues Formular: Adresse verbergen ist vorausgewählt
+        $oldHide = ppb_hide_email(($_SERVER['REQUEST_METHOD'] === 'POST') ? Security::getString('hideemail', 'POST') : '');
         $oldCookie = ($_SERVER['REQUEST_METHOD'] === 'POST') ? Security::getString('logincookie', 'POST') : 'YES';
         ?>
   <div class="row justify-content-center">
@@ -376,7 +377,7 @@ if ($acception === 0) {
                 <label class="form-check-label" for="hideemailYes"><?php echo Security::escape($lang_yes ?? 'ja'); ?></label>
               </div>
               <div class="form-check form-check-inline">
-                <input class="form-check-input" type="radio" name="hideemail" id="hideemailNo" value="NO" <?php echo $oldHide !== 'YES' ? 'checked' : ''; ?>>
+                <input class="form-check-input" type="radio" name="hideemail" id="hideemailNo" value="NO" <?php echo $oldHide === 'NO' ? 'checked' : ''; ?>>
                 <label class="form-check-label" for="hideemailNo"><?php echo Security::escape($lang_no ?? 'nein'); ?></label>
               </div>
               <div class="form-text"><?php echo Security::escape($lang_hideemailhelp ?? 'If enabled, other users cannot see your email address.'); ?></div>
