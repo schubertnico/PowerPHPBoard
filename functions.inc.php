@@ -17,6 +17,7 @@ use PowerPHPBoard\DatabaseRateLimitStorage;
 use PowerPHPBoard\RateLimiter;
 use PowerPHPBoard\Security;
 use PowerPHPBoard\TextFormatter;
+use PowerPHPBoard\ThreadPages;
 
 /**
  * Sprachtext aus der geladenen Sprachdatei ($lang_…) mit Ersatztext.
@@ -275,6 +276,41 @@ function ppb_closed_write_notice(array $board, array $thread): string
 
     return '<div class="alert alert-secondary small d-flex align-items-center gap-2 ppb-mod-hint" role="note">'
         . '<i class="bi bi-shield-check" aria-hidden="true"></i><div>' . Security::escape($text) . '</div></div>';
+}
+
+/**
+ * Spalte „Letzte Antwort“ der Themenliste: Sprung-Link, Datum und Autor der
+ * letzten Antwort. Ein Thema ohne Antworten zeigt „Keine Antworten“ – beim
+ * Anlegen zeigt lastreply auf den Starterbeitrag (für Sortierung und
+ * „Neue Antworten“), dessen Datum und Autor gehören aber nicht in diese Spalte.
+ *
+ * @param array<string, mixed> $thread Themen-Zeile aus ppb_posts
+ * @param int $replyCount Anzahl der Antworten (ohne Starterbeitrag)
+ *
+ * @return string HTML
+ */
+function ppb_last_reply_cell(Database $db, array $thread, int $replyCount): string
+{
+    $lastReply = (int) ($thread['lastreply'] ?? 0);
+    if ($replyCount === 0 || $lastReply === 0) {
+        return '<span class="text-body-secondary">' . Security::escape(ppb_lang('noreplys', 'No replies')) . '</span>';
+    }
+
+    $threadId = (int) ($thread['id'] ?? 0);
+    $lastAuthorId = (int) ($thread['lastauthor'] ?? 0);
+    $lastAuthor = $db->fetchOne('SELECT username FROM ppb_users WHERE id = ?', [$lastAuthorId]);
+    $lastPost = $db->fetchOne(
+        'SELECT id FROM ppb_posts WHERE (threadid = ? OR id = ?) AND time = ? AND author = ?',
+        [$threadId, $threadId, $lastReply, $lastAuthorId]
+    );
+    $jumpLink = $lastPost !== null ? ThreadPages::postLink($db, $threadId, (int) $lastPost['id']) : '#';
+
+    return '<a class="text-decoration-none" href="' . Security::escape($jumpLink) . '" title="'
+        . Security::escape(ppb_lang('jumptolastpost', 'Jump to last post')) . '">'
+        . '<i class="bi bi-arrow-right-circle" aria-hidden="true"></i></a> '
+        . Security::escape(date('d.m.Y - H:i', $lastReply)) . '<br>'
+        . '<span class="text-body-secondary">' . Security::escape(ppb_lang('by', 'by')) . '</span> '
+        . Security::escape($lastAuthor !== null ? (string) $lastAuthor['username'] : ppb_lang('anonymous', 'Unknown'));
 }
 
 /**

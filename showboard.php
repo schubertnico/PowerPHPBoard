@@ -216,28 +216,7 @@ include __DIR__ . '/header.inc.php';
               <td class="text-end d-none d-md-table-cell"><?php echo $replyCount; ?></td>
               <td class="text-end d-none d-md-table-cell"><?php echo (int) $row['views']; ?></td>
               <td class="d-none d-lg-table-cell small">
-                <?php if ($row['lastreply'] == 0): ?>
-                  <span class="text-body-secondary"><?php echo Security::escape($lang_noreplys ?? 'No replies'); ?></span>
-                <?php else:
-                    $lastAuthor = $db->fetchOne('SELECT username FROM ppb_users WHERE id = ?', [$row['lastauthor']]);
-                    if ($lastAuthor !== null):
-                        $lastPost = $db->fetchOne(
-                            'SELECT id FROM ppb_posts WHERE (threadid = ? OR id = ?) AND time = ? AND author = ?',
-                            [$row['id'], $row['id'], $row['lastreply'], $row['lastauthor']]
-                        );
-                        $jumpLink = '#';
-                        if ($lastPost !== null) {
-                            $jumpLink = ThreadPages::postLink($db, (int) $row['id'], (int) $lastPost['id']);
-                        }
-                        ?>
-                  <a class="text-decoration-none" href="<?php echo Security::escape($jumpLink); ?>"
-                     title="<?php echo Security::escape($lang_jumptolastpost ?? 'Jump to last post'); ?>">
-                    <i class="bi bi-arrow-right-circle" aria-hidden="true"></i>
-                  </a>
-                  <?php echo Security::escape(date('d.m.Y - H:i', (int) $row['lastreply'])); ?><br>
-                  <span class="text-body-secondary"><?php echo Security::escape($lang_by ?? 'by'); ?></span>
-                  <?php echo Security::escape((string) $lastAuthor['username']); ?>
-                <?php endif; endif; ?>
+                <?php echo ppb_last_reply_cell($db, $row, $replyCount); ?>
               </td>
             </tr>
           <?php endforeach; ?>
