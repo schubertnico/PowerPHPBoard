@@ -13,6 +13,7 @@ use PowerPHPBoard\BoardAccess;
 use PowerPHPBoard\Database;
 use PowerPHPBoard\Security;
 use PowerPHPBoard\Session;
+use PowerPHPBoard\ThreadPages;
 
 require_once __DIR__ . '/config.inc.php';
 require_once __DIR__ . '/includes/autoload.php';
@@ -172,10 +173,9 @@ include __DIR__ . '/header.inc.php';
                                 [$row['id'], $row['id'], $visit['time']]
                             );
                             if ($firstUnread !== null) {
-                                $currentPosts = (int) floor($postCount / 25) * 25;
-                                echo '<a class="text-decoration-none me-1" href="showthread.php?threadid='
-                                    . (int) $row['id'] . '&current=' . $currentPosts
-                                    . '#post' . (int) $firstUnread['id'] . '" title="'
+                                echo '<a class="text-decoration-none me-1" href="'
+                                    . Security::escape(ThreadPages::postLink($db, (int) $row['id'], (int) $firstUnread['id']))
+                                    . '" title="'
                                     . Security::escape($lang_jumptofirstunread ?? 'Jump to first unread post')
                                     . '"><i class="bi bi-arrow-right-circle-fill text-primary" aria-hidden="true"></i></a>';
                             }
@@ -227,9 +227,7 @@ include __DIR__ . '/header.inc.php';
                         );
                         $jumpLink = '#';
                         if ($lastPost !== null) {
-                            $currentPosts = (int) floor($postCount / 25) * 25;
-                            $jumpLink = 'showthread.php?threadid=' . (int) $row['id']
-                                . '&current=' . $currentPosts . '#post' . (int) $lastPost['id'];
+                            $jumpLink = ThreadPages::postLink($db, (int) $row['id'], (int) $lastPost['id']);
                         }
                         ?>
                   <a class="text-decoration-none" href="<?php echo Security::escape($jumpLink); ?>"

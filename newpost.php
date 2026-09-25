@@ -14,6 +14,7 @@ use PowerPHPBoard\CSRF;
 use PowerPHPBoard\Database;
 use PowerPHPBoard\Security;
 use PowerPHPBoard\Session;
+use PowerPHPBoard\ThreadPages;
 use PowerPHPBoard\Validator;
 
 require_once __DIR__ . '/config.inc.php';
@@ -171,7 +172,7 @@ if ($postid > 0 && !$postCreated && $formError === '' && $hasAccess && !empty($t
       <p class="mb-3">
         <?php echo Security::escape($lang_newpostcreated ?? 'Post created successfully'); ?>
       </p>
-      <a href="showthread.php?threadid=<?php echo (int) $thread['id']; ?>&current=<?php echo (int) $current; ?>#post<?php echo $newPostId; ?>"
+      <a href="<?php echo Security::escape(ThreadPages::postLink($db, (int) $thread['id'], $newPostId)); ?>"
          class="btn btn-primary">
         <i class="bi bi-arrow-left" aria-hidden="true"></i>
         <?php echo Security::escape(sprintf($lang_backtothread ?? 'Back to the thread "%s"', (string) $thread['title'])); ?>

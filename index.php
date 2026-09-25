@@ -10,6 +10,7 @@ declare(strict_types=1);
 
 use PowerPHPBoard\Installer\InstallState;
 use PowerPHPBoard\Security;
+use PowerPHPBoard\ThreadPages;
 
 require_once __DIR__ . '/config.inc.php';
 require_once __DIR__ . '/includes/Installer/LocalConfig.php';
@@ -146,13 +147,7 @@ if ($catid > 0) {
                           $lastPostLink = '#';
                           if ($lastPost !== null) {
                               $lastPostThreadId = ($lastPost['threadid'] == 0) ? $lastPost['id'] : $lastPost['threadid'];
-                              $postInThread = $db->fetchOne(
-                                  'SELECT COUNT(*) as count FROM ppb_posts WHERE threadid = ?',
-                                  [$lastPostThreadId]
-                              );
-                              $currentPostings = (int) floor(((int) ($postInThread['count'] ?? 0)) / 25) * 25;
-                              $lastPostLink = 'showthread.php?threadid=' . (int) $lastPostThreadId
-                                  . '&current=' . $currentPostings . '#post' . (int) $lastPost['id'];
+                              $lastPostLink = ThreadPages::postLink($db, (int) $lastPostThreadId, (int) $lastPost['id']);
                           }
                           ?>
                     <a href="<?php echo Security::escape($lastPostLink); ?>"
