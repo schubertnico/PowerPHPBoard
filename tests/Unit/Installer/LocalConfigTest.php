@@ -93,23 +93,166 @@ final class LocalConfigTest extends TestCase
 
     public function testMailValuesWithSpecialCharactersSurviveRoundTrip(): void
     {
-        $mail = ['host' => "smtp'.example.com", 'port' => 587, 'from' => 'no"reply@example.com'];
+        $mail = [
+            'host' => "smtp'.example.com",
+            'port' => 587,
+            'from' => 'no"reply@example.com',
+            'user' => "post'fach@example.com",
+            'password' => "pa'ss\\",
+            'encryption' => 'starttls',
+        ];
 
         $this->assertSame(['mysql' => $this->mysql(), 'mail' => $mail], $this->renderAndLoad($this->mysql(), $mail));
+    }
+
+    #[DataProvider('trickyPasswords')]
+    public function testRenderedFileReturnsExactlyTheGivenSmtpPassword(string $password): void
+    {
+        $mail = array_replace($this->mail(), ['password' => $password, 'user' => 'forum@example.com', 'encryption' => 'ssl', 'port' => 465]);
+
+        $config = $this->renderAndLoad($this->mysql(), $mail);
+
+        $this->assertSame($mail, $config['mail'] ?? null);
+    }
+
+    public function testRenderedMailSectionNamesTheEncryptionValues(): void
+    {
+        $source = LocalConfig::render($this->mysql(), $this->mail(), '2026-09-25 12:00:00');
+
+        $this->assertStringContainsString("        'encryption' => 'none', // none, starttls oder ssl\n", $source);
+        $this->assertStringContainsString("        'user' => '',\n", $source);
     }
 
     public function testApplyOverridesEnvironmentValues(): void
     {
         $result = LocalConfig::apply($this->mysql(), $this->mail(), [
             'mysql' => ['server' => 'other', 'port' => 3310, 'user' => 'u', 'password' => 'p', 'database' => 'd'],
-            'mail' => ['host' => 'smtp.local', 'port' => 2525, 'from' => 'a@b.de'],
+            'mail' => [
+                'host' => 'smtp.local',
+                'port' => 2525,
+                'from' => 'a@b.de',
+                'user' => 'postfach@b.de',
+                'password' => 'geheim',
+                'encryption' => 'ssl',
+            ],
         ]);
 
         $this->assertSame(
             ['server' => 'other', 'port' => 3310, 'user' => 'u', 'password' => 'p', 'database' => 'd'],
             $result['mysql']
         );
-        $this->assertSame(['host' => 'smtp.local', 'port' => 2525, 'from' => 'a@b.de'], $result['mail']);
+        $this->assertSame(
+            ['host' => 'smtp.local', 'port' => 2525, 'from' => 'a@b.de', 'user' => 'postfach@b.de', 'password' => 'geheim', 'encryption' => 'ssl'],
+            $result['mail']
+        );
+    }
+
+    public function testApplyIgnoresWrongTypesForSmtpCredentials(): void
+    {
+        $result = LocalConfig::apply($this->mysql(), $this->mail(), [
+            'mail' => ['user' => ['a'], 'password' => 1234, 'encryption' => true],
+        ]);
+
+        $this->assertSame($this->mail(), $result['mail']);
+    }
+
+    public function testApplyKeepsUnknownEncryptionForTheMailerToReject(): void
+    {
+        // Nie stillschweigend auf "none" zurückfallen – der Mailer verweigert unbekannte Werte
+        $result = LocalConfig::apply($this->mysql(), $this->mail(), ['mail' => ['encryption' => 'TLS']]);
+
+        $this->assertSame('TLS', $result['mail']['encryption']);
+    }
+
+    // ---------------------------------------------------------------
+    //  Umgebungsvariablen PPB_MAIL_* und Rangfolge
+    // ---------------------------------------------------------------
+
+    public function testMailFromEnvironmentWithoutVariablesUsesDefaults(): void
+    {
+        $mail = LocalConfig::mailFromEnvironment($this->environment([]));
+
+        $this->assertSame(LocalConfig::DEFAULT_MAIL, $mail);
+        $this->assertSame(
+            ['host' => 'mailpit', 'port' => 1025, 'from' => 'noreply@powerphpboard.local', 'user' => '', 'password' => '', 'encryption' => 'none'],
+            $mail
+        );
+    }
+
+    public function testMailFromEnvironmentReadsAllVariables(): void
+    {
+        $mail = LocalConfig::mailFromEnvironment($this->environment([
+            'PPB_MAIL_HOST' => 'smtp.example.com',
+            'PPB_MAIL_PORT' => '587',
+            'PPB_MAIL_FROM' => 'forum@example.com',
+            'PPB_MAIL_USER' => 'forum@example.com',
+            'PPB_MAIL_PASS' => 'App-Passwort 123',
+            'PPB_MAIL_ENCRYPTION' => 'starttls',
+        ]));
+
+        $this->assertSame([
+            'host' => 'smtp.example.com',
+            'port' => 587,
+            'from' => 'forum@example.com',
+            'user' => 'forum@example.com',
+            'password' => 'App-Passwort 123',
+            'encryption' => 'starttls',
+        ], $mail);
+    }
+
+    public function testMailFromEnvironmentIgnoresEmptyValuesAndInvalidPorts(): void
+    {
+        $mail = LocalConfig::mailFromEnvironment($this->environment([
+            'PPB_MAIL_HOST' => '  ',
+            'PPB_MAIL_PORT' => '70000',
+            'PPB_MAIL_USER' => '',
+            'PPB_MAIL_ENCRYPTION' => '',
+        ]));
+
+        $this->assertSame(LocalConfig::DEFAULT_MAIL, $mail);
+        $this->assertSame(1025, LocalConfig::mailFromEnvironment($this->environment(['PPB_MAIL_PORT' => 'abc']))['port']);
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function environmentPasswords(): array
+    {
+        return [
+            'Null als Text' => ['0'],
+            'Leerzeichen außen' => ['  geheim  '],
+            'Sonderzeichen' => ["pa'ss\"\\\$x"],
+        ];
+    }
+
+    #[DataProvider('environmentPasswords')]
+    public function testMailPasswordFromEnvironmentIsKeptExactly(string $password): void
+    {
+        $mail = LocalConfig::mailFromEnvironment($this->environment(['PPB_MAIL_PASS' => $password]));
+
+        $this->assertSame($password, $mail['password']);
+    }
+
+    public function testPrecedenceLocalConfigBeforeEnvironmentBeforeDefaults(): void
+    {
+        $environment = LocalConfig::mailFromEnvironment($this->environment([
+            'PPB_MAIL_HOST' => 'smtp.env.example',
+            'PPB_MAIL_USER' => 'env@example.com',
+            'PPB_MAIL_PASS' => 'env-passwort',
+        ]));
+
+        $result = LocalConfig::apply($this->mysql(), $environment, [
+            'mail' => ['password' => 'lokal-passwort', 'encryption' => 'ssl', 'port' => 465],
+        ]);
+
+        $this->assertSame([
+            'host' => 'smtp.env.example',          // Umgebungsvariable
+            'port' => 465,                         // config.local.php
+            'from' => 'noreply@powerphpboard.local', // Vorgabe
+            'user' => 'env@example.com',           // Umgebungsvariable
+            'password' => 'lokal-passwort',        // config.local.php
+            'encryption' => 'ssl',                 // config.local.php
+        ], $result['mail']);
     }
 
     public function testApplyKeepsValuesThatAreMissingOrHaveTheWrongType(): void
@@ -218,7 +361,7 @@ final class LocalConfigTest extends TestCase
 
     /**
      * @param array{server: string, port: int, user: string, password: string, database: string} $mysql
-     * @param array{host: string, port: int, from: string}|null $mail
+     * @param array{host: string, port: int, from: string, user: string, password: string, encryption: string}|null $mail
      *
      * @return array<array-key, mixed>
      */
@@ -251,10 +394,22 @@ final class LocalConfigTest extends TestCase
     }
 
     /**
-     * @return array{host: string, port: int, from: string}
+     * @return array{host: string, port: int, from: string, user: string, password: string, encryption: string}
      */
     private function mail(): array
     {
-        return ['host' => 'localhost', 'port' => 25, 'from' => 'noreply@example.com'];
+        return ['host' => 'localhost', 'port' => 25, 'from' => 'noreply@example.com', 'user' => '', 'password' => '', 'encryption' => 'none'];
+    }
+
+    /**
+     * getenv()-Ersatz für die Tests
+     *
+     * @param array<string, string> $variables
+     *
+     * @return callable(string): (string|false)
+     */
+    private function environment(array $variables): callable
+    {
+        return static fn (string $name): string|false => $variables[$name] ?? false;
     }
 }

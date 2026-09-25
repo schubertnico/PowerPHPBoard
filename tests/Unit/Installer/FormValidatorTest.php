@@ -133,7 +133,7 @@ final class FormValidatorTest extends TestCase
             'boardurl' => 'https://forum.example.com/board',
             'adminemail' => 'admin@example.com',
             'language' => 'Deutsch-Sie',
-            'mail' => ['host' => 'localhost', 'port' => 25, 'from' => 'noreply@example.com'],
+            'mail' => ['host' => 'localhost', 'port' => 25, 'from' => 'noreply@example.com', 'user' => '', 'password' => '', 'encryption' => 'none'],
         ], $result['values']);
     }
 
@@ -164,7 +164,139 @@ final class FormValidatorTest extends TestCase
     {
         $result = FormValidator::forum($this->forum(['smtp_from' => '', 'smtp_port' => '']));
 
-        $this->assertSame(['host' => 'localhost', 'port' => 25, 'from' => 'admin@example.com'], $result['values']['mail']);
+        $this->assertSame(
+            ['host' => 'localhost', 'port' => 25, 'from' => 'admin@example.com', 'user' => '', 'password' => '', 'encryption' => 'none'],
+            $result['values']['mail']
+        );
+    }
+
+    public function testSmtpLoginWithStarttls(): void
+    {
+        $result = FormValidator::forum($this->forum([
+            'smtp_host' => 'smtp.hoster.example',
+            'smtp_port' => '587',
+            'smtp_encryption' => 'starttls',
+            'smtp_user' => ' forum@example.com ',
+            'smtp_password' => '  App Passwort  ',
+        ]));
+
+        $this->assertSame([], $result['errors']);
+        $this->assertSame([
+            'host' => 'smtp.hoster.example',
+            'port' => 587,
+            'from' => 'noreply@example.com',
+            'user' => 'forum@example.com',
+            'password' => '  App Passwort  ',
+            'encryption' => 'starttls',
+        ], $result['values']['mail']);
+    }
+
+    /**
+     * @return array<string, array{string, int}>
+     */
+    public static function defaultPorts(): array
+    {
+        return [
+            'keine' => ['none', 25],
+            'STARTTLS' => ['starttls', 587],
+            'SSL/TLS' => ['ssl', 465],
+            'Feld fehlt (altes Formular)' => ['', 25],
+        ];
+    }
+
+    #[DataProvider('defaultPorts')]
+    public function testEmptyPortUsesTheUsualPortOfTheEncryption(string $encryption, int $port): void
+    {
+        $result = FormValidator::forum($this->forum(['smtp_encryption' => $encryption, 'smtp_port' => '']));
+
+        $this->assertSame([], $result['errors']);
+        $this->assertSame($port, $result['values']['mail']['port'] ?? null);
+        $this->assertSame($encryption === '' ? 'none' : $encryption, $result['values']['mail']['encryption'] ?? null);
+    }
+
+    public function testSmtpUserRequiresPassword(): void
+    {
+        $result = FormValidator::forum($this->forum(['smtp_user' => 'forum@example.com', 'smtp_password' => '']));
+
+        $this->assertSame(['smtp_password'], array_keys($result['errors']));
+        $this->assertSame('Bitte geben Sie das Passwort des E-Mail-Postfachs an.', $result['errors']['smtp_password']);
+    }
+
+    public function testPasswordWithoutUserIsNotStored(): void
+    {
+        // z. B. vom Browser automatisch ausgefüllt
+        $result = FormValidator::forum($this->forum(['smtp_user' => '', 'smtp_password' => 'autofill']));
+
+        $this->assertSame([], $result['errors']);
+        $this->assertSame('', $result['values']['mail']['password'] ?? null);
+    }
+
+    public function testEmptyPasswordKeepsTheStoredPasswordOfTheSameUser(): void
+    {
+        $previous = $this->smtp(['user' => 'forum@example.com', 'password' => 'gespeichert']);
+
+        $same = FormValidator::forum($this->forum(['smtp_user' => 'forum@example.com', 'smtp_password' => '']), $previous);
+        $other = FormValidator::forum($this->forum(['smtp_user' => 'anderer@example.com', 'smtp_password' => '']), $previous);
+        $changed = FormValidator::forum($this->forum(['smtp_user' => 'forum@example.com', 'smtp_password' => 'neu']), $previous);
+
+        $this->assertSame([], $same['errors']);
+        $this->assertSame('gespeichert', $same['values']['mail']['password'] ?? null);
+        $this->assertSame(['smtp_password'], array_keys($other['errors']));
+        $this->assertSame('neu', $changed['values']['mail']['password'] ?? null);
+    }
+
+    /**
+     * @return array<string, array{array<string, string>}>
+     */
+    public static function smtpWithoutHost(): array
+    {
+        return [
+            'Benutzer' => [['smtp_user' => 'forum@example.com', 'smtp_password' => 'x']],
+            'Verschlüsselung' => [['smtp_encryption' => 'ssl']],
+        ];
+    }
+
+    /**
+     * @param array<string, string> $override
+     */
+    #[DataProvider('smtpWithoutHost')]
+    public function testSmtpSettingsWithoutHostAreReported(array $override): void
+    {
+        $result = FormValidator::forum($this->forum(['smtp_host' => ''] + $override));
+
+        $this->assertSame(['smtp_host'], array_keys($result['errors']));
+        $this->assertNull($result['values']['mail']);
+    }
+
+    /**
+     * @return array<string, array{array<string, string>, string}>
+     */
+    public static function invalidSmtpCredentials(): array
+    {
+        return [
+            'Steuerzeichen im Benutzer' => [['smtp_user' => "forum\r\nRCPT", 'smtp_password' => 'x'], 'smtp_user'],
+            'Benutzer zu lang' => [['smtp_user' => str_repeat('u', 256), 'smtp_password' => 'x'], 'smtp_user'],
+            'Passwort zu lang' => [['smtp_user' => 'forum', 'smtp_password' => str_repeat('p', 256)], 'smtp_password'],
+        ];
+    }
+
+    /**
+     * @param array<string, string> $override
+     */
+    #[DataProvider('invalidSmtpCredentials')]
+    public function testInvalidSmtpCredentials(array $override, string $field): void
+    {
+        $result = FormValidator::forum($this->forum($override));
+
+        $this->assertSame([$field], array_keys($result['errors']));
+    }
+
+    public function testEncryptionLabelsForTheSelectList(): void
+    {
+        $this->assertSame(
+            ['none' => 'Keine', 'starttls' => 'STARTTLS (meist Port 587)', 'ssl' => 'SSL/TLS (meist Port 465)'],
+            FormValidator::ENCRYPTIONS
+        );
     }
 
     /**
@@ -187,7 +319,9 @@ final class FormValidatorTest extends TestCase
             'Sprache unbekannt' => ['board_language', 'Klingonisch'],
             'SMTP-Host ungültig' => ['smtp_host', 'smtp;evil'],
             'SMTP-Port ungültig' => ['smtp_port', '99999'],
+            'SMTP-Port null' => ['smtp_port', '0'],
             'Absender ungültig' => ['smtp_from', 'kein@'],
+            'Verschlüsselung unbekannt' => ['smtp_encryption', 'tls'],
         ];
     }
 
@@ -320,6 +454,20 @@ final class FormValidatorTest extends TestCase
             'smtp_port' => '25',
             'smtp_from' => 'noreply@example.com',
         ], $override);
+    }
+
+    /**
+     * @param array<string, string|int> $override
+     *
+     * @return array{host: string, port: int, from: string, user: string, password: string, encryption: string}
+     */
+    private function smtp(array $override = []): array
+    {
+        /** @var array{host: string, port: int, from: string, user: string, password: string, encryption: string} */
+        return array_replace(
+            ['host' => 'localhost', 'port' => 25, 'from' => 'noreply@example.com', 'user' => '', 'password' => '', 'encryption' => 'none'],
+            $override
+        );
     }
 
     /**

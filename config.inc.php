@@ -42,12 +42,9 @@ $mysql = [
     'database' => getenv('PPB_DB_NAME') ?: LocalConfig::DEFAULT_MYSQL['database'],
 ];
 
-// Mail configuration (Mailpit for dev, real SMTP in production)
-$mail = [
-    'host' => getenv('PPB_MAIL_HOST') ?: LocalConfig::DEFAULT_MAIL['host'],
-    'port' => (int) (getenv('PPB_MAIL_PORT') ?: LocalConfig::DEFAULT_MAIL['port']),
-    'from' => getenv('PPB_MAIL_FROM') ?: LocalConfig::DEFAULT_MAIL['from'],
-];
+// Mailversand (Mailpit in der Entwicklung, SMTP-Server des Hosters im Betrieb):
+// PPB_MAIL_HOST, _PORT, _FROM, _USER, _PASS und _ENCRYPTION (none, starttls, ssl)
+$mail = LocalConfig::mailFromEnvironment(static fn (string $name): string|false => getenv($name));
 
 if (is_file(__DIR__ . '/' . LocalConfig::FILENAME)) {
     ['mysql' => $mysql, 'mail' => $mail] = LocalConfig::apply(

@@ -10,6 +10,7 @@ declare(strict_types=1);
 
 namespace PowerPHPBoard\Installer;
 
+use PowerPHPBoard\Mailer;
 use PowerPHPBoard\Security;
 use PowerPHPBoard\Validator;
 use SensitiveParameter;
@@ -41,6 +42,19 @@ final class FormValidator
     public const int HOST_MAX = 255;
 
     public const int DEFAULT_DB_PORT = 3306;
+
+    public const int SMTP_USER_MAX = 255;
+
+    public const int SMTP_PASSWORD_MAX = 255;
+
+    /**
+     * Verschlüsselung des Mailversands (Wert => Beschriftung), Werte wie in $mail['encryption'].
+     */
+    public const array ENCRYPTIONS = [
+        Mailer::ENCRYPTION_NONE => 'Keine',
+        Mailer::ENCRYPTION_STARTTLS => 'STARTTLS (meist Port 587)',
+        Mailer::ENCRYPTION_SSL => 'SSL/TLS (meist Port 465)',
+    ];
 
     /**
      * Forumsprachen wie in ppb_config.language (Wert => Beschriftung).
@@ -107,10 +121,12 @@ final class FormValidator
      * Schritt 3: Forum-Einstellungen und optional SMTP.
      *
      * @param array<array-key, mixed> $input
+     * @param MailConfig|null $previousMail bereits gespeicherte SMTP-Angaben – ein leeres
+     *                                      Passwortfeld behält das Passwort desselben Benutzers
      *
      * @return array{values: ForumSettings, errors: array<string, string>}
      */
-    public static function forum(array $input): array
+    public static function forum(#[SensitiveParameter] array $input, #[SensitiveParameter] ?array $previousMail = null): array
     {
         $title = self::text($input, 'board_title');
         $url = rtrim(self::text($input, 'board_url'), '/');
@@ -136,7 +152,7 @@ final class FormValidator
                 : 'Bitte wählen Sie eine Sprache aus der Liste.',
         ]);
 
-        [$mail, $mailErrors] = self::mail($input, $email);
+        [$mail, $mailErrors] = self::mail($input, $email, $previousMail);
 
         return [
             'values' => [
@@ -216,24 +232,36 @@ final class FormValidator
 
     /**
      * SMTP ist optional: Ohne Host bleiben die Vorgaben bzw. Umgebungsvariablen aktiv.
+     * Ein leerer Port ergibt den üblichen Port der gewählten Verschlüsselung.
      *
      * @param array<array-key, mixed> $input
+     * @param MailConfig|null $previous
      *
      * @return array{0: MailConfig|null, 1: array<string, string>}
      */
-    private static function mail(array $input, string $boardEmail): array
+    private static function mail(#[SensitiveParameter] array $input, string $boardEmail, #[SensitiveParameter] ?array $previous): array
     {
         $host = self::text($input, 'smtp_host');
+        $user = self::text($input, 'smtp_user');
+        $encryption = self::encryption($input);
+
         if ($host === '') {
-            return [null, []];
+            return [null, $user !== '' || $encryption !== Mailer::ENCRYPTION_NONE
+                ? ['smtp_host' => 'Bitte geben Sie den SMTP-Server an – Benutzername und Verschlüsselung gelten nur zusammen mit ihm.']
+                : []];
         }
 
         $errors = [];
         if (!self::isHostname($host)) {
             $errors['smtp_host'] = 'Der SMTP-Server enthält ungültige Zeichen.';
         }
+        if ($encryption === null) {
+            $errors['smtp_encryption'] = 'Bitte wählen Sie eine Verschlüsselung aus der Liste.';
+            $encryption = Mailer::ENCRYPTION_NONE;
+        }
 
-        $port = self::port(self::text($input, 'smtp_port'), 25);
+        $defaultPort = Mailer::DEFAULT_PORTS[$encryption];
+        $port = self::port(self::text($input, 'smtp_port'), $defaultPort);
         if ($port === null) {
             $errors['smtp_port'] = 'Der SMTP-Port muss eine Zahl zwischen 1 und 65535 sein.';
         }
@@ -245,7 +273,72 @@ final class FormValidator
             $errors['smtp_from'] = 'Bitte geben Sie eine gültige Absenderadresse an oder lassen Sie das Feld leer.';
         }
 
-        return [['host' => $host, 'port' => $port ?? 25, 'from' => $from], $errors];
+        [$password, $credentialErrors] = self::smtpPassword($input, $user, $previous);
+
+        return [
+            [
+                'host' => $host,
+                'port' => $port ?? $defaultPort,
+                'from' => $from,
+                'user' => $user,
+                'password' => $password,
+                'encryption' => $encryption,
+            ],
+            $errors + $credentialErrors,
+        ];
+    }
+
+    /**
+     * Gewählte Verschlüsselung; null bei einem Wert außerhalb der Liste.
+     * Fehlt das Feld (Formular von vor 2.3.0), gilt wie bisher: keine.
+     *
+     * @param array<array-key, mixed> $input
+     *
+     * @return 'none'|'starttls'|'ssl'|null
+     */
+    private static function encryption(#[SensitiveParameter] array $input): ?string
+    {
+        $value = self::text($input, 'smtp_encryption');
+
+        return match ($value) {
+            '', Mailer::ENCRYPTION_NONE => Mailer::ENCRYPTION_NONE,
+            Mailer::ENCRYPTION_STARTTLS, Mailer::ENCRYPTION_SSL => $value,
+            default => null,
+        };
+    }
+
+    /**
+     * Zugangsdaten des Postfachs: mit Benutzer ist ein Passwort Pflicht. Das
+     * Passwort wird nicht getrimmt; ohne Benutzer wird keines gespeichert.
+     *
+     * @param array<array-key, mixed> $input
+     * @param MailConfig|null $previous
+     *
+     * @return array{0: string, 1: array<string, string>} Passwort und Fehler
+     */
+    private static function smtpPassword(#[SensitiveParameter] array $input, string $user, #[SensitiveParameter] ?array $previous): array
+    {
+        if ($user === '') {
+            return ['', []];
+        }
+
+        $errors = [];
+        if (!self::isPlainText($user, self::SMTP_USER_MAX)) {
+            $errors['smtp_user'] = 'Der Benutzername ist zu lang oder enthält ungültige Zeichen.';
+        }
+
+        $password = is_string($input['smtp_password'] ?? null) ? $input['smtp_password'] : '';
+        if ($password === '' && $previous !== null && $previous['user'] === $user) {
+            $password = $previous['password'];
+        }
+
+        if ($password === '') {
+            $errors['smtp_password'] = 'Bitte geben Sie das Passwort des E-Mail-Postfachs an.';
+        } elseif (!Validator::withinLength($password, self::SMTP_PASSWORD_MAX)) {
+            $errors['smtp_password'] = 'Das Passwort darf höchstens ' . self::SMTP_PASSWORD_MAX . ' Zeichen lang sein.';
+        }
+
+        return [$password, $errors];
     }
 
     /**

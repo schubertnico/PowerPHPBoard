@@ -139,6 +139,50 @@ final class WizardTest extends TestCase
         $this->assertStringNotContainsString('argon2id', serialize($session));
     }
 
+    public function testSmtpCredentialsSurviveTheSessionAndAreDroppedOnFinish(): void
+    {
+        $forum = $this->forum();
+        $forum['mail'] = [
+            'host' => 'smtp.example.com',
+            'port' => 587,
+            'from' => 'forum@example.com',
+            'user' => 'forum@example.com',
+            'password' => 'smtp-geheim',
+            'encryption' => 'starttls',
+        ];
+        $wizard = $this->completeWizard();
+        $wizard->storeForum($forum);
+
+        $restored = Wizard::fromSession($wizard->toSession());
+        $this->assertSame($forum['mail'], $restored->forum()['mail'] ?? null);
+
+        $restored->finish(true, '');
+        $this->assertStringNotContainsString('smtp-geheim', serialize($restored->toSession()));
+    }
+
+    public function testSessionMailFromBeforeSmtpLoginGetsDefaults(): void
+    {
+        $session = $this->completeWizard()->toSession();
+        $session['forum'] = $this->forum();
+        $session['forum']['mail'] = ['host' => 'localhost', 'port' => 25, 'from' => 'a@example.com'];
+
+        $wizard = Wizard::fromSession($session);
+
+        $this->assertSame(
+            ['host' => 'localhost', 'port' => 25, 'from' => 'a@example.com', 'user' => '', 'password' => '', 'encryption' => 'none'],
+            $wizard->forum()['mail'] ?? null
+        );
+    }
+
+    public function testSessionMailWithWrongTypeIsDiscarded(): void
+    {
+        $session = $this->completeWizard()->toSession();
+        $session['forum'] = $this->forum();
+        $session['forum']['mail'] = ['host' => 'localhost', 'port' => 25, 'from' => 'a@example.com', 'password' => 123];
+
+        $this->assertNull(Wizard::fromSession($session)->forum()['mail'] ?? null);
+    }
+
     public function testFinishKeepsConfigSourceOnlyForManualSetup(): void
     {
         $wizard = $this->completeWizard();
@@ -221,7 +265,7 @@ final class WizardTest extends TestCase
     }
 
     /**
-     * @return array{boardtitle: string, boardurl: string, adminemail: string, language: string, mail: array{host: string, port: int, from: string}|null}
+     * @return array{boardtitle: string, boardurl: string, adminemail: string, language: string, mail: array{host: string, port: int, from: string, user: string, password: string, encryption: string}|null}
      */
     private function forum(): array
     {

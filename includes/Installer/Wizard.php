@@ -17,7 +17,8 @@ use SensitiveParameter;
  *
  * Gespeichert werden nur die Eingaben, die für den letzten Schritt nötig
  * sind. Das Administrator-Passwort liegt ausschließlich als Argon2id-Hash
- * vor; das Datenbankpasswort wird nach Abschluss aus der Session entfernt.
+ * vor; Datenbank- und SMTP-Passwort werden nach Abschluss aus der Session
+ * entfernt.
  *
  * @phpstan-import-type MysqlConfig from LocalConfig
  * @phpstan-import-type MailConfig from LocalConfig
@@ -328,12 +329,21 @@ final class Wizard
             return null;
         }
 
-        $strings = self::strings($data, ['host', 'from']);
+        // Sitzungen von vor der SMTP-Anmeldung kennen user, password und encryption noch nicht
+        $data += ['user' => '', 'password' => '', 'encryption' => 'none'];
+        $strings = self::strings($data, ['host', 'from', 'user', 'password', 'encryption']);
         if ($strings === null) {
             return null;
         }
 
-        return ['host' => $strings['host'], 'port' => $data['port'], 'from' => $strings['from']];
+        return [
+            'host' => $strings['host'],
+            'port' => $data['port'],
+            'from' => $strings['from'],
+            'user' => $strings['user'],
+            'password' => $strings['password'],
+            'encryption' => $strings['encryption'],
+        ];
     }
 
     /**
