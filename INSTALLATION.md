@@ -52,7 +52,7 @@ pdo           Datenbank-Abstraktion
 pdo_mysql     MySQL-Treiber
 mbstring      Multibyte-Strings (UTF-8)
 json          JSON (Standard in PHP 8+)
-openssl       Fuer password_hash + CSRF
+openssl       Verschlüsselter Mailversand (STARTTLS, SSL/TLS)
 session       Session-Verwaltung (Standard)
 filter        Input-Validierung (Standard)
 ```
@@ -130,8 +130,11 @@ Er ist seit Version 2.3.0 enthalten und ersetzt den früheren Standard-Administr
 
 ### Voraussetzungen
 
-- PHP 8.4 oder neuer mit den Erweiterungen `pdo_mysql` und `mbstring`
+- PHP 8.4 oder neuer mit den Erweiterungen `pdo_mysql` und `mbstring`; für
+  verschlüsselten Mailversand zusätzlich `openssl` (bei fast allen Hostern aktiv)
 - MySQL 8.0+ oder MariaDB 10.5+ mit einer **leeren** Datenbank
+- Zugangsdaten eines E-Mail-Postfachs für den Versand (Postausgangsserver,
+  Benutzername, Passwort) – stehen im Kundenmenü des Hosters
 - Schreibrechte für `logs/`; damit der Installer `config.local.php` selbst anlegen
   kann, auch für das Forumverzeichnis (sonst laden Sie die Datei von Hand hoch)
 - Empfohlen: HTTPS, damit die Zugangsdaten verschlüsselt übertragen werden
@@ -156,7 +159,7 @@ Er ist seit Version 2.3.0 enthalten und ersetzt den früheren Standard-Administr
    |---------|--------|
    | 1 Systemprüfung | PHP-Version, Erweiterungen, Schreibrechte, Hinweis auf HTTPS. Rote Punkte müssen behoben werden, gelbe sind Hinweise. |
    | 2 Datenbank | Server (meist `localhost`), Port (`3306`), Name der Datenbank, Benutzer, Passwort. Die Verbindung wird sofort geprüft. Enthält die Datenbank schon `ppb_`-Tabellen, bricht der Installer ab, statt etwas zu überschreiben. |
-   | 3 Forum | Name, Adresse (URL, aus der aktuellen Anfrage vorbelegt – bitte prüfen, sie steht in allen Links der Forum-Mails), E-Mail-Adresse, Sprache (English, Deutsch Sie-Form, Deutsch Du-Form), optional SMTP-Server, Port und Absender. HTML in Beiträgen bleibt aus Sicherheitsgründen ausgeschaltet. |
+   | 3 Forum | Name, Adresse (URL, aus der aktuellen Anfrage vorbelegt – bitte prüfen, sie steht in allen Links der Forum-Mails), E-Mail-Adresse, Sprache (English, Deutsch Sie-Form, Deutsch Du-Form). HTML in Beiträgen bleibt aus Sicherheitsgründen ausgeschaltet. Dazu optional der E-Mail-Versand: SMTP-Server, Port, Verschlüsselung (Keine, STARTTLS, SSL/TLS), Benutzername und Passwort des Postfachs sowie Absender – Details unter [E-Mail-Versand (SMTP)](#e-mail-versand-smtp). „Test-Mail senden“ prüft die Angaben sofort. |
    | 4 Administrator | Benutzername (2–50 Zeichen: Buchstaben, Ziffern sowie `. _ -`), E-Mail-Adresse, Passwort (mindestens 8 Zeichen) mit Wiederholung – dieselben Regeln wie bei der Registrierung. |
    | 5 Abschluss | Zusammenfassung mit „Ändern“-Links. „Jetzt installieren“ legt Tabellen und Administrator an, schreibt `config.local.php` und sperrt den Installer. |
 
@@ -592,9 +595,10 @@ Konto löschen.
 
 1. **`config.local.php`** – schreibt der Web-Installer, kann auch von Hand angelegt werden
 2. **Umgebungsvariablen** `PPB_DB_HOST`, `PPB_DB_PORT`, `PPB_DB_USER`, `PPB_DB_PASS`,
-   `PPB_DB_NAME`, `PPB_MAIL_HOST`, `PPB_MAIL_PORT`, `PPB_MAIL_FROM`
+   `PPB_DB_NAME`, `PPB_MAIL_HOST`, `PPB_MAIL_PORT`, `PPB_MAIL_FROM`, `PPB_MAIL_USER`,
+   `PPB_MAIL_PASS`, `PPB_MAIL_ENCRYPTION`
 3. **Vorgaben**: `localhost:3306`, Benutzer `root` ohne Passwort, Datenbank
-   `PowerPHPBoard_v2`, Mail über `mailpit:1025`
+   `PowerPHPBoard_v2`, Mail über `mailpit:1025` ohne Anmeldung und ohne Verschlüsselung
 
 `config.local.php` gewinnt, weil sie die ausdrückliche Einstellung genau dieser
 Installation ist. Im Docker-Stack gibt es die Datei nicht – dort greifen die
@@ -618,8 +622,11 @@ return [
     ],
     'mail' => [
         'host' => 'smtp.example.com',
-        'port' => 25,
-        'from' => 'noreply@example.com',
+        'port' => 587,
+        'from' => 'forum@example.com',
+        'user' => 'forum@example.com',
+        'password' => 'PASSWORT_DES_POSTFACHS',
+        'encryption' => 'starttls', // none, starttls oder ssl
     ],
 ];
 ```
@@ -641,7 +648,10 @@ SetEnv PPB_DB_PASS "GEHEIMES_PASSWORT"
 SetEnv PPB_DB_NAME forum_prod
 SetEnv PPB_MAIL_HOST smtp.example.com
 SetEnv PPB_MAIL_PORT 587
-SetEnv PPB_MAIL_FROM noreply@example.com
+SetEnv PPB_MAIL_FROM forum@example.com
+SetEnv PPB_MAIL_USER forum@example.com
+SetEnv PPB_MAIL_PASS "PASSWORT_DES_POSTFACHS"
+SetEnv PPB_MAIL_ENCRYPTION starttls
 ```
 
 **Nginx (Umgebung ueber PHP-FPM-Pool-Config):**
@@ -654,7 +664,10 @@ env[PPB_DB_PASS]  = GEHEIMES_PASSWORT
 env[PPB_DB_NAME]  = forum_prod
 env[PPB_MAIL_HOST] = smtp.example.com
 env[PPB_MAIL_PORT] = 587
-env[PPB_MAIL_FROM] = noreply@example.com
+env[PPB_MAIL_FROM] = forum@example.com
+env[PPB_MAIL_USER] = forum@example.com
+env[PPB_MAIL_PASS] = PASSWORT_DES_POSTFACHS
+env[PPB_MAIL_ENCRYPTION] = starttls
 ```
 
 Ein abweichender Datenbank-Port wird mit `PPB_DB_PORT` gesetzt (Standard `3306`).
@@ -681,35 +694,96 @@ PowerPHPBoard sendet E-Mails bei:
 - Passwort-Reset (Token-Link)
 - User-zu-User (Sendmail-Formular)
 
-Die Versand-Klasse ist `PowerPHPBoard\Mailer` - ein minimalistischer SMTP-Client
-(kein PHP `mail()`!). Entsprechend muessen SMTP-Zugangsdaten konfiguriert sein.
+Die Versand-Klasse ist `PowerPHPBoard\Mailer` – ein schlanker SMTP-Client ohne
+externe Abhängigkeiten (kein PHP-`mail()`). Er beherrscht:
+
+- **Verschlüsselung** `none`, `starttls` (Verbindung beginnt unverschlüsselt und
+  wechselt nach `EHLO` per STARTTLS, meist Port 587) oder `ssl` (von Beginn an
+  verschlüsselt, meist Port 465); nur TLS 1.2 und 1.3
+- **Zertifikatsprüfung** immer eingeschaltet – als SMTP-Server deshalb den Namen
+  eintragen, auf den das Zertifikat ausgestellt ist (z. B. `smtp.ihr-hoster.de`,
+  nicht `localhost`)
+- **Anmeldung** per `AUTH PLAIN` oder `AUTH LOGIN`, je nachdem, was der Server
+  anbietet – nur wenn ein Benutzer eingetragen ist. Über eine unverschlüsselte
+  Verbindung meldet er sich nur an, wenn ausdrücklich `none` eingestellt ist; bietet
+  ein Server bei `starttls` kein STARTTLS an, bricht der Versand ab, statt das
+  Passwort im Klartext zu senden
+- **Fehlerprotokoll** mit Arbeitsschritt, Antwortcode und Kurztext des Servers in
+  `logs/php-error.log` bzw. dem PHP-Fehlerprotokoll – Passwort und Anmeldezeilen
+  erscheinen dort nie
 
 ### Dev: Mailpit (Docker-Setup)
 
 Bereits vorkonfiguriert in `docker-compose.yml`. Mails landen in der Mailpit-UI
-auf http://localhost:8032 und werden nicht wirklich versendet.
+auf http://localhost:8032 und werden nicht wirklich versendet. Mailpit braucht
+weder Anmeldung noch Verschlüsselung (`encryption` bleibt `none`).
 
-### Produktion: echter SMTP-Relay
+### Produktion: Postfach beim Hoster
 
-Beispiel: SMTP ohne Auth (interner Relay):
+Fast alle Hoster verlangen für den Versand eine Anmeldung mit einem E-Mail-Postfach.
+Die Angaben finden Sie im Kundenmenü Ihres Hosters beim E-Mail-Postfach
+(„Postausgangsserver“, „SMTP“). Typische Werte:
+
+| Einstellung      | Wert                                                           |
+|------------------|----------------------------------------------------------------|
+| SMTP-Server      | Postausgangsserver des Hosters, z. B. `smtp.ihr-hoster.de`     |
+| Verschlüsselung  | `starttls` mit Port `587` – oder `ssl` mit Port `465`          |
+| Benutzername     | meist die vollständige E-Mail-Adresse des Postfachs            |
+| Passwort         | Passwort des Postfachs                                         |
+| Absender         | dieselbe Adresse wie das Postfach (siehe Hinweis unten)        |
+
+Im Web-Installer (Schritt 3) tragen Sie die Werte direkt ein und prüfen sie mit
+„Test-Mail senden“. Später gehören sie in `config.local.php` (siehe
+[Konfiguration](#konfiguration)) oder in die Umgebungsvariablen:
+
 ```text
-PPB_MAIL_HOST = smtp.example.com
-PPB_MAIL_PORT = 25
-PPB_MAIL_FROM = noreply@example.com
+PPB_MAIL_HOST       = smtp.ihr-hoster.de
+PPB_MAIL_PORT       = 587
+PPB_MAIL_ENCRYPTION = starttls
+PPB_MAIL_USER       = forum@ihre-domain.de
+PPB_MAIL_PASS       = PASSWORT_DES_POSTFACHS
+PPB_MAIL_FROM       = forum@ihre-domain.de
 ```
 
-Der mitgelieferte `Mailer` unterstuetzt **Plain-SMTP** ohne TLS/AUTH. Bei
-Relay-Systemen mit IP-Whitelist reicht das. Fuer oeffentliche SMTP-Server
-(z. B. SendGrid, Mailgun, Amazon SES) musst du entweder:
+Hinweise:
 
-1. einen lokalen Relay (Postfix als Smart-Host) vorschalten, oder
-2. den `Mailer` um STARTTLS+AUTH erweitern.
+- **Absender:** Als Absender verwendet das Forum die Admin-E-Mail-Adresse aus den
+  Einstellungen (Adminbereich „Allgemein“), `from` nur ersatzweise. Viele Mailserver
+  nehmen nur Mails an, deren Absender zum angemeldeten Postfach gehört – dann beide
+  Adressen gleich wählen.
+- **App-Passwort:** Große Freemail-Anbieter lassen die Anmeldung per SMTP oft nur mit
+  einem eigenen App-Passwort zu, sobald für das Konto die Zwei-Faktor-Anmeldung aktiv
+  ist. Das normale Passwort wird dann mit `535` abgelehnt; das App-Passwort erzeugen
+  Sie in den Sicherheitseinstellungen des Kontos und tragen es statt des normalen
+  Passworts ein. Für ein Forum ist ein Postfach bei Ihrem Webhoster meist die
+  einfachere Wahl.
+- **Ohne Anmeldung:** Ein interner Relay mit Freigabe per IP-Adresse (z. B. `localhost`
+  Port `25` beim eigenen Server) funktioniert weiterhin mit leerem Benutzer und
+  `encryption` = `none`.
 
-### Kein SMTP verfuegbar?
+### Fehlermeldungen beim Versand
 
-Wenn Mailversand nicht konfiguriert ist, schlaegt der `Mailer` intern stumm fehl
-(Log-Eintrag). Registrierung und Passwort-Reset funktionieren weiterhin, aber
-der Nutzer bekommt keine Mail.
+Die Test-Mail im Installer zeigt den Grund direkt an; im Betrieb steht er im
+Fehlerprotokoll in einer Zeile wie
+`[Mailer] Versand über smtp.ihr-hoster.de:587 (Verschlüsselung starttls, mit Anmeldung) fehlgeschlagen – …`.
+
+| Meldung (Auszug) | Ursache und Abhilfe |
+|------------------|---------------------|
+| `Anmeldung (AUTH …): Server antwortet 535 …` | Benutzername oder Passwort falsch – bei Freemail-Konten mit Zwei-Faktor-Anmeldung App-Passwort verwenden. |
+| `STARTTLS: TLS-Aushandlung fehlgeschlagen: … certificate verify failed` | Das Zertifikat passt nicht zum Servernamen oder ist nicht vertrauenswürdig. Den Servernamen aus dem Zertifikat eintragen (nicht `localhost` oder eine IP-Adresse). |
+| `STARTTLS: Der Server bietet keine Verschlüsselung per STARTTLS an` | Port und Verschlüsselung passen nicht zusammen, z. B. Port 465 mit `starttls` – dort `ssl` wählen. |
+| `SSL/TLS-Verbindung fehlgeschlagen: … wrong version number` | Der Port spricht kein SSL/TLS von Beginn an, z. B. Port 587 mit `ssl` – dort `starttls` wählen. |
+| `Server antwortet 530 … STARTTLS` bzw. `… Authentication required` | Der Server verlangt Verschlüsselung bzw. Anmeldung: `starttls` wählen bzw. Benutzer und Passwort eintragen. |
+| `Anmeldung: Der Server bietet keine Anmeldung (AUTH) an` | Viele Server bieten die Anmeldung erst nach STARTTLS an – `starttls` wählen. |
+| `Verbindungsaufbau fehlgeschlagen` / `Zeitüberschreitung` | Servername oder Port falsch, oder der Hoster sperrt ausgehende Verbindungen zu fremden Mailservern – dann seinen eigenen Postausgangsserver verwenden. |
+| `Unbekannte Verschlüsselung „…“` | Nur `none`, `starttls` und `ssl` sind erlaubt; unbekannte Werte werden nie stillschweigend unverschlüsselt versendet. |
+| `Für verschlüsselten Versand fehlt die PHP-Erweiterung openssl` | `openssl` im Kundenmenü bzw. in der `php.ini` aktivieren. |
+
+### Kein SMTP verfügbar?
+
+Ist der Mailversand nicht eingerichtet, schlägt der `Mailer` fehl und schreibt einen
+Eintrag ins Fehlerprotokoll. Registrierung und Passwort-Reset funktionieren weiterhin,
+die Mitglieder bekommen aber keine Mail.
 
 ---
 
@@ -770,6 +844,11 @@ Datenbank und Zugangsdaten bleiben gültig.
    - Wer Zugangsdaten direkt in `config.inc.php` eingetragen hatte: **vor** dem Hochladen
      eine `config.local.php` mit diesen Werten anlegen (Vorlage unter
      [Konfiguration](#konfiguration)).
+   - Verlangt der Mailserver eine Anmeldung oder Verschlüsselung (bei den meisten
+     Hostern der Fall), im `mail`-Block zusätzlich `user`, `password` und
+     `encryption` eintragen bzw. `PPB_MAIL_USER`, `PPB_MAIL_PASS` und
+     `PPB_MAIL_ENCRYPTION` setzen – siehe [E-Mail-Versand (SMTP)](#e-mail-versand-smtp).
+     Ohne diese Angaben versendet das Forum wie bisher ohne Anmeldung.
 3. **Dateien aktualisieren** (`git pull` bzw. Upload per FTP). Das Verzeichnis `install/`
    dabei weglassen oder direkt danach löschen.
 4. Ein altes `create-admin.php` im Forumverzeichnis löschen – es ist durch
@@ -1000,8 +1079,9 @@ Limits anpassen direkt im Code (`login.php`, `sendpassword.php`) via
 
 ### Passwort-Reset-Mail kommt nicht an
 
-1. Mailpit (Dev) oder SMTP-Log (Prod) pruefen - ist die Verbindung zum SMTP-Host hergestellt?
-2. `logs/php-error.log` nach `[Mailer]`-Zeilen durchsuchen.
+1. Mailpit (Dev) oder SMTP-Log (Prod) prüfen – ist die Verbindung zum SMTP-Host hergestellt?
+2. `logs/php-error.log` nach `[Mailer]`-Zeilen durchsuchen; Arbeitsschritt, Antwortcode
+   und Abhilfe stehen unter [Fehlermeldungen beim Versand](#fehlermeldungen-beim-versand).
 3. `boardurl` in `ppb_config` muss gesetzt sein, sonst wird eine lokale URL aus
    `$_SERVER['HTTP_HOST']` gebaut (funktioniert hinter Reverse-Proxies evtl. nicht).
 4. Token-Gueltigkeit ist 1 Stunde - danach Status "Invalid or expired".
@@ -1034,14 +1114,15 @@ try {
 "
 ```
 
-**SMTP testen**:
+**SMTP testen** (mit den wirksamen Einstellungen aus `config.local.php` bzw. den
+Umgebungsvariablen; gibt bei einem Fehler den Grund aus):
 
 ```bash
 docker compose exec web php -r "
-require '/var/www/html/includes/Security.php';
-require '/var/www/html/includes/Mailer.php';
-\$m = new PowerPHPBoard\Mailer('mailpit', 1025);
-var_dump(\$m->send('test@example.com', 'noreply@local.test', 'Test', 'Hallo'));
+require '/var/www/html/config.inc.php';
+\$m = PowerPHPBoard\Mailer::fromConfig(\$mail);
+var_dump(\$m->send('test@example.com', PowerPHPBoard\Mailer::senderAddress([], \$mail), 'Test', 'Hallo'));
+echo \$m->lastError(), PHP_EOL;
 "
 ```
 

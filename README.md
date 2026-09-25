@@ -83,7 +83,9 @@ und ohne Zugangsdaten im PHP-Code. Das passt auch für Shared Hosting:
 1. **Dateien hochladen** – das Release-Paket entpacken und per FTP/SFTP in das
    gewünschte Verzeichnis kopieren (versteckte `.htaccess`-Dateien mit übertragen).
 2. **Leere Datenbank anlegen** – im Kundenmenü des Hosters (MySQL 8 oder
-   MariaDB 10.5+, Zeichensatz `utf8mb4`). Server, Name, Benutzer und Passwort notieren.
+   MariaDB 10.5+, Zeichensatz `utf8mb4`). Server, Name, Benutzer und Passwort notieren,
+   ebenso Postausgangsserver (SMTP), Benutzername und Passwort eines E-Mail-Postfachs
+   für den Versand der Forum-Mails.
 3. **Installer aufrufen** – `https://ihre-domain.de/forum/install/` im Browser
    öffnen (wer die Startseite des noch leeren Forums aufruft, landet automatisch dort).
    Der Assistent führt durch fünf Schritte: Systemprüfung, Datenbank, Forum,
@@ -257,7 +259,7 @@ Seit Version 2.2.0 nutzt PowerPHPBoard ein durchgängiges **Bootstrap-5.3.3-Fron
 | MySQL      | 8.0+     | oder MariaDB 10.5+                               |
 | Composer   | 2.0+     | Autoloader und Dev-Tooling                       |
 | Browser    | modern   | Bootstrap 5.3 unterstützt alle aktuellen Browser |
-| SMTP       | -        | z. B. Mailpit im Dev-Setup, produktiv SMTP-Relay |
+| SMTP       | -        | Mailpit im Dev-Setup, produktiv das Postfach des Hosters (STARTTLS/SSL mit Anmeldung) |
 
 ---
 
@@ -292,15 +294,25 @@ return [
         'database' => 'forum_db',
     ],
     'mail' => [            // optional
-        'host' => 'localhost',
-        'port' => 25,
-        'from' => 'noreply@example.com',
+        'host' => 'smtp.example.com',
+        'port' => 587,
+        'from' => 'forum@example.com',
+        'user' => 'forum@example.com',   // leer = ohne Anmeldung
+        'password' => 'PASSWORT_DES_POSTFACHS',
+        'encryption' => 'starttls',      // none, starttls oder ssl
     ],
 ];
 ```
 
 Die Datei liefert nur ein Array zurück und setzt keine Variablen. Rechte
 möglichst auf `640` (bzw. `600`) setzen.
+
+**Mailversand:** Die meisten Hoster verlangen eine Anmeldung mit einem E-Mail-Postfach
+und eine verschlüsselte Verbindung – `starttls` (meist Port 587) oder `ssl` (meist
+Port 465). Die Angaben stehen im Kundenmenü des Hosters beim E-Mail-Postfach. Das
+Zertifikat des Mailservers wird immer geprüft; ohne Verschlüsselung (`none`) meldet
+sich der Mailer nur an, wenn das ausdrücklich so eingestellt ist. Details, typische
+Werte und Fehlermeldungen: [INSTALLATION.md – E-Mail-Versand](INSTALLATION.md#e-mail-versand-smtp).
 
 ### Environment-Variablen
 
@@ -314,6 +326,9 @@ möglichst auf `640` (bzw. `600`) setzen.
 | `PPB_MAIL_HOST`  | SMTP-Host              | `mailpit`                     |
 | `PPB_MAIL_PORT`  | SMTP-Port              | `1025`                        |
 | `PPB_MAIL_FROM`  | Absender (Fallback)    | `noreply@powerphpboard.local` |
+| `PPB_MAIL_USER`  | SMTP-Benutzer (leer = ohne Anmeldung) | (leer)         |
+| `PPB_MAIL_PASS`  | SMTP-Passwort          | (leer)                        |
+| `PPB_MAIL_ENCRYPTION` | Verschlüsselung: `none`, `starttls` oder `ssl` | `none` |
 | `PPB_DEBUG`      | Debug-Modus            | `false`                       |
 
 ### `config.inc.php`
@@ -331,7 +346,8 @@ $mysql = [
     'password' => getenv('PPB_DB_PASS') ?: LocalConfig::DEFAULT_MYSQL['password'],
     'database' => getenv('PPB_DB_NAME') ?: LocalConfig::DEFAULT_MYSQL['database'],
 ];
-$mail = [ /* analog mit PPB_MAIL_* und LocalConfig::DEFAULT_MAIL */ ];
+// PPB_MAIL_HOST, _PORT, _FROM, _USER, _PASS, _ENCRYPTION, sonst LocalConfig::DEFAULT_MAIL
+$mail = LocalConfig::mailFromEnvironment(static fn (string $name): string|false => getenv($name));
 
 // config.local.php hat Vorrang
 if (is_file(__DIR__ . '/config.local.php')) {
@@ -383,16 +399,17 @@ PowerPHPBoard/
 │   ├── Database.php               # PDO-Wrapper (Singleton)
 │   ├── DatabaseRateLimitStorage.php
 │   ├── ErrorHandler.php           # Error + Security-Logging
-│   ├── Mailer.php                 # SMTP-Versand direkt zu Mailpit/SMTP-Relay
+│   ├── Mailer.php                 # SMTP-Versand mit STARTTLS/SSL und AUTH PLAIN/LOGIN
 │   ├── RateLimiter.php            # Fenster/Lock-basiertes Rate-Limit
 │   ├── RateLimiterStorage.php     # Interface für verschiedene Backends
 │   ├── Security.php               # escape, hashPassword, verifyPassword, isValidEmail …
 │   ├── Session.php                # Session-Verwaltung (login/logout, regenerate)
+│   ├── SmtpConnection.php         # SMTP-Verbindung: Zeilen, Antworten, TLS (für Mailer)
 │   ├── TextFormatter.php          # BBCode + Smilies
 │   ├── Validator.php              # Username-, Längen-, Passwortregeln
 │   └── Installer/                 # Web-Installer: LocalConfig, Schema, FormValidator,
 │                                  # Requirements, DatabaseSetup, AdminAccount,
-│                                  # InstallState (Sperre), Wizard, Html
+│                                  # InstallState (Sperre), Wizard, Html, SmtpCheck
 ├── install/                       # Web-Installer (nach der Installation löschen)
 │   ├── index.php                  # Einstieg mit PHP-Versionsprüfung
 │   ├── installer.php              # Ablaufsteuerung der fünf Schritte
@@ -514,6 +531,7 @@ Die Logik des Installers liegt testbar in `includes/Installer/`, die Oberfläche
 | `InstallState`  | Sperre des Installers und Weiterleitung der Startseite                  |
 | `Wizard`        | Fortschritt in der Session (Admin-Passwort nur als Hash)                |
 | `AdminAccount`  | Administrator anlegen/befördern (auch für `bin/create-admin.php`)       |
+| `SmtpCheck`     | „Test-Mail senden“ in Schritt 3: Text, Zusammenfassung ohne Passwort, ehrliche Meldung |
 
 ### `RateLimiter`
 
@@ -537,26 +555,47 @@ Das Interface `RateLimiterStorage` erlaubt das Austauschen des Backends (z. B. R
 
 ### `Mailer`
 
-Minimalistischer SMTP-Client – verbindet sich direkt per `stream_socket_client` zu
-einem SMTP-Server (in Dev: Mailpit auf Port 1025). Keine externen Abhängigkeiten.
+Schlanker SMTP-Client ohne externe Abhängigkeiten – verbindet sich per
+`stream_socket_client` mit einem SMTP-Server (in Dev: Mailpit auf Port 1025).
+Die Socket-Ebene steckt in `SmtpConnection`.
+
+- Verschlüsselung `none`, `starttls` (nach `EHLO` per `stream_socket_enable_crypto`)
+  oder `ssl` (`ssl://host:465`), nur TLS 1.2/1.3, Zertifikatsprüfung immer an
+- Anmeldung per `AUTH PLAIN`, sonst `AUTH LOGIN` – nur mit Benutzer; ohne
+  Verschlüsselung nur bei ausdrücklich `none`
+- `EHLO` mit Hostname bzw. eigener IP als Adressliteral, `HELO` für alte Server,
+  Zeitlimit auch beim Lesen, SMTP-Punktverdopplung
 
 ```php
 use PowerPHPBoard\Mailer;
 
+// Aus der Konfiguration ($mail in config.inc.php) …
+$mailer = Mailer::fromConfig($mail);
+
+// … oder direkt
 $mailer = new Mailer(
-    smtpHost: $mail['host'] ?? 'mailpit',
-    smtpPort: (int) ($mail['port'] ?? 1025),
+    smtpHost: 'smtp.example.com',
+    smtpPort: 587,
+    encryption: Mailer::ENCRYPTION_STARTTLS,
+    username: 'forum@example.com',
+    password: 'PASSWORT_DES_POSTFACHS',
 );
 
-$mailer->send(
+if (!$mailer->send(
     to:      'alice@example.com',
-    from:    'noreply@powerphpboard.local',
+    from:    'forum@example.com',
     subject: 'Willkommen!',
     body:    "Hallo Alice,\n\ndein Account wurde angelegt."
-);
+)) {
+    echo $mailer->lastError(); // z. B. "Anmeldung (AUTH PLAIN): Server antwortet 535 …"
+}
 ```
 
-Versand schlägt nicht stumm fehl – Fehler landen im `error_log`.
+Versand schlägt nicht stumm fehl – Fehler landen mit Arbeitsschritt, Antwortcode
+und Kurztext im `error_log`, Passwort und Anmeldezeilen nie. Für einen Mailserver
+mit eigener Zertifizierungsstelle (Testumgebung) ergänzt
+`$mailer->withTlsOptions(['cafile' => '/pfad/ca.pem'])` die SSL-Optionen, ohne die
+Prüfung abzuschalten.
 
 ### `TextFormatter` (BBCode + Smilies)
 
@@ -828,7 +867,26 @@ auf dunklem Hintergrund unleserlich werden.
   Moderatoren des betroffenen Boards, Header-/Footer-Templates nur aus `inc/`,
   „Design anwenden“ nur per POST mit CSRF-Schutz
 
+#### Mailversand
+- SMTP-Anmeldung per `AUTH PLAIN` bzw. `AUTH LOGIN` und Verschlüsselung per STARTTLS
+  (meist Port 587) oder SSL/TLS (meist Port 465), nur TLS 1.2/1.3, Zertifikatsprüfung
+  immer an; ohne Verschlüsselung meldet sich der Mailer nur bei ausdrücklich `none` an
+- Neue Einstellungen `user`, `password` und `encryption` in `$mail` bzw.
+  `config.local.php`, Umgebungsvariablen `PPB_MAIL_USER`, `PPB_MAIL_PASS` und
+  `PPB_MAIL_ENCRYPTION`; unbekannte Verschlüsselungswerte werden nie stillschweigend
+  unverschlüsselt versendet
+- Web-Installer, Schritt 3: Verschlüsselung, Benutzername und Passwort des Postfachs,
+  Port-Vorschlag passend zur Verschlüsselung und „Test-Mail senden“ an die
+  E-Mail-Adresse des Forums mit ehrlicher Erfolgs- bzw. Fehlermeldung
+- Fehlerprotokoll mit Arbeitsschritt, SMTP-Antwortcode und Kurztext – ohne Passwort
+  und Anmeldezeilen; `EHLO` mit Hostname bzw. Adressliteral, Zeitlimit auch beim Lesen
+- Systemprüfung des Installers weist auf die PHP-Erweiterung `openssl` hin
+
 #### Fehlerbehebungen
+- Registrierungs-, Reset- und Benutzer-Mails kamen bei Hostern, deren Mailserver eine
+  Anmeldung verlangt, nie an – der Mailer beherrscht jetzt Anmeldung und Verschlüsselung
+- Eine fehlende Antwort auf `QUIT` meldet eine bereits angenommene Mail nicht mehr als
+  gescheitert
 - Registrierung und „Benutzer anlegen“ nicht mehr durch ein vorbelegtes „https://“ blockiert
 - Alle Mails über den SMTP-Mailer, Fehlschläge werden gemeldet, kein Klartext-Passwort
   mehr per Mail
