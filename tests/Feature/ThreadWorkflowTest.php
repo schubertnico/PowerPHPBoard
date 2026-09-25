@@ -8,11 +8,12 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\Attributes\Test;
+use PowerPHPBoard\PostDeletion;
 use PowerPHPBoard\ThreadPages;
 
 /**
  * Feature-Tests gegen eine echte Datenbank für Themen: Sprung-Links auf
- * die richtige Seite.
+ * die richtige Seite und Zeiger auf den letzten Beitrag nach dem Löschen.
  */
 #[RunTestsInSeparateProcesses]
 #[PreserveGlobalState(false)]
@@ -89,6 +90,58 @@ class ThreadWorkflowTest extends FeatureTestCase
         );
         $this->assertContains($lastId, array_map(static fn (array $row): int => (int) $row['id'], $page));
         $this->assertStringContainsString('&current=' . $expectedOffset . '#post' . $lastId, ThreadPages::postLink($this->db, $threadId, $lastId));
+    }
+
+    #[Test]
+    public function deletingPostsMovesLastPostPointersToTheRemainingPosts(): void
+    {
+        $this->requiresDatabase();
+        assert($this->db !== null && $this->userId !== null && $this->boardId !== null);
+
+        $older = $this->createThread(2, 1_700_000_000);   // Thema + 1 Antwort, zuletzt 1_700_000_060
+        $newer = $this->createThread(3, 1_700_100_000);   // Thema + 2 Antworten, zuletzt 1_700_100_120
+
+        // Letzte Antwort des neueren Themas löschen
+        PostDeletion::deleteReply($this->db, $newer[2], $newer[0], $this->boardId);
+        $this->assertSame([1_700_100_060, $this->userId], $this->threadPointer($newer[0]));
+        $this->assertSame([1_700_100_060, $this->userId], $this->boardPointer());
+
+        // Letzte verbliebene Antwort löschen: Das Thema zeigt wieder auf den Starterbeitrag
+        PostDeletion::deleteReply($this->db, $newer[1], $newer[0], $this->boardId);
+        $this->assertSame([1_700_100_000, $this->userId], $this->threadPointer($newer[0]));
+
+        // Ganzes Thema löschen: Das Board zeigt auf das ältere Thema
+        PostDeletion::deleteThread($this->db, $newer[0], $this->boardId);
+        $this->assertNull($this->db->fetchOne('SELECT id FROM ppb_posts WHERE id = ? OR threadid = ?', [$newer[0], $newer[0]]));
+        $this->assertSame([1_700_000_060, $this->userId], $this->boardPointer());
+
+        // Letztes Thema löschen: leeres Board
+        PostDeletion::deleteThread($this->db, $older[0], $this->boardId);
+        $this->assertSame([0, 0], $this->boardPointer());
+    }
+
+    /**
+     * @return array{int, int}
+     */
+    private function threadPointer(int $threadId): array
+    {
+        assert($this->db !== null);
+        $row = $this->db->fetchOne('SELECT lastreply, lastauthor FROM ppb_posts WHERE id = ?', [$threadId]);
+        $this->assertNotNull($row);
+
+        return [(int) $row['lastreply'], (int) $row['lastauthor']];
+    }
+
+    /**
+     * @return array{int, int}
+     */
+    private function boardPointer(): array
+    {
+        assert($this->db !== null);
+        $row = $this->db->fetchOne('SELECT lastchange, lastauthor FROM ppb_boards WHERE id = ?', [$this->boardId]);
+        $this->assertNotNull($row);
+
+        return [(int) $row['lastchange'], (int) $row['lastauthor']];
     }
 
     /**

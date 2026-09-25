@@ -11,6 +11,7 @@ declare(strict_types=1);
 use PowerPHPBoard\Auth;
 use PowerPHPBoard\CSRF;
 use PowerPHPBoard\Database;
+use PowerPHPBoard\PostDeletion;
 use PowerPHPBoard\Security;
 use PowerPHPBoard\Session;
 use PowerPHPBoard\Validator;
@@ -100,15 +101,16 @@ if ($postid === 0) {
             $threadLink = 'showthread.php?threadid=' . (int) ($isThread ? $post['id'] : $post['threadid']);
             $boardLink = 'showboard.php?boardid=' . (int) $post['boardid'];
 
+            // Beim Löschen werden die Zeiger auf den letzten Beitrag von Thema
+            // und Board aus den verbliebenen Beiträgen neu berechnet
             if ($deletepost && $isThread) {
-                $db->query('DELETE FROM ppb_posts WHERE id = ?', [$postid]);
-                $db->query('DELETE FROM ppb_posts WHERE threadid = ?', [$postid]);
+                PostDeletion::deleteThread($db, $postid, (int) $post['boardid']);
                 $state = 'success';
                 $successMessage = $lang_threaddeleted ?? 'Thread deleted';
                 $successLink = $boardLink;
                 $successLinkText = $lang_showboard ?? 'Show board';
             } elseif ($deletepost) {
-                $db->query('DELETE FROM ppb_posts WHERE id = ?', [$postid]);
+                PostDeletion::deleteReply($db, $postid, (int) $post['threadid'], (int) $post['boardid']);
                 $state = 'success';
                 $successMessage = $lang_postingdeleted ?? 'Post deleted';
                 $successLink = $threadLink;
