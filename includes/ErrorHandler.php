@@ -130,6 +130,16 @@ class ErrorHandler
     }
 
     /**
+     * Hinweis für den Administrator ins Fehlerprotokoll schreiben, etwa bei
+     * fehlender Board-URL oder gescheitertem Mailversand. Besucher sehen
+     * davon nur eine neutrale Meldung.
+     */
+    public static function logConfigurationError(string $message): void
+    {
+        self::writeLog(sprintf('[%s] CONFIG: %s', date('Y-m-d H:i:s'), $message));
+    }
+
+    /**
      * Log a security event
      *
      * @param array<string, mixed> $context

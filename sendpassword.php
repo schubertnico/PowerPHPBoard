@@ -8,15 +8,18 @@ declare(strict_types=1);
  * MIT License - Copyright (c) 2026 PowerScripts
  */
 
+use PowerPHPBoard\BoardUrl;
 use PowerPHPBoard\CSRF;
 use PowerPHPBoard\Database;
 use PowerPHPBoard\DatabaseRateLimitStorage;
+use PowerPHPBoard\ErrorHandler;
 use PowerPHPBoard\Mailer;
 use PowerPHPBoard\RateLimiter;
 use PowerPHPBoard\Security;
 use PowerPHPBoard\Session;
 
 require_once __DIR__ . '/config.inc.php';
+require_once __DIR__ . '/includes/autoload.php';
 Session::start();
 
 try {
@@ -51,8 +54,16 @@ $status = '';
 $errorText = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $send === 1) {
+    // Der Reset-Link entsteht nur aus der konfigurierten Board-URL, nie aus
+    // dem (fälschbaren) Host-Header der Anfrage.
+    $baseUrl = BoardUrl::base($settings);
     if (!CSRF::validateFromPost()) {
         $errorText = 'Security token invalid. Please try again.';
+    } elseif ($baseUrl === null) {
+        ErrorHandler::logConfigurationError(
+            'Passwort-Reset nicht möglich: In den allgemeinen Einstellungen ist keine gültige Board-URL eingetragen.'
+        );
+        $errorText = $lang_pwdresetunavailable ?? 'Password reset is currently unavailable. Please contact the board administrator.';
     } elseif (!$rateLimiter->check('pwreset', $rlIdent)) {
         $errorText = $lang_toomanyattempts ?? 'Too many attempts. Please try again later.';
     } else {
@@ -79,13 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $send === 1) {
                 [$user['id'], $tokenHash, $expires, $now]
             );
 
-            $baseUrl = (string) ($settings['boardurl'] ?? '');
-            if ($baseUrl === '') {
-                $scheme = (($_SERVER['HTTPS'] ?? '') === 'on') ? 'https' : 'http';
-                $host = (string) ($_SERVER['HTTP_HOST'] ?? 'localhost');
-                $baseUrl = $scheme . '://' . $host;
-            }
-            $resetUrl = rtrim($baseUrl, '/') . '/resetpassword.php?token=' . $rawToken;
+            $resetUrl = BoardUrl::link($baseUrl, 'resetpassword.php', ['token' => $rawToken]);
 
             $subject = ($settings['boardtitle'] ?? 'PowerPHPBoard') . ' - ' . ($lang_passwordreminder ?? 'Password Reset');
             $message = ($lang_hello ?? 'Hello') . ' ' . $user['username'] . ",\n\n"
@@ -101,7 +106,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $send === 1) {
                 (string) ($mail['host'] ?? 'mailpit'),
                 (int) ($mail['port'] ?? 1025)
             );
-            $mailer->send($email, $fromAddress, $subject, $message);
+            if (!$mailer->send($email, $fromAddress, $subject, $message)) {
+                ErrorHandler::logConfigurationError(
+                    'Passwort-Reset-Mail an Benutzer #' . (int) $user['id'] . ' konnte nicht versendet werden (SMTP-Einstellungen prüfen).'
+                );
+            }
         }
 
         CSRF::regenerate();

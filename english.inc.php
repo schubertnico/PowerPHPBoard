@@ -214,3 +214,4 @@ $lang_posttoolong = 'Post text is too long.';
 $lang_loginfirst = 'You have to log in first';
 
 $lang_homepageinvalid = 'Please enter a valid homepage address starting with http:// or https://.';
+$lang_pwdresetunavailable = 'Password reset is currently unavailable. Please contact the board administrator.';

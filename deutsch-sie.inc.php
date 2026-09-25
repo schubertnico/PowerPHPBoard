@@ -215,3 +215,4 @@ $lang_posttoolong = 'Der Beitragstext ist zu lang.';
 $lang_loginfirst = 'Sie m&uuml;ssen Sich zuerst einloggen';
 
 $lang_homepageinvalid = 'Bitte geben Sie eine gültige Homepage-Adresse mit http:// oder https:// an.';
+$lang_pwdresetunavailable = 'Das Zurücksetzen des Passworts ist derzeit nicht möglich. Bitte wenden Sie sich an die Forenleitung.';

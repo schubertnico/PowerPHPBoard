@@ -224,6 +224,19 @@ class ErrorHandlerTest extends TestCase
     }
 
     #[Test]
+    public function logConfigurationErrorWritesToErrorLog(): void
+    {
+        $this->initHandler();
+
+        ErrorHandler::logConfigurationError('Board-URL fehlt');
+
+        $content = file_get_contents($this->getLogPath());
+        $this->assertIsString($content);
+        $this->assertStringContainsString('CONFIG: Board-URL fehlt', $content);
+        $this->assertFileDoesNotExist($this->getSecurityLogPath());
+    }
+
+    #[Test]
     public function logSecurityEventWritesToSecurityLog(): void
     {
         $this->initHandler();
