@@ -8,11 +8,13 @@ declare(strict_types=1);
  * MIT License - Copyright (c) 2026 PowerScripts
  */
 
+use PowerPHPBoard\Auth;
 use PowerPHPBoard\Database;
 use PowerPHPBoard\Security;
 use PowerPHPBoard\Session;
 
 require_once __DIR__ . '/../config.inc.php';
+require_once __DIR__ . '/../includes/autoload.php';
 require_once __DIR__ . '/../includes/Database.php';
 require_once __DIR__ . '/../includes/Session.php';
 require_once __DIR__ . '/../includes/Security.php';
@@ -34,19 +36,12 @@ if ($settingsRow !== null) {
     $settings = $settingsRow;
 }
 
-$loggedin = 'NO';
-$userId = Session::getUserId();
+// Angemeldeter Benutzer (deaktivierte Konten gelten als abgemeldet)
+$ppbuser = Auth::currentUser($db) ?? [];
+$loggedin = $ppbuser !== [] ? 'YES' : 'NO';
 
-if ($userId !== null) {
-    $userRow = $db->fetchOne('SELECT * FROM ppb_users WHERE id = ?', [$userId]);
-    if ($userRow !== null) {
-        $loggedin = 'YES';
-        $ppbuser = $userRow;
-    }
-}
-
-// Admin guard: nur Administratoren duerfen den Adminbereich sehen
-$isAdmin = ($loggedin === 'YES' && ($ppbuser['status'] ?? '') === 'Administrator');
+// Admin guard: nur Administratoren dürfen den Adminbereich sehen
+$isAdmin = Auth::isAdmin($ppbuser !== [] ? $ppbuser : null);
 ?>
 <!DOCTYPE html>
 <html lang="de">

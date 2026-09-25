@@ -195,7 +195,7 @@ $lang_numthreads = '<b>Threads</b><br><small>The number of all threads</small>';
 $lang_numposts = '<b>Postings</b><br><small>The number of all postings</small>';
 
 // Userbereich-Bugfixes 2026-04-23 (new language keys)
-$lang_loginfailed = 'Invalid email or password.';
+$lang_loginfailed = 'Login failed. The email address or password is incorrect, or the account has been deactivated.';
 $lang_toomanyattempts = 'Too many attempts. Please try again later.';
 $lang_usernameinvalid = 'Username must be 2-50 chars and contain only letters, digits and . _ -';
 $lang_usernametaken = 'This username is already taken.';

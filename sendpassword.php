@@ -8,6 +8,7 @@ declare(strict_types=1);
  * MIT License - Copyright (c) 2026 PowerScripts
  */
 
+use PowerPHPBoard\Auth;
 use PowerPHPBoard\BoardUrl;
 use PowerPHPBoard\CSRF;
 use PowerPHPBoard\Database;
@@ -75,7 +76,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $send === 1) {
             $user = $db->fetchOne('SELECT * FROM ppb_users WHERE email = ?', [$email]);
         }
 
-        if ($user !== null) {
+        // Deaktivierte Konten bekommen keinen Link (Antwort bleibt gleich)
+        if ($user !== null && Auth::isActive($user)) {
             $rawToken = bin2hex(random_bytes(32));
             $tokenHash = hash('sha256', $rawToken);
             $now = time();

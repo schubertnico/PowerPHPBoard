@@ -8,12 +8,14 @@ declare(strict_types=1);
  * MIT License - Copyright (c) 2026 PowerScripts
  */
 
+use PowerPHPBoard\Auth;
 use PowerPHPBoard\CSRF;
 use PowerPHPBoard\Database;
 use PowerPHPBoard\Security;
 use PowerPHPBoard\Session;
 
 require_once __DIR__ . '/config.inc.php';
+require_once __DIR__ . '/includes/autoload.php';
 
 Session::start();
 
@@ -30,19 +32,11 @@ try {
 }
 
 $settings = $db->fetchOne('SELECT * FROM ppb_config WHERE id = ?', [1]) ?? [];
-$ppbuser = [];
-$loggedin = 'NO';
-
-if (Session::isLoggedIn()) {
-    $userId = Session::getUserId();
-    $ppbuser = $db->fetchOne('SELECT * FROM ppb_users WHERE id = ?', [$userId]);
-    if ($ppbuser !== null) {
-        $loggedin = 'YES';
-        $login = 1;
-    } else {
-        $ppbuser = [];
-        Session::logout();
-    }
+// Angemeldeter Benutzer (deaktivierte Konten gelten als abgemeldet)
+$ppbuser = Auth::currentUser($db) ?? [];
+$loggedin = $ppbuser !== [] ? 'YES' : 'NO';
+if ($loggedin === 'YES') {
+    $login = 1;
 }
 
 $langFile = match ($settings['language'] ?? 'English') {
@@ -63,7 +57,6 @@ $successLink = '';
 $successLinkText = '';
 $post = null;
 $canedit = false;
-$ismod = false;
 $adminCanModerate = false;
 $user = null;
 
@@ -83,22 +76,10 @@ if ($postid === 0) {
     } else {
         $user = $ppbuser;
 
-        $boardData = $db->fetchOne('SELECT mods FROM ppb_boards WHERE id = ?', [$post['boardid']]);
-        if ($boardData !== null && !empty($boardData['mods'])) {
-            $mods = explode(',', (string) $boardData['mods']);
-            foreach ($mods as $modEmail) {
-                $modEmail = trim($modEmail);
-                if ($modEmail !== '' && $modEmail === $user['email']) {
-                    $canedit = true;
-                    $ismod = true;
-                    break;
-                }
-            }
-        }
-        if ((int) $user['id'] === (int) $post['author'] || $user['status'] === 'Administrator') {
-            $canedit = true;
-        }
-        $adminCanModerate = ($ismod || $user['status'] === 'Administrator');
+        // Autor, Moderator des Boards oder Administrator
+        $postBoard = $db->fetchOne('SELECT * FROM ppb_boards WHERE id = ?', [$post['boardid']]) ?? [];
+        $canedit = Auth::canEditPost($user, $post, $postBoard);
+        $adminCanModerate = Auth::canModerate($user, $postBoard);
 
         if (!$canedit) {
             $state = 'error';

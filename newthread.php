@@ -8,6 +8,7 @@ declare(strict_types=1);
  * MIT License - Copyright (c) 2026 PowerScripts
  */
 
+use PowerPHPBoard\Auth;
 use PowerPHPBoard\CSRF;
 use PowerPHPBoard\Database;
 use PowerPHPBoard\Security;
@@ -15,6 +16,7 @@ use PowerPHPBoard\Session;
 use PowerPHPBoard\Validator;
 
 require_once __DIR__ . '/config.inc.php';
+require_once __DIR__ . '/includes/autoload.php';
 
 Session::start();
 
@@ -26,6 +28,9 @@ try {
 } catch (PDOException $e) {
     die('Database connection failed');
 }
+// Angemeldeter Benutzer (deaktivierte Konten gelten als abgemeldet)
+$ppbuser = Auth::currentUser($db) ?? [];
+$loggedin = $ppbuser !== [] ? 'YES' : 'NO';
 
 $board = [];
 if ($boardid > 0) {
@@ -41,8 +46,8 @@ if ($boardid > 0) {
 $boardpassword = Security::getString('boardpassword', 'POST');
 $boardpassworddb = '';
 
-if (Session::isLoggedIn() && ($board['status'] ?? '') === 'Private') {
-    $userId = Session::getUserId();
+if ($loggedin === 'YES' && ($board['status'] ?? '') === 'Private') {
+    $userId = (int) $ppbuser['id'];
     $visit = $db->fetchOne(
         "SELECT password FROM ppb_visits WHERE userid = ? AND vid = ? AND type = 'Board'",
         [$userId, $board['id'] ?? 0]
@@ -53,19 +58,6 @@ if (Session::isLoggedIn() && ($board['status'] ?? '') === 'Private') {
 }
 
 $settings = $db->fetchOne('SELECT * FROM ppb_config WHERE id = ?', [1]) ?? [];
-$ppbuser = [];
-$loggedin = 'NO';
-
-if (Session::isLoggedIn()) {
-    $userId = Session::getUserId();
-    $ppbuser = $db->fetchOne('SELECT * FROM ppb_users WHERE id = ?', [$userId]);
-    if ($ppbuser !== null) {
-        $loggedin = 'YES';
-    } else {
-        $ppbuser = [];
-        Session::logout();
-    }
-}
 
 $langFile = match ($settings['language'] ?? 'English') {
     'Deutsch-Sie' => 'deutsch-sie.inc.php',

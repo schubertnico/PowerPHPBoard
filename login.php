@@ -8,6 +8,7 @@ declare(strict_types=1);
  * MIT License - Copyright (c) 2026 PowerScripts
  */
 
+use PowerPHPBoard\Auth;
 use PowerPHPBoard\CSRF;
 use PowerPHPBoard\Database;
 use PowerPHPBoard\DatabaseRateLimitStorage;
@@ -17,6 +18,7 @@ use PowerPHPBoard\Security;
 use PowerPHPBoard\Session;
 
 require_once __DIR__ . '/config.inc.php';
+require_once __DIR__ . '/includes/autoload.php';
 
 Session::start();
 
@@ -71,7 +73,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $login === 1) {
                 $rateLimiter->recordFailure('login', $rateLimitIdentifier);
             } else {
                 if (Security::verifyPassword($password, $user['password'])) {
-                    if ($user['logincookie'] === 'YES' || $user['logincookie'] === 'NO') {
+                    // Deaktivierte Konten bekommen dieselbe Meldung wie bei
+                    // falschem Passwort (keine Unterscheidung nach außen).
+                    if (Auth::isActive($user)) {
                         if (Security::needsRehash($user['password'])) {
                             $newHash = Security::hashPassword($password);
                             $db->query('UPDATE ppb_users SET password = ? WHERE id = ?', [$newHash, $user['id']]);
@@ -84,6 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $login === 1) {
                         $loginSuccess = true;
                     } else {
                         $loginerror = $lang_loginfailed ?? 'Invalid email or password.';
+                        ErrorHandler::logFailedLogin($email, 'account_deactivated');
                         $rateLimiter->recordFailure('login', $rateLimitIdentifier);
                     }
                 } else {

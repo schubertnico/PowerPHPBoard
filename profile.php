@@ -8,6 +8,7 @@ declare(strict_types=1);
  * MIT License - Copyright (c) 2026 PowerScripts
  */
 
+use PowerPHPBoard\Auth;
 use PowerPHPBoard\CSRF;
 use PowerPHPBoard\Database;
 use PowerPHPBoard\Security;
@@ -15,6 +16,7 @@ use PowerPHPBoard\Session;
 use PowerPHPBoard\Validator;
 
 require_once __DIR__ . '/config.inc.php';
+require_once __DIR__ . '/includes/autoload.php';
 
 Session::start();
 
@@ -34,17 +36,9 @@ $langFile = match ($settings['language'] ?? 'English') {
 require_once __DIR__ . '/' . $langFile;
 require_once __DIR__ . '/functions.inc.php';
 
-$ppbuser = [];
-$loggedin = 'NO';
-$userId = Session::getUserId();
-
-if ($userId !== null) {
-    $userRow = $db->fetchOne('SELECT * FROM ppb_users WHERE id = ?', [$userId]);
-    if ($userRow !== null) {
-        $loggedin = 'YES';
-        $ppbuser = $userRow;
-    }
-}
+// Angemeldeter Benutzer (deaktivierte Konten gelten als abgemeldet)
+$ppbuser = Auth::currentUser($db) ?? [];
+$loggedin = $ppbuser !== [] ? 'YES' : 'NO';
 
 $logout = Security::getInt('logout');
 if ($logout === 1) {

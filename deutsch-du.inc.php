@@ -196,7 +196,7 @@ $lang_numthreads = '<b>Themen</b><br><small>Die Anzahl aller Themen</small>';
 $lang_numposts = '<b>Beitr&auml;ge</b><br><small>Die Anzahl aller Beitr&auml;ge</small>';
 
 // Userbereich-Bugfixes 2026-04-23 (neue Sprachkeys)
-$lang_loginfailed = 'Anmeldung fehlgeschlagen. E-Mail oder Passwort sind nicht korrekt.';
+$lang_loginfailed = 'Anmeldung fehlgeschlagen. E-Mail-Adresse oder Passwort sind nicht korrekt, oder das Konto ist deaktiviert.';
 $lang_toomanyattempts = 'Zu viele Versuche. Bitte warte, bevor Du es erneut versuchst.';
 $lang_usernameinvalid = 'Benutzername muss 2-50 Zeichen haben und nur Buchstaben, Ziffern und . _ - enthalten.';
 $lang_usernametaken = 'Dieser Benutzername ist bereits vergeben.';

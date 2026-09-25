@@ -8,12 +8,14 @@ declare(strict_types=1);
  * MIT License - Copyright (c) 2026 PowerScripts
  */
 
+use PowerPHPBoard\Auth;
 use PowerPHPBoard\Database;
 use PowerPHPBoard\Security;
 use PowerPHPBoard\Session;
 
 // Load configuration and core classes
 require_once __DIR__ . '/config.inc.php';
+require_once __DIR__ . '/includes/autoload.php';
 
 // Start secure session
 Session::start();
@@ -114,17 +116,9 @@ if ($catid > 0) {
     }
 }
 
-// Check user authentication via session
-if (Session::isLoggedIn()) {
-    $userId = Session::getUserId();
-    $ppbuser = $db->fetchOne('SELECT * FROM ppb_users WHERE id = ?', [$userId]);
-    if ($ppbuser !== null) {
-        $loggedin = 'YES';
-    } else {
-        $ppbuser = [];
-        Session::logout();
-    }
-}
+// Check user authentication via session (deaktivierte Konten werden abgemeldet)
+$ppbuser = Auth::currentUser($db) ?? [];
+$loggedin = $ppbuser !== [] ? 'YES' : 'NO';
 
 // Include functions
 require_once __DIR__ . '/functions.inc.php';
