@@ -56,17 +56,7 @@ if ($userid > 0) {
 
           <dt class="col-sm-4 col-md-3"><?php echo Security::escape($lang_email ?? 'Email'); ?></dt>
           <dd class="col-sm-8 col-md-9">
-            <?php if ($user['hideemail'] === 'NO'): ?>
-              <a class="text-decoration-none" href="mailto:<?php echo Security::escape((string) $user['email']); ?>">
-                <i class="bi bi-envelope" aria-hidden="true"></i>
-                <?php echo Security::escape((string) $user['email']); ?>
-              </a>
-            <?php else: ?>
-              <a class="text-decoration-none" href="sendmail.php?userid=<?php echo (int) $user['id']; ?>&catid=<?php echo (int) $catid; ?>&boardid=<?php echo (int) $boardid; ?>">
-                <i class="bi bi-envelope" aria-hidden="true"></i>
-                <?php echo Security::escape($lang_sendmail ?? 'Send mail'); ?>
-              </a>
-            <?php endif; ?>
+            <?php echo ppb_profile_email($user, (int) $catid, (int) $boardid); ?>
           </dd>
 
           <dt class="col-sm-4 col-md-3"><?php echo Security::escape($lang_icq ?? 'ICQ'); ?></dt>

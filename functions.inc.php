@@ -138,6 +138,31 @@ function ppb_hide_email(string $value): string
 }
 
 /**
+ * E-Mail-Angaben im Benutzerprofil: die Adresse nur, wenn der Benutzer sie
+ * nicht verbirgt, und immer „E-Mail senden“ – das Kontaktformular
+ * (sendmail.php) steht für alle Mitglieder zur Verfügung, die Adresse des
+ * Empfängers bleibt dabei verborgen. Gäste führt sendmail.php zur Anmeldung.
+ *
+ * @param array<string, mixed> $user Zeile aus ppb_users
+ *
+ * @return string HTML
+ */
+function ppb_profile_email(array $user, int $catid, int $boardid): string
+{
+    $html = '';
+    if (($user['hideemail'] ?? 'YES') === 'NO') {
+        $email = Security::escape((string) ($user['email'] ?? ''));
+        $html .= '<div class="mb-1"><a class="text-decoration-none" href="mailto:' . $email . '">'
+            . '<i class="bi bi-at" aria-hidden="true"></i> ' . $email . '</a></div>';
+    }
+
+    return $html . '<a class="text-decoration-none" id="profile-sendmail" href="sendmail.php?userid=' . (int) ($user['id'] ?? 0)
+        . '&amp;catid=' . $catid . '&amp;boardid=' . $boardid . '">'
+        . '<i class="bi bi-envelope" aria-hidden="true"></i> '
+        . Security::escape(ppb_lang('sendmail', 'Send email')) . '</a>';
+}
+
+/**
  * Text der Begrüßungsmail nach der Registrierung oder nach „Benutzer
  * anlegen“ im Adminbereich. Das Passwort steht bewusst nie in der Mail.
  *

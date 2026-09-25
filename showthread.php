@@ -255,13 +255,11 @@ $renderPagination = static function () use ($thread, $db, $current, $current2, $
                      title="<?php echo Security::escape($lang_profile ?? 'Profile'); ?>">
                     <i class="bi bi-person" aria-hidden="true"></i>
                   </a>
-                  <?php if (($author['hideemail'] ?? 'YES') === 'NO'): ?>
-                    <a class="btn btn-outline-secondary"
-                       href="sendmail.php?userid=<?php echo (int) $author['id']; ?>&catid=<?php echo (int) ($catid ?? 0); ?>&boardid=<?php echo (int) $boardid; ?>"
-                       title="<?php echo Security::escape($lang_writemail ?? 'Write mail to'); ?> <?php echo Security::escape($authorName); ?>">
-                      <i class="bi bi-envelope" aria-hidden="true"></i>
-                    </a>
-                  <?php endif; ?>
+                  <a class="btn btn-outline-secondary"
+                     href="sendmail.php?userid=<?php echo (int) $author['id']; ?>&catid=<?php echo (int) ($catid ?? 0); ?>&boardid=<?php echo (int) $boardid; ?>"
+                     title="<?php echo Security::escape($lang_writemail ?? 'Write mail to'); ?> <?php echo Security::escape($authorName); ?>">
+                    <i class="bi bi-envelope" aria-hidden="true"></i>
+                  </a>
                   <?php $homepageUrl = TextFormatter::sanitizeUrl((string) ($author['homepage'] ?? '')); ?>
                   <?php if ($homepageUrl !== null): ?>
                     <a class="btn btn-outline-secondary"
