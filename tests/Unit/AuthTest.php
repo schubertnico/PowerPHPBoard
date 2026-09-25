@@ -113,6 +113,36 @@ final class AuthTest extends TestCase
         $this->assertTrue(Auth::canModerate($admin, []));
     }
 
+    #[Test]
+    public function administratorCannotDemoteOrDeactivateHimself(): void
+    {
+        $admin = ['id' => 1, 'status' => 'Administrator'];
+
+        $this->assertSame('self', Auth::statusChangeError($admin, $admin, 'Normal user', 3));
+        $this->assertSame('self', Auth::statusChangeError($admin, $admin, 'Deactivated', 3));
+        $this->assertNull(Auth::statusChangeError($admin, $admin, 'Administrator', 1));
+    }
+
+    #[Test]
+    public function lastAdministratorStaysAdministrator(): void
+    {
+        $actor = ['id' => 1, 'status' => 'Administrator'];
+        $lastAdmin = ['id' => 2, 'status' => 'Administrator'];
+
+        $this->assertSame('lastadmin', Auth::statusChangeError($actor, $lastAdmin, 'Deactivated', 1));
+        $this->assertNull(Auth::statusChangeError($actor, $lastAdmin, 'Normal user', 2));
+    }
+
+    #[Test]
+    public function otherStatusChangesAreAllowed(): void
+    {
+        $actor = ['id' => 1, 'status' => 'Administrator'];
+        $user = ['id' => 5, 'status' => 'Normal user'];
+
+        $this->assertNull(Auth::statusChangeError($actor, $user, 'Deactivated', 1));
+        $this->assertNull(Auth::statusChangeError($actor, $user, 'Administrator', 1));
+    }
+
     /**
      * @param array<string, mixed>|null $row
      */

@@ -35,15 +35,21 @@ if ($adduser === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $signature = Security::getString('signature', 'POST');
     $hideemail = Security::getString('hideemail', 'POST', 'NO');
     $logincookie = Security::getString('logincookie', 'POST', 'YES');
+    $hideemail = $hideemail === 'YES' ? 'YES' : 'NO';
+    $logincookie = $logincookie === 'NO' ? 'NO' : 'YES';
 
     if ($username === '' || $email1 === '' || $email2 === '' || $password1 === '' || $password2 === '') {
         $formError = 'Bitte fülle alle Pflichtfelder aus.';
+    } elseif (!Validator::isValidUsername($username)) {
+        $formError = 'Der Benutzername muss 2 bis 50 Zeichen lang sein und darf nur Buchstaben, Ziffern sowie . _ - enthalten.';
     } elseif ($email1 !== $email2) {
         $formError = 'Die E-Mail-Adressen stimmen nicht überein.';
     } elseif (!Security::isValidEmail($email1)) {
         $formError = 'Bitte eine gültige E-Mail-Adresse angeben.';
     } elseif ($password1 !== $password2) {
         $formError = 'Die Passwörter stimmen nicht überein.';
+    } elseif (!Validator::isStrongPassword($password1)) {
+        $formError = 'Das Passwort muss mindestens 8 Zeichen lang sein.';
     } elseif (Validator::normalizeHomepage($homepage) === null) {
         $formError = 'Bitte eine gültige Homepage-Adresse mit http:// oder https:// angeben.';
     } else {
@@ -51,10 +57,11 @@ if ($adduser === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $existingUser = $db->fetchOne('SELECT id FROM ppb_users WHERE email = ?', [$email1]);
         if ($existingUser !== null) {
             $formError = 'Diese E-Mail-Adresse ist bereits registriert.';
+        } elseif ($db->fetchOne('SELECT id FROM ppb_users WHERE username = ?', [$username]) !== null) {
+            $formError = 'Dieser Benutzername ist bereits vergeben.';
         } else {
             $icqInt = (int) $icq;
             $passwordHash = Security::hashPassword($password1);
-            $username = strip_tags($username);
             $biography = strip_tags($biography);
             $now = time();
             try {

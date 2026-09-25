@@ -8,6 +8,7 @@ declare(strict_types=1);
  * MIT License - Copyright (c) 2026 PowerScripts
  */
 
+use PowerPHPBoard\CSRF;
 use PowerPHPBoard\Security;
 
 include __DIR__ . '/header.inc.php';
@@ -18,7 +19,10 @@ $confirmText = '';
 $confirmTitle = '';
 $confirmHref = '';
 
-if ($boarddesign === 1) {
+// Übernehmen ändert Daten und geht deshalb nur per POST mit CSRF-Token
+if ($boarddesign === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    CSRF::validateOrDie();
+    CSRF::regenerate();
     if ($catid > 0) {
         $category = $db->fetchOne(
             'SELECT * FROM ppb_boards WHERE id = ? AND type = ?',
@@ -85,9 +89,12 @@ if ($boarddesign === 1) {
     <div class="card-body">
       <p class="mb-3"><?php echo Security::escape($confirmText); ?></p>
       <div class="d-flex flex-wrap gap-2">
-        <a href="<?php echo Security::escape($confirmHref); ?>" class="btn btn-warning">
-          <i class="bi bi-check-lg" aria-hidden="true"></i> Ja, anwenden
-        </a>
+        <form action="<?php echo Security::escape($confirmHref); ?>" method="post" class="d-inline">
+          <?php echo CSRF::getTokenField(); ?>
+          <button type="submit" class="btn btn-warning">
+            <i class="bi bi-check-lg" aria-hidden="true"></i> Ja, anwenden
+          </button>
+        </form>
         <a href="boards.php" class="btn btn-outline-secondary">
           <i class="bi bi-x-lg" aria-hidden="true"></i> Abbrechen
         </a>

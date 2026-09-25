@@ -8,6 +8,7 @@ declare(strict_types=1);
  * MIT License - Copyright (c) 2026 PowerScripts
  */
 
+use PowerPHPBoard\Auth;
 use PowerPHPBoard\CSRF;
 use PowerPHPBoard\Security;
 use PowerPHPBoard\Validator;
@@ -36,19 +37,36 @@ if ($row !== null && $edituser === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $hideemail = Security::getString('hideemail', 'POST', 'NO');
     $logincookie = Security::getString('logincookie', 'POST', 'YES');
     $status = Security::getString('status', 'POST', 'Normal user');
+    if (!in_array($status, [Auth::STATUS_NORMAL, Auth::STATUS_ADMIN, Auth::STATUS_DEACTIVATED], true)) {
+        $status = Auth::STATUS_NORMAL;
+    }
+    $hideemail = $hideemail === 'YES' ? 'YES' : 'NO';
+    $logincookie = $logincookie === 'NO' ? 'NO' : 'YES';
 
     $passwordWillChange = $password1 !== '' || $password2 !== '';
+    $adminCount = (int) ($db->fetchOne("SELECT COUNT(*) c FROM ppb_users WHERE status = 'Administrator'")['c'] ?? 0);
+    $statusError = Auth::statusChangeError($ppbuser, $row, $status, $adminCount);
 
     if ($username === '' || $email1 === '' || $email2 === '') {
         $formError = 'Bitte fülle alle Pflichtfelder aus.';
+    } elseif ($statusError === 'self') {
+        $formError = 'Der eigene Status kann nicht geändert werden, sonst ist der Adminbereich nicht mehr erreichbar. Das kann nur ein anderer Administrator.';
+    } elseif ($statusError === 'lastadmin') {
+        $formError = 'Der letzte Administrator kann weder herabgestuft noch deaktiviert werden.';
+    } elseif (!Validator::isValidUsername($username)) {
+        $formError = 'Der Benutzername muss 2 bis 50 Zeichen lang sein und darf nur Buchstaben, Ziffern sowie . _ - enthalten.';
     } elseif ($email1 !== $email2) {
         $formError = 'Die E-Mail-Adressen stimmen nicht überein.';
     } elseif (!Security::isValidEmail($email1)) {
         $formError = 'Bitte eine gültige E-Mail-Adresse angeben.';
     } elseif ($passwordWillChange && $password1 !== $password2) {
         $formError = 'Die Passwörter stimmen nicht überein.';
+    } elseif ($passwordWillChange && !Validator::isStrongPassword($password1)) {
+        $formError = 'Das Passwort muss mindestens 8 Zeichen lang sein.';
     } elseif (Validator::normalizeHomepage($homepage) === null) {
         $formError = 'Bitte eine gültige Homepage-Adresse mit http:// oder https:// angeben.';
+    } elseif ($db->fetchOne('SELECT id FROM ppb_users WHERE username = ? AND id != ?', [$username, $row['id']]) !== null) {
+        $formError = 'Dieser Benutzername ist bereits vergeben.';
     } else {
         $homepage = (string) Validator::normalizeHomepage($homepage);
         $existingUser = $db->fetchOne(
@@ -59,16 +77,10 @@ if ($row !== null && $edituser === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $formError = 'Diese E-Mail-Adresse ist bereits einem anderen Nutzer zugeordnet.';
         } else {
             $icqInt = (int) $icq;
-            $username = strip_tags($username);
             $biography = strip_tags($biography);
             $finalPassword = $passwordWillChange
                 ? Security::hashPassword($password1)
                 : $row['password'];
-
-            $allowedStatus = ['Deactivated', 'Normal user', 'Administrator'];
-            if (!in_array($status, $allowedStatus, true)) {
-                $status = 'Normal user';
-            }
 
             try {
                 $db->execute(

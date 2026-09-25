@@ -109,6 +109,31 @@ final class Auth
     }
 
     /**
+     * Prüft eine Statusänderung im Adminbereich.
+     *
+     * Ein Administrator darf sich nicht selbst herabstufen oder deaktivieren
+     * (er sperrte sich sonst aus dem Adminbereich aus), und der letzte
+     * Administrator bleibt immer Administrator.
+     *
+     * @param array<string, mixed> $actor Angemeldeter Administrator
+     * @param array<string, mixed> $target Zu ändernder Benutzer
+     * @param int $adminCount Anzahl der Administratoren vor der Änderung
+     *
+     * @return string|null 'self', 'lastadmin' oder null, wenn die Änderung erlaubt ist
+     */
+    public static function statusChangeError(array $actor, array $target, string $newStatus, int $adminCount): ?string
+    {
+        if (($target['status'] ?? '') !== self::STATUS_ADMIN || $newStatus === self::STATUS_ADMIN) {
+            return null;
+        }
+        if ((int) ($actor['id'] ?? 0) === (int) ($target['id'] ?? -1)) {
+            return 'self';
+        }
+
+        return $adminCount <= 1 ? 'lastadmin' : null;
+    }
+
+    /**
      * Darf den Beitrag bearbeiten: Autor, Moderator des Boards oder Administrator
      *
      * @param array<string, mixed>|null $user
