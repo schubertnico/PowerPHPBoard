@@ -14,13 +14,18 @@ use PowerPHPBoard\Security;
 
 include __DIR__ . '/header.inc.php';
 
-$row = $db->fetchOne('SELECT * FROM ppb_boards WHERE id = ?', [$boardid]);
+$row = $db->fetchOne("SELECT * FROM ppb_boards WHERE id = ? AND type = 'Board'", [$boardid]);
 $editboard = Security::getInt('editboard', 'GET', 0);
 $saved = false;
 $deleted = false;
 $formError = '';
+$statusLabels = [
+    'Open' => $lang_adm_status_open ?? 'Open',
+    'Closed' => $lang_adm_status_closed ?? 'Closed',
+    'Private' => $lang_adm_status_private ?? 'Private',
+];
 
-// Anzahl der Threads im Board ermitteln (für Lösch-Warnung)
+// Anzahl der Themen im Board ermitteln (für Lösch-Warnung)
 $threadsInBoard = 0;
 if ($row !== null) {
     $cnt = $db->fetchOne(
@@ -38,9 +43,10 @@ if ($row !== null && $editboard === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') 
 
     if ($deleteBoard === 'YES') {
         if ($threadsInBoard > 0 && $deleteConfirm !== 'YES') {
-            $formError = 'Dieses Board enthält ' . $threadsInBoard . ' Thread(s) mit Beiträgen. '
-                . 'Aktiviere zusätzlich "Lösch-Bestätigung", wenn du alle Threads und '
-                . 'Beiträge mit löschen möchtest.';
+            $formError = sprintf(
+                $lang_adm_deleteneedsconfirm ?? 'This board contains threads (%d). Tick "Deletion confirmation" as well if all threads and posts should be deleted.',
+                $threadsInBoard
+            );
         } else {
             // Alle Posts/Threads im Board löschen
             $threadIds = $db->fetchAll(
@@ -74,7 +80,7 @@ if ($row !== null && $editboard === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') 
         $newthread = Security::getString('newthread', 'POST');
         $newpost = Security::getString('newpost', 'POST');
 
-        if (!in_array($status, ['Open', 'Closed', 'Private'], true)) {
+        if (!array_key_exists($status, $statusLabels)) {
             $status = 'Open';
         }
         // Board-Passwort nur als Hash speichern; leeres Feld behält das
@@ -87,12 +93,12 @@ if ($row !== null && $editboard === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') 
         }
 
         if ($status === 'Private' && $passwordHash === '') {
-            $formError = 'Wenn der Status "Private" gewählt ist, muss ein Passwort gesetzt werden.';
+            $formError = $lang_adm_privateneedspassword ?? 'A private board needs a password.';
         } elseif ($title === '' || $catidPost === 0) {
             // Beschreibung und Design-Felder sind optional
-            $formError = 'Bitte einen Titel angeben und eine Kategorie wählen.';
+            $formError = $lang_adm_titleandcategory ?? 'Please enter a title and choose a category.';
         } elseif (!ppb_valid_template_setting($header) || !ppb_valid_template_setting($footer)) {
-            $formError = 'Header- und Footer-Template müssen Dateinamen aus dem Ordner inc/ sein oder leer bleiben.';
+            $formError = $lang_adm_templateinvalid ?? 'Header and footer templates must be file names from the inc/ folder or stay empty.';
         } else {
             $title = strip_tags($title);
             $description = strip_tags($description);
@@ -133,19 +139,19 @@ if ($row !== null && $editboard === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') 
 ?>
 
 <header class="mb-3">
-  <h1 class="h3 mb-0"><i class="bi bi-pencil-square" aria-hidden="true"></i> Board bearbeiten</h1>
+  <h1 class="h3 mb-0"><i class="bi bi-pencil-square" aria-hidden="true"></i> <?php echo Security::escape($lang_adm_editboard ?? 'Edit board'); ?></h1>
 </header>
 
 <?php if ($deleted): ?>
   <div class="alert alert-success" role="alert">
     <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
-    Board wurde gelöscht.
-    <a class="alert-link" href="boards.php">Zurück zur Board-Verwaltung</a>.
+    <?php echo Security::escape($lang_adm_boarddeleted ?? 'The board has been deleted.'); ?>
+    <a class="alert-link" href="boards.php"><?php echo Security::escape($lang_adm_backtoboards ?? 'Back to board management'); ?></a>
   </div>
 <?php elseif ($row === null): ?>
   <div class="alert alert-warning" role="alert">
-    Kein Board mit dieser ID gefunden.
-    <a class="alert-link" href="boards.php">Zurück zur Board-Verwaltung</a>.
+    <?php echo Security::escape($lang_adm_boardnotfound ?? 'There is no board with this ID.'); ?>
+    <a class="alert-link" href="boards.php"><?php echo Security::escape($lang_adm_backtoboards ?? 'Back to board management'); ?></a>
   </div>
 <?php else:
     $hasBoardPassword = (string) ($row['password'] ?? '') !== '';
@@ -153,7 +159,7 @@ if ($row !== null && $editboard === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') 
     ?>
 
   <?php if ($saved): ?>
-    <div class="alert alert-success" role="alert"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Board gespeichert.</div>
+    <div class="alert alert-success" role="alert"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> <?php echo Security::escape($lang_adm_boardsaved ?? 'The board has been saved.'); ?></div>
   <?php endif; ?>
   <?php if ($formError !== ''): ?>
     <div class="alert alert-danger" role="alert"><?php echo Security::escape($formError); ?></div>
@@ -165,29 +171,29 @@ if ($row !== null && $editboard === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') 
 
     <section class="card shadow-sm mb-3">
       <header class="card-header bg-secondary-subtle">
-        <h2 class="h6 mb-0"><i class="bi bi-info-circle" aria-hidden="true"></i> Board-Informationen</h2>
+        <h2 class="h6 mb-0"><i class="bi bi-info-circle" aria-hidden="true"></i> <?php echo Security::escape($lang_adm_boardinfo ?? 'Board information'); ?></h2>
       </header>
       <div class="card-body">
         <div class="row g-3">
           <div class="col-md-6">
-            <label for="title" class="form-label fw-semibold">Titel</label>
+            <label for="title" class="form-label fw-semibold"><?php echo Security::escape($lang_title ?? 'Title'); ?></label>
             <input id="title" name="title" type="text" class="form-control"
                    maxlength="100" required value="<?php echo Security::escape((string) $row['title']); ?>">
-            <div class="invalid-feedback">Bitte einen Boardtitel angeben.</div>
+            <div class="invalid-feedback"><?php echo Security::escape($lang_adm_insertboardtitle ?? 'Please enter a board title.'); ?></div>
           </div>
           <div class="col-md-6">
-            <label for="description" class="form-label">Beschreibung</label>
+            <label for="description" class="form-label"><?php echo Security::escape($lang_description ?? 'Description'); ?></label>
             <input id="description" name="description" type="text" class="form-control"
                    maxlength="150" value="<?php echo Security::escape((string) $row['description']); ?>">
           </div>
           <div class="col-md-6">
-            <label for="mods" class="form-label">Moderatoren</label>
+            <label for="mods" class="form-label"><?php echo Security::escape($lang_adm_moderators ?? 'Moderators'); ?></label>
             <input id="mods" name="mods" type="text" class="form-control" maxlength="250"
-                   value="<?php echo Security::escape((string) $row['mods']); ?>">
-            <div class="form-text">Komma-getrennte Liste der E-Mail-Adressen.</div>
+                   value="<?php echo Security::escape((string) $row['mods']); ?>" aria-describedby="modsHelp">
+            <div id="modsHelp" class="form-text"><?php echo Security::escape($lang_adm_modshelp ?? 'Comma-separated list of email addresses, e.g. anna@example.org, moritz@example.org'); ?></div>
           </div>
           <div class="col-md-6">
-            <label for="catid" class="form-label fw-semibold">Kategorie</label>
+            <label for="catid" class="form-label fw-semibold"><?php echo Security::escape($lang_adm_category ?? 'Category'); ?></label>
             <select id="catid" name="catid" class="form-select">
               <?php foreach ($categories as $cat): ?>
                 <option value="<?php echo (int) $cat['id']; ?>" <?php echo (int) $cat['id'] === (int) $row['catid'] ? 'selected' : ''; ?>>
@@ -197,23 +203,23 @@ if ($row !== null && $editboard === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') 
             </select>
           </div>
           <div class="col-md-6">
-            <label for="status" class="form-label fw-semibold">Status</label>
-            <select id="status" name="status" class="form-select">
-              <?php foreach (['Open', 'Closed', 'Private'] as $s): ?>
-                <option value="<?php echo $s; ?>" <?php echo $row['status'] === $s ? 'selected' : ''; ?>><?php echo $s; ?></option>
+            <label for="status" class="form-label fw-semibold"><?php echo Security::escape($lang_status ?? 'Status'); ?></label>
+            <select id="status" name="status" class="form-select" aria-describedby="statusHelp">
+              <?php foreach ($statusLabels as $value => $label): ?>
+                <option value="<?php echo $value; ?>" <?php echo $row['status'] === $value ? 'selected' : ''; ?>><?php echo Security::escape($label); ?></option>
               <?php endforeach; ?>
             </select>
-            <div class="form-text">"Closed" deaktiviert neue Threads. "Private" verlangt ein Passwort.</div>
+            <div id="statusHelp" class="form-text"><?php echo Security::escape($lang_adm_statushelp ?? '"Closed" blocks new threads and replies, "Private" requires a password.'); ?></div>
           </div>
           <div class="col-md-6">
-            <label for="password" class="form-label">Board-Passwort (nur bei "Private")</label>
+            <label for="password" class="form-label"><?php echo Security::escape($lang_adm_boardpassword ?? 'Board password (only for "Private")'); ?></label>
             <input id="password" name="password" type="text" class="form-control" maxlength="100"
                    autocomplete="off" value="" aria-describedby="passwordHelp">
             <div id="passwordHelp" class="form-text">
               <?php if ($hasBoardPassword): ?>
-                Ein Passwort ist gesetzt und wird nur verschlüsselt gespeichert. Leer lassen, um es beizubehalten.
+                <?php echo Security::escape($lang_adm_boardpasswordset ?? 'A password is set and only stored as a hash. Leave empty to keep it.'); ?>
               <?php else: ?>
-                Pflichtfeld, wenn der Status "Private" ist.
+                <?php echo Security::escape($lang_adm_boardpasswordrequired ?? 'Required if the status is "Private".'); ?>
               <?php endif; ?>
             </div>
           </div>
@@ -223,85 +229,10 @@ if ($row !== null && $editboard === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') 
 
     <section class="card shadow-sm mb-3">
       <header class="card-header bg-secondary-subtle">
-        <h2 class="h6 mb-0"><i class="bi bi-palette" aria-hidden="true"></i> Design (Legacy-Felder)</h2>
+        <h2 class="h6 mb-0"><i class="bi bi-palette" aria-hidden="true"></i> <?php echo Security::escape($lang_adm_legacydesign ?? 'Design (legacy fields)'); ?></h2>
       </header>
       <div class="card-body">
-        <div class="alert alert-info small d-flex align-items-start gap-2 mb-3" role="alert">
-          <i class="bi bi-info-circle-fill fs-5" aria-hidden="true"></i>
-          <div>
-            <strong>Hinweis:</strong> Im neuen Bootstrap-5-Layout werden diese Felder
-            <strong>nicht mehr</strong> für die Darstellung verwendet. Sie bleiben aus
-            Kompatibilitätsgründen erhalten – Änderungen hier haben keine sichtbare Wirkung
-            im Forum.
-          </div>
-        </div>
-        <div class="row g-3">
-          <div class="col-md-6">
-            <label for="header" class="form-label">Eigenes Header-Template</label>
-            <input id="header" name="header" type="text" class="form-control" maxlength="250"
-                   value="<?php echo Security::escape((string) $row['header']); ?>"
-                   aria-describedby="headerHelp">
-            <div id="headerHelp" class="form-text">Dateiname aus dem <code>inc/</code>-Ordner. Leer = Standard-Header.</div>
-          </div>
-          <div class="col-md-6">
-            <label for="footer" class="form-label">Eigenes Footer-Template</label>
-            <input id="footer" name="footer" type="text" class="form-control" maxlength="250"
-                   value="<?php echo Security::escape((string) $row['footer']); ?>"
-                   aria-describedby="footerHelp">
-            <div id="footerHelp" class="form-text">Dateiname aus dem <code>inc/</code>-Ordner. Leer = Standard-Footer.</div>
-          </div>
-          <div class="col-md-3">
-            <label for="bordercolor" class="form-label">Rahmenfarbe</label>
-            <div class="input-group">
-              <input id="bordercolor" name="bordercolor" type="text" class="form-control" maxlength="7"
-                     value="<?php echo Security::escape((string) $row['bordercolor']); ?>"
-                     aria-describedby="bordercolorHelp">
-              <span class="input-group-text" style="background:<?php echo Security::escape((string) $row['bordercolor']); ?>;width:38px;" aria-hidden="true">&nbsp;</span>
-            </div>
-            <div id="bordercolorHelp" class="form-text">Hex-Farbcode, z.B. <code>#000000</code></div>
-          </div>
-          <div class="col-md-3">
-            <label for="tablebg1" class="form-label">Tabelle Hintergrund 1</label>
-            <div class="input-group">
-              <input id="tablebg1" name="tablebg1" type="text" class="form-control" maxlength="7"
-                     value="<?php echo Security::escape((string) $row['tablebg1']); ?>">
-              <span class="input-group-text" style="background:<?php echo Security::escape((string) $row['tablebg1']); ?>;width:38px;" aria-hidden="true">&nbsp;</span>
-            </div>
-            <div class="form-text">Helle Zeile</div>
-          </div>
-          <div class="col-md-3">
-            <label for="tablebg2" class="form-label">Tabelle Hintergrund 2</label>
-            <div class="input-group">
-              <input id="tablebg2" name="tablebg2" type="text" class="form-control" maxlength="7"
-                     value="<?php echo Security::escape((string) $row['tablebg2']); ?>">
-              <span class="input-group-text" style="background:<?php echo Security::escape((string) $row['tablebg2']); ?>;width:38px;" aria-hidden="true">&nbsp;</span>
-            </div>
-            <div class="form-text">Wechsel-Zeile</div>
-          </div>
-          <div class="col-md-3">
-            <label for="tablebg3" class="form-label">Tabelle Hintergrund 3</label>
-            <div class="input-group">
-              <input id="tablebg3" name="tablebg3" type="text" class="form-control" maxlength="7"
-                     value="<?php echo Security::escape((string) $row['tablebg3']); ?>">
-              <span class="input-group-text" style="background:<?php echo Security::escape((string) $row['tablebg3']); ?>;width:38px;" aria-hidden="true">&nbsp;</span>
-            </div>
-            <div class="form-text">Tabellen-Header</div>
-          </div>
-          <div class="col-md-6">
-            <label for="newthread" class="form-label">Bild für "Neuer Thread"-Button</label>
-            <input id="newthread" name="newthread" type="text" class="form-control" maxlength="250"
-                   value="<?php echo Security::escape((string) $row['newthread']); ?>"
-                   aria-describedby="newthreadHelp">
-            <div id="newthreadHelp" class="form-text">Pfad zu einem 120×20-px-GIF/PNG, z.B. <code>images/newthread.gif</code></div>
-          </div>
-          <div class="col-md-6">
-            <label for="newpost" class="form-label">Bild für "Neuer Beitrag"-Button</label>
-            <input id="newpost" name="newpost" type="text" class="form-control" maxlength="250"
-                   value="<?php echo Security::escape((string) $row['newpost']); ?>"
-                   aria-describedby="newpostHelp">
-            <div id="newpostHelp" class="form-text">Pfad zu einem 120×20-px-GIF/PNG, z.B. <code>images/newpost.gif</code></div>
-          </div>
-        </div>
+        <?php echo ppb_admin_design_fields($row, $lang_adm_designnote_edit ?? 'The Bootstrap 5 layout no longer uses these fields. They are optional and kept for compatibility; changes here have no visible effect in the board.'); ?>
       </div>
     </section>
 
@@ -309,23 +240,21 @@ if ($row !== null && $editboard === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') 
       <header class="card-header bg-danger-subtle">
         <h2 class="h6 mb-0 text-danger-emphasis">
           <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
-          Gefahrenzone
+          <?php echo Security::escape($lang_adm_dangerzone ?? 'Danger zone'); ?>
         </h2>
       </header>
       <div class="card-body">
         <?php if ($threadsInBoard > 0): ?>
           <div class="alert alert-warning small mb-3" role="alert">
             <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
-            Dieses Board enthält <strong><?php echo $threadsInBoard; ?></strong>
-            Thread(s) mit Beiträgen. Beim Löschen werden <strong>alle Threads
-            und Beiträge unwiderruflich entfernt</strong>.
+            <?php echo Security::escape(sprintf($lang_adm_boardhasthreads ?? 'Threads in this board: %d. Deleting the board removes all threads and posts permanently.', $threadsInBoard)); ?>
           </div>
         <?php endif; ?>
         <div class="form-check">
           <input class="form-check-input" type="checkbox" id="deleteboard"
                  name="deleteboard" value="YES">
           <label class="form-check-label fw-semibold text-danger" for="deleteboard">
-            Dieses Board löschen
+            <?php echo Security::escape($lang_adm_deleteboard ?? 'Delete this board'); ?>
           </label>
         </div>
         <?php if ($threadsInBoard > 0): ?>
@@ -333,23 +262,22 @@ if ($row !== null && $editboard === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') 
             <input class="form-check-input" type="checkbox" id="deleteconfirm"
                    name="deleteconfirm" value="YES">
             <label class="form-check-label text-danger" for="deleteconfirm">
-              Lösch-Bestätigung: Ich weiß, dass alle <?php echo $threadsInBoard; ?>
-              Thread(s) inklusive aller Beiträge unwiderruflich entfernt werden.
+              <?php echo Security::escape(sprintf($lang_adm_deleteconfirm ?? 'Deletion confirmation: I understand that all %d threads including all posts will be removed permanently.', $threadsInBoard)); ?>
             </label>
           </div>
         <?php endif; ?>
         <div class="form-text mt-2">
           <i class="bi bi-info-circle" aria-hidden="true"></i>
-          Diese Aktion kann nicht rückgängig gemacht werden.
+          <?php echo Security::escape($lang_cannotbeundone ?? 'This action cannot be undone.'); ?>
         </div>
       </div>
     </section>
 
     <div class="d-flex flex-wrap gap-2 mb-4">
       <button type="submit" class="btn btn-primary">
-        <i class="bi bi-save" aria-hidden="true"></i> Speichern / Aktion ausführen
+        <i class="bi bi-save" aria-hidden="true"></i> <?php echo Security::escape($lang_adm_saveoraction ?? 'Save / perform action'); ?>
       </button>
-      <a class="btn btn-link" href="boards.php">Abbrechen</a>
+      <a class="btn btn-link" href="boards.php"><?php echo Security::escape($lang_adm_cancel ?? 'Cancel'); ?></a>
     </div>
   </form>
 

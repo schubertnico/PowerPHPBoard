@@ -20,23 +20,23 @@ if ($catid > 0) {
 ?>
 
 <header class="d-flex flex-wrap align-items-center justify-content-between mb-3 gap-2">
-  <h1 class="h3 mb-0"><i class="bi bi-folder2-open" aria-hidden="true"></i> Board-Verwaltung</h1>
-  <div class="btn-group" role="group" aria-label="Board-Aktionen">
+  <h1 class="h3 mb-0"><i class="bi bi-folder2-open" aria-hidden="true"></i> <?php echo Security::escape($lang_adm_boardmanagement ?? 'Board management'); ?></h1>
+  <div class="btn-group" role="group" aria-label="<?php echo Security::escape($lang_adm_boardactions ?? 'Board actions'); ?>">
     <a class="btn btn-primary btn-sm" href="addboard.php">
-      <i class="bi bi-plus-circle" aria-hidden="true"></i> Board hinzufügen
+      <i class="bi bi-plus-circle" aria-hidden="true"></i> <?php echo Security::escape($lang_adm_addboard ?? 'Add board'); ?>
     </a>
     <a class="btn btn-outline-primary btn-sm" href="addboardcategory.php">
-      <i class="bi bi-folder-plus" aria-hidden="true"></i> Kategorie hinzufügen
+      <i class="bi bi-folder-plus" aria-hidden="true"></i> <?php echo Security::escape($lang_adm_addcategory ?? 'Add category'); ?>
     </a>
     <a class="btn btn-outline-secondary btn-sm" href="boarddesign.php">
-      <i class="bi bi-palette" aria-hidden="true"></i> Default-Design
+      <i class="bi bi-palette" aria-hidden="true"></i> <?php echo Security::escape($lang_adm_defaultdesign ?? 'Default design'); ?>
     </a>
   </div>
 </header>
 
 <?php if (count($categories) === 0): ?>
   <div class="alert alert-warning" role="alert">
-    Keine Board-Kategorien in der Datenbank. Bitte mindestens eine Kategorie anlegen.
+    <?php echo Security::escape($lang_adm_nocategories ?? 'There are no board categories yet. Please create at least one category.'); ?>
   </div>
 <?php else: ?>
   <?php foreach ($categories as $row): ?>
@@ -48,14 +48,14 @@ if ($catid > 0) {
             <?php echo Security::escape((string) $row['title']); ?>
           </a>
         </h2>
-        <div class="btn-group btn-group-sm" role="group" aria-label="Kategorie-Aktionen">
+        <div class="btn-group btn-group-sm" role="group" aria-label="<?php echo Security::escape($lang_adm_categoryactions ?? 'Category actions'); ?>">
           <a class="btn btn-outline-secondary"
              href="editboardcategory.php?catid=<?php echo (int) $row['id']; ?>">
-            <i class="bi bi-pencil" aria-hidden="true"></i> Kategorie bearbeiten
+            <i class="bi bi-pencil" aria-hidden="true"></i> <?php echo Security::escape($lang_adm_editcategory ?? 'Edit category'); ?>
           </a>
           <a class="btn btn-outline-secondary"
              href="boarddesign.php?catid=<?php echo (int) $row['id']; ?>">
-            <i class="bi bi-palette" aria-hidden="true"></i> Design anwenden
+            <i class="bi bi-palette" aria-hidden="true"></i> <?php echo Security::escape($lang_adm_applydesign ?? 'Apply design'); ?>
           </a>
         </div>
       </header>
@@ -65,26 +65,28 @@ if ($catid > 0) {
       if (count($boards) === 0):
           ?>
         <div class="card-body text-center text-body-secondary">
-          Keine Boards in dieser Kategorie.
+          <?php echo Security::escape($lang_noboardsincat ?? 'There are no boards in this category.'); ?>
         </div>
       <?php else: ?>
         <div class="table-responsive">
           <table class="table table-hover align-middle mb-0">
             <thead class="table-light">
               <tr>
-                <th scope="col" style="width:48px;"><span class="visually-hidden">Status</span></th>
-                <th scope="col">Board</th>
-                <th scope="col" style="width:240px;">Moderiert von</th>
-                <th scope="col" class="text-end" style="width:160px;">Aktion</th>
+                <th scope="col" style="width:48px;"><span class="visually-hidden"><?php echo Security::escape($lang_status ?? 'Status'); ?></span></th>
+                <th scope="col"><?php echo Security::escape($lang_board ?? 'Board'); ?></th>
+                <th scope="col" style="width:240px;"><?php echo Security::escape($lang_moderatedby ?? 'Moderated by'); ?></th>
+                <th scope="col" class="text-end" style="width:160px;"><?php echo Security::escape($lang_adm_action ?? 'Action'); ?></th>
               </tr>
             </thead>
             <tbody>
               <?php foreach ($boards as $row2):
                   $statusBadge = '';
                   if ($row2['status'] === 'Closed') {
-                      $statusBadge = '<span class="badge text-bg-secondary"><i class="bi bi-lock-fill" aria-hidden="true"></i> Closed</span>';
+                      $statusBadge = '<span class="badge text-bg-secondary"><i class="bi bi-lock-fill" aria-hidden="true"></i> '
+                          . Security::escape($lang_adm_status_closed ?? 'Closed') . '</span>';
                   } elseif ($row2['status'] === 'Private') {
-                      $statusBadge = '<span class="badge text-bg-warning"><i class="bi bi-shield-lock-fill" aria-hidden="true"></i> Private</span>';
+                      $statusBadge = '<span class="badge text-bg-warning"><i class="bi bi-shield-lock-fill" aria-hidden="true"></i> '
+                          . Security::escape($lang_adm_status_private ?? 'Private') . '</span>';
                   }
                   ?>
                 <tr>
@@ -132,7 +134,7 @@ if ($catid > 0) {
                   <td class="text-end">
                     <a class="btn btn-outline-primary btn-sm"
                        href="editboard.php?boardid=<?php echo (int) $row2['id']; ?>">
-                      <i class="bi bi-pencil" aria-hidden="true"></i> Bearbeiten
+                      <i class="bi bi-pencil" aria-hidden="true"></i> <?php echo Security::escape($lang_adm_edit ?? 'Edit'); ?>
                     </a>
                   </td>
                 </tr>

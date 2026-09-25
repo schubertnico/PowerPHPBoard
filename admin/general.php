@@ -18,7 +18,7 @@ $row = $db->fetchOne('SELECT * FROM ppb_config WHERE id = ?', [1]) ?? [];
 $editgeneral = Security::getInt('editgeneral', 'GET', 0);
 $saveSuccess = false;
 $formError = '';
-$languages = ['English', 'Deutsch-Sie', 'Deutsch-Du'];
+$languages = ['English' => 'English', 'Deutsch-Sie' => 'Deutsch (Sie)', 'Deutsch-Du' => 'Deutsch (Du)'];
 
 if ($editgeneral === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
     CSRF::validateOrDie();
@@ -43,20 +43,20 @@ if ($editgeneral === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $htmlcode = $htmlcode === 'ON' ? 'ON' : 'OFF';
     $bbcode = $bbcode === 'OFF' ? 'OFF' : 'ON';
     $smilies = $smilies === 'OFF' ? 'OFF' : 'ON';
-    if (!in_array($language, $languages, true)) {
+    if (!array_key_exists($language, $languages)) {
         $language = (string) ($row['language'] ?? 'English');
     }
 
     // Die Design-Felder (Farben, Button-Bilder) wirken im Bootstrap-Layout
     // nicht mehr und sind deshalb optional.
     if ($boardtitle === '' || $boardurl === '' || $adminemail === '') {
-        $formError = 'Bitte alle Pflichtfelder ausfüllen.';
+        $formError = $lang_adm_fillrequired ?? 'Please fill in all required fields.';
     } elseif (BoardUrl::base(['boardurl' => $boardurl]) === null) {
-        $formError = 'Bitte eine gültige Board-URL mit http:// oder https:// angeben, z. B. https://forum.example.org.';
+        $formError = $lang_adm_boardurlinvalid ?? 'Please enter a valid board URL starting with http:// or https://, e.g. https://forum.example.org.';
     } elseif (!Security::isValidEmail($adminemail)) {
-        $formError = 'Bitte eine gültige Admin-E-Mail-Adresse angeben.';
+        $formError = $lang_adm_adminemailinvalid ?? 'Please enter a valid administrator email address.';
     } elseif (!ppb_valid_template_setting($header) || !ppb_valid_template_setting($footer)) {
-        $formError = 'Header- und Footer-Template müssen Dateinamen aus dem Ordner inc/ sein oder leer bleiben.';
+        $formError = $lang_adm_templateinvalid ?? 'Header and footer templates must be file names from the inc/ folder or stay empty.';
     } else {
         $db->execute(
             'UPDATE ppb_config SET boardtitle = ?, boardurl = ?, adminemail = ?, header = ?, footer = ?, bordercolor = ?, tablebg1 = ?, tablebg2 = ?, tablebg3 = ?, htmlcode = ?, bbcode = ?, smilies = ?, newthread = ?, newpost = ?, language = ? WHERE id = ?',
@@ -88,17 +88,23 @@ if ($editgeneral === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
         ));
     }
 }
+
+$features = [
+    ['htmlcode', $lang_adm_htmlinposts ?? 'HTML in posts', $lang_adm_htmlhelp ?? 'Only simple formatting tags without attributes (b, i, u, p, ul, li …); links and images via BBCode.', $row['htmlcode'] ?? 'OFF'],
+    ['bbcode', $lang_adm_bbcodeinposts ?? 'BBCode in posts', '', $row['bbcode'] ?? 'ON'],
+    ['smilies', $lang_adm_smiliesinposts ?? 'Smilies in posts', '', $row['smilies'] ?? 'ON'],
+];
 ?>
 
 <header class="mb-3">
-  <h1 class="h3 mb-1"><i class="bi bi-sliders" aria-hidden="true"></i> Allgemeine Einstellungen</h1>
-  <p class="text-body-secondary mb-0">Allgemeines Forum-Setup, Standard-Design und Feature-Schalter.</p>
+  <h1 class="h3 mb-1"><i class="bi bi-sliders" aria-hidden="true"></i> <?php echo Security::escape($lang_adm_generalsettings ?? 'General settings'); ?></h1>
+  <p class="text-body-secondary mb-0"><?php echo Security::escape($lang_adm_generalintro ?? 'Name, address and language of the board, default design and features.'); ?></p>
 </header>
 
 <?php if ($saveSuccess): ?>
   <div class="alert alert-success" role="alert">
     <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
-    Einstellungen wurden gespeichert.
+    <?php echo Security::escape($lang_adm_settingssaved ?? 'The settings have been saved.'); ?>
   </div>
 <?php endif; ?>
 <?php if ($formError !== ''): ?>
@@ -113,41 +119,41 @@ if ($editgeneral === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
   <section class="card shadow-sm mb-3">
     <header class="card-header bg-secondary-subtle">
-      <h2 class="h6 mb-0"><i class="bi bi-info-circle" aria-hidden="true"></i> Allgemeine Informationen</h2>
+      <h2 class="h6 mb-0"><i class="bi bi-info-circle" aria-hidden="true"></i> <?php echo Security::escape($lang_adm_generalinfo ?? 'General information'); ?></h2>
     </header>
     <div class="card-body">
       <div class="row g-3">
         <div class="col-md-6">
-          <label for="boardtitle" class="form-label fw-semibold">Boardtitel</label>
+          <label for="boardtitle" class="form-label fw-semibold"><?php echo Security::escape($lang_adm_boardtitle ?? 'Board title'); ?></label>
           <input id="boardtitle" name="boardtitle" type="text" class="form-control"
                  maxlength="200" required
                  value="<?php echo Security::escape((string) ($row['boardtitle'] ?? '')); ?>">
-          <div class="form-text">Wird als Marke im Header und Browser-Tab angezeigt.</div>
-          <div class="invalid-feedback">Bitte einen Boardtitel angeben.</div>
+          <div class="form-text"><?php echo Security::escape($lang_adm_boardtitlehelp ?? 'Shown in the navigation bar and in the browser tab.'); ?></div>
+          <div class="invalid-feedback"><?php echo Security::escape($lang_adm_insertboardtitle ?? 'Please enter a board title.'); ?></div>
         </div>
         <div class="col-md-6">
-          <label for="boardurl" class="form-label fw-semibold">Board-URL</label>
+          <label for="boardurl" class="form-label fw-semibold"><?php echo Security::escape($lang_adm_boardurl ?? 'Board URL'); ?></label>
           <input id="boardurl" name="boardurl" type="url" class="form-control"
                  maxlength="250" required placeholder="https://forum.example.org"
                  value="<?php echo Security::escape((string) ($row['boardurl'] ?? '')); ?>">
-          <div class="form-text">Adresse des Forums, z. B. https://forum.example.org. Wird für Links in E-Mails verwendet (Registrierung, Passwort vergessen).</div>
-          <div class="invalid-feedback">Bitte die vollständige Adresse mit https:// oder http:// angeben.</div>
+          <div class="form-text"><?php echo Security::escape($lang_adm_boardurlhelp ?? 'Address of the board, e.g. https://forum.example.org. Used for links in emails (registration, forgotten password).'); ?></div>
+          <div class="invalid-feedback"><?php echo Security::escape($lang_adm_boardurlfeedback ?? 'Please enter the full address starting with https:// or http://.'); ?></div>
         </div>
         <div class="col-md-6">
-          <label for="adminemail" class="form-label fw-semibold">Admin-E-Mail</label>
+          <label for="adminemail" class="form-label fw-semibold"><?php echo Security::escape($lang_adm_adminemail ?? 'Administrator email'); ?></label>
           <input id="adminemail" name="adminemail" type="email" class="form-control"
                  maxlength="100" required
                  value="<?php echo Security::escape((string) ($row['adminemail'] ?? '')); ?>">
-          <div class="form-text">Absender der E-Mails des Forums.</div>
-          <div class="invalid-feedback">Bitte eine gültige E-Mail-Adresse angeben.</div>
+          <div class="form-text"><?php echo Security::escape($lang_adm_adminemailhelp ?? 'Sender address of the emails sent by the board.'); ?></div>
+          <div class="invalid-feedback"><?php echo Security::escape($lang_insertvalidemail ?? 'Please enter a valid email address.'); ?></div>
         </div>
         <div class="col-md-6">
-          <label for="language" class="form-label fw-semibold">Sprache</label>
+          <label for="language" class="form-label fw-semibold"><?php echo Security::escape($lang_adm_language ?? 'Language'); ?></label>
           <select id="language" name="language" class="form-select">
-            <?php foreach ($languages as $lang): ?>
-              <option value="<?php echo Security::escape($lang); ?>"
-                <?php echo ($row['language'] ?? '') === $lang ? 'selected' : ''; ?>>
-                <?php echo Security::escape($lang); ?>
+            <?php foreach ($languages as $value => $label): ?>
+              <option value="<?php echo Security::escape($value); ?>"
+                <?php echo ($row['language'] ?? '') === $value ? 'selected' : ''; ?>>
+                <?php echo Security::escape($label); ?>
               </option>
             <?php endforeach; ?>
           </select>
@@ -158,117 +164,34 @@ if ($editgeneral === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
   <section class="card shadow-sm mb-3">
     <header class="card-header bg-secondary-subtle">
-      <h2 class="h6 mb-0"><i class="bi bi-palette" aria-hidden="true"></i> Standard-Design</h2>
+      <h2 class="h6 mb-0"><i class="bi bi-palette" aria-hidden="true"></i> <?php echo Security::escape($lang_adm_defaultdesign ?? 'Default design'); ?></h2>
     </header>
     <div class="card-body">
-      <div class="alert alert-info small d-flex align-items-start gap-2 mb-3" role="alert">
-        <i class="bi bi-info-circle-fill fs-5" aria-hidden="true"></i>
-        <div>
-          <strong>Hinweis:</strong> Im neuen Bootstrap-5-Layout werden die Farb- und
-          Button-Bild-Felder <strong>nicht mehr</strong> für die Darstellung verwendet.
-          Sie bleiben aus Kompatibilitätsgründen erhalten und werden als Defaults an
-          neue Boards / Kategorien vererbt.
-        </div>
-      </div>
-      <div class="row g-3">
-        <div class="col-md-6">
-          <label for="header" class="form-label">Eigenes Header-Template</label>
-          <input id="header" name="header" type="text" class="form-control" maxlength="250"
-                 value="<?php echo Security::escape((string) ($row['header'] ?? '')); ?>"
-                 aria-describedby="headerHelp">
-          <div id="headerHelp" class="form-text">Dateiname aus dem <code>inc/</code>-Ordner. Leer = Standard-Header.</div>
-        </div>
-        <div class="col-md-6">
-          <label for="footer" class="form-label">Eigenes Footer-Template</label>
-          <input id="footer" name="footer" type="text" class="form-control" maxlength="250"
-                 value="<?php echo Security::escape((string) ($row['footer'] ?? '')); ?>"
-                 aria-describedby="footerHelp">
-          <div id="footerHelp" class="form-text">Dateiname aus dem <code>inc/</code>-Ordner. Leer = Standard-Footer.</div>
-        </div>
-        <div class="col-md-4">
-          <label for="bordercolor" class="form-label">Rahmenfarbe</label>
-          <div class="input-group">
-            <input id="bordercolor" name="bordercolor" type="text" class="form-control"
-                   maxlength="7"
-                   value="<?php echo Security::escape((string) ($row['bordercolor'] ?? '')); ?>"
-                   aria-describedby="bordercolorHelp">
-            <span class="input-group-text" style="background:<?php echo Security::escape((string) ($row['bordercolor'] ?? '#000')); ?>;width:40px;" aria-hidden="true">&nbsp;</span>
-          </div>
-          <div id="bordercolorHelp" class="form-text">Hex-Farbcode, z.B. <code>#000000</code></div>
-        </div>
-        <div class="col-md-4">
-          <label for="tablebg1" class="form-label">Tabelle Hintergrund 1</label>
-          <div class="input-group">
-            <input id="tablebg1" name="tablebg1" type="text" class="form-control"
-                   maxlength="7"
-                   value="<?php echo Security::escape((string) ($row['tablebg1'] ?? '')); ?>">
-            <span class="input-group-text" style="background:<?php echo Security::escape((string) ($row['tablebg1'] ?? '#fff')); ?>;width:40px;" aria-hidden="true">&nbsp;</span>
-          </div>
-          <div class="form-text">Helle Tabellenzeile</div>
-        </div>
-        <div class="col-md-4">
-          <label for="tablebg2" class="form-label">Tabelle Hintergrund 2</label>
-          <div class="input-group">
-            <input id="tablebg2" name="tablebg2" type="text" class="form-control"
-                   maxlength="7"
-                   value="<?php echo Security::escape((string) ($row['tablebg2'] ?? '')); ?>">
-            <span class="input-group-text" style="background:<?php echo Security::escape((string) ($row['tablebg2'] ?? '#eee')); ?>;width:40px;" aria-hidden="true">&nbsp;</span>
-          </div>
-          <div class="form-text">Wechsel-Zeile</div>
-        </div>
-        <div class="col-md-4">
-          <label for="tablebg3" class="form-label">Tabelle Hintergrund 3</label>
-          <div class="input-group">
-            <input id="tablebg3" name="tablebg3" type="text" class="form-control"
-                   maxlength="7"
-                   value="<?php echo Security::escape((string) ($row['tablebg3'] ?? '')); ?>">
-            <span class="input-group-text" style="background:<?php echo Security::escape((string) ($row['tablebg3'] ?? '#ccc')); ?>;width:40px;" aria-hidden="true">&nbsp;</span>
-          </div>
-          <div class="form-text">Tabellen-Header</div>
-        </div>
-        <div class="col-md-4">
-          <label for="newthread" class="form-label">Bild für "Neuer Thread"-Button</label>
-          <input id="newthread" name="newthread" type="text" class="form-control" maxlength="250"
-                 value="<?php echo Security::escape((string) ($row['newthread'] ?? '')); ?>"
-                 aria-describedby="newthreadHelp">
-          <div id="newthreadHelp" class="form-text">Pfad zu einem 120×20-px-GIF/PNG, z.B. <code>images/newthread.gif</code></div>
-        </div>
-        <div class="col-md-4">
-          <label for="newpost" class="form-label">Bild für "Neuer Beitrag"-Button</label>
-          <input id="newpost" name="newpost" type="text" class="form-control" maxlength="250"
-                 value="<?php echo Security::escape((string) ($row['newpost'] ?? '')); ?>"
-                 aria-describedby="newpostHelp">
-          <div id="newpostHelp" class="form-text">Pfad zu einem 120×20-px-GIF/PNG, z.B. <code>images/newpost.gif</code></div>
-        </div>
-      </div>
+      <?php echo ppb_admin_design_fields($row, $lang_adm_designnote_general ?? 'The Bootstrap 5 layout no longer uses the colour and button image fields. They are optional, kept for compatibility and passed on as defaults to new boards and categories.'); ?>
     </div>
   </section>
 
   <section class="card shadow-sm mb-3">
     <header class="card-header bg-secondary-subtle">
-      <h2 class="h6 mb-0"><i class="bi bi-toggles" aria-hidden="true"></i> Feature-Einstellungen</h2>
+      <h2 class="h6 mb-0"><i class="bi bi-toggles" aria-hidden="true"></i> <?php echo Security::escape($lang_adm_features ?? 'Features'); ?></h2>
     </header>
     <div class="card-body">
-      <?php
-      $features = [
-          ['htmlcode', 'HTML in Beiträgen', $row['htmlcode'] ?? 'OFF'],
-          ['bbcode',   'BBCode in Beiträgen', $row['bbcode'] ?? 'ON'],
-          ['smilies',  'Smilies in Beiträgen', $row['smilies'] ?? 'ON'],
-      ];
-foreach ($features as [$name, $label, $val]):
-    ?>
+      <?php foreach ($features as [$name, $label, $help, $val]): ?>
         <fieldset class="mb-2">
           <legend class="form-label fw-semibold mb-1 fs-6"><?php echo Security::escape($label); ?></legend>
           <div class="form-check form-check-inline">
             <input class="form-check-input" type="radio" name="<?php echo $name; ?>"
                    id="<?php echo $name; ?>On" value="ON" <?php echo $val === 'ON' ? 'checked' : ''; ?>>
-            <label class="form-check-label" for="<?php echo $name; ?>On">an</label>
+            <label class="form-check-label" for="<?php echo $name; ?>On"><?php echo Security::escape($lang_on ?? 'on'); ?></label>
           </div>
           <div class="form-check form-check-inline">
             <input class="form-check-input" type="radio" name="<?php echo $name; ?>"
                    id="<?php echo $name; ?>Off" value="OFF" <?php echo $val !== 'ON' ? 'checked' : ''; ?>>
-            <label class="form-check-label" for="<?php echo $name; ?>Off">aus</label>
+            <label class="form-check-label" for="<?php echo $name; ?>Off"><?php echo Security::escape($lang_off ?? 'off'); ?></label>
           </div>
+          <?php if ($help !== ''): ?>
+            <div class="form-text mt-0"><?php echo Security::escape($help); ?></div>
+          <?php endif; ?>
         </fieldset>
       <?php endforeach; ?>
     </div>
@@ -276,13 +199,13 @@ foreach ($features as [$name, $label, $val]):
 
   <div class="d-flex flex-wrap gap-2 mb-4">
     <button type="submit" class="btn btn-primary">
-      <i class="bi bi-save" aria-hidden="true"></i> Einstellungen speichern
+      <i class="bi bi-save" aria-hidden="true"></i> <?php echo Security::escape($lang_adm_savesettings ?? 'Save settings'); ?>
     </button>
     <button type="reset" class="btn btn-outline-secondary">
-      <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Zurücksetzen
+      <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> <?php echo Security::escape($lang_reset ?? 'Reset'); ?>
     </button>
     <a class="btn btn-link" href="index.php">
-      Zurück zur Übersicht
+      <?php echo Security::escape($lang_adm_backtooverview ?? 'Back to the overview'); ?>
     </a>
   </div>
 </form>

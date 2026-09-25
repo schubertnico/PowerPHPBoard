@@ -9,6 +9,7 @@ declare(strict_types=1);
  */
 
 use PowerPHPBoard\Auth;
+use PowerPHPBoard\CSRF;
 use PowerPHPBoard\Database;
 use PowerPHPBoard\Security;
 use PowerPHPBoard\Session;
@@ -51,46 +52,52 @@ $loggedin = $ppbuser !== [] ? 'YES' : 'NO';
 
 // Admin guard: nur Administratoren dürfen den Adminbereich sehen
 $isAdmin = Auth::isAdmin($ppbuser !== [] ? $ppbuser : null);
+
+// Ein ungültiges CSRF-Token wird hier freundlich gemeldet, bevor eine Seite
+// etwas ändert (die Seiten prüfen zusätzlich selbst mit validateOrDie()).
+$csrfFailed = $isAdmin && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && !CSRF::validateFromPost();
+
+$adminTitle = $lang_adm_title ?? 'Administration';
 ?>
 <!DOCTYPE html>
-<html lang="de">
+<html lang="<?php echo Security::escape($lang_htmllang ?? 'en'); ?>">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Adminbereich &middot; PowerPHPBoard</title>
+<title><?php echo Security::escape($adminTitle . ' – ' . ($settings['boardtitle'] ?? 'PowerPHPBoard')); ?></title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <link rel="stylesheet" href="../ppb.css">
 </head>
 <body class="bg-body-tertiary d-flex flex-column min-vh-100">
-<nav class="navbar navbar-expand-lg navbar-dark bg-danger" aria-label="Adminbereich-Navigation">
+<nav class="navbar navbar-expand-lg navbar-dark bg-danger" aria-label="<?php echo Security::escape($lang_adm_nav ?? 'Administration navigation'); ?>">
   <div class="container-xl">
     <a class="navbar-brand fw-semibold" href="index.php">
       <i class="bi bi-shield-lock-fill" aria-hidden="true"></i>
-      Adminbereich
+      <?php echo Security::escape($adminTitle); ?>
     </a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
             data-bs-target="#adminNav" aria-controls="adminNav" aria-expanded="false"
-            aria-label="Navigation umschalten">
+            aria-label="<?php echo Security::escape($lang_togglenav ?? 'Toggle navigation'); ?>">
       <span class="navbar-toggler-icon"></span>
     </button>
     <div class="collapse navbar-collapse" id="adminNav">
       <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-        <li class="nav-item"><a class="nav-link" href="index.php"><i class="bi bi-grid" aria-hidden="true"></i> Übersicht</a></li>
-        <li class="nav-item"><a class="nav-link" href="general.php"><i class="bi bi-sliders" aria-hidden="true"></i> Allgemein</a></li>
-        <li class="nav-item"><a class="nav-link" href="boards.php"><i class="bi bi-folder2-open" aria-hidden="true"></i> Boards</a></li>
-        <li class="nav-item"><a class="nav-link" href="user.php"><i class="bi bi-people" aria-hidden="true"></i> Nutzer</a></li>
+        <li class="nav-item"><a class="nav-link" href="index.php"><i class="bi bi-grid" aria-hidden="true"></i> <?php echo Security::escape($lang_adm_overview ?? 'Overview'); ?></a></li>
+        <li class="nav-item"><a class="nav-link" href="general.php"><i class="bi bi-sliders" aria-hidden="true"></i> <?php echo Security::escape($lang_adm_general ?? 'General'); ?></a></li>
+        <li class="nav-item"><a class="nav-link" href="boards.php"><i class="bi bi-folder2-open" aria-hidden="true"></i> <?php echo Security::escape($lang_adm_boards ?? 'Boards'); ?></a></li>
+        <li class="nav-item"><a class="nav-link" href="user.php"><i class="bi bi-people" aria-hidden="true"></i> <?php echo Security::escape($lang_adm_users ?? 'Users'); ?></a></li>
       </ul>
       <ul class="navbar-nav align-items-lg-center">
-        <li class="nav-item"><a class="nav-link" href="../index.php"><i class="bi bi-house-door" aria-hidden="true"></i> Forum</a></li>
+        <li class="nav-item"><a class="nav-link" href="../index.php"><i class="bi bi-house-door" aria-hidden="true"></i> <?php echo Security::escape($lang_adm_forum ?? 'Forum'); ?></a></li>
         <?php if ($loggedin === 'YES'): ?>
           <li class="nav-item nav-link mb-0">
             <i class="bi bi-person-check" aria-hidden="true"></i>
             <strong><?php echo Security::escape((string) ($ppbuser['username'] ?? '')); ?></strong>
           </li>
-          <li class="nav-item"><a class="nav-link" href="../logout.php"><i class="bi bi-box-arrow-right" aria-hidden="true"></i> Logout</a></li>
+          <li class="nav-item"><a class="nav-link" href="../logout.php"><i class="bi bi-box-arrow-right" aria-hidden="true"></i> <?php echo Security::escape($lang_logout ?? 'Logout'); ?></a></li>
         <?php else: ?>
-          <li class="nav-item"><a class="nav-link" href="../login.php"><i class="bi bi-box-arrow-in-right" aria-hidden="true"></i> Login</a></li>
+          <li class="nav-item"><a class="nav-link" href="../login.php"><i class="bi bi-box-arrow-in-right" aria-hidden="true"></i> <?php echo Security::escape($lang_login ?? 'Login'); ?></a></li>
         <?php endif; ?>
       </ul>
     </div>
@@ -99,13 +106,18 @@ $isAdmin = Auth::isAdmin($ppbuser !== [] ? $ppbuser : null);
 
 <main class="container-xl py-4 flex-grow-1" role="main">
 
-<?php if (!$isAdmin): ?>
+<?php if (!$isAdmin || $csrfFailed): ?>
   <div class="alert alert-danger d-flex align-items-center gap-2" role="alert">
     <i class="bi bi-shield-exclamation fs-4" aria-hidden="true"></i>
     <div>
-      <strong>Kein Zugriff.</strong>
-      Diese Seite ist nur für Administratoren erreichbar. Bitte
-      <a class="alert-link" href="../login.php">einloggen</a>.
+      <?php if (!$isAdmin): ?>
+        <strong><?php echo Security::escape($lang_adm_noaccess ?? 'No access.'); ?></strong>
+        <?php echo Security::escape($lang_adm_noaccesstext ?? 'This area is only available to administrators.'); ?>
+        <a class="alert-link" href="../login.php"><?php echo Security::escape($lang_login ?? 'Login'); ?></a>
+      <?php else: ?>
+        <?php echo Security::escape($lang_csrfinvalid ?? 'The security token is invalid. Please reload the page and try again.'); ?>
+        <a class="alert-link" href="index.php"><?php echo Security::escape($lang_adm_backtooverview ?? 'Back to the overview'); ?></a>
+      <?php endif; ?>
     </div>
   </div>
   </main>

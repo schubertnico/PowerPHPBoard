@@ -15,9 +15,6 @@ include __DIR__ . '/header.inc.php';
 
 $boarddesign = Security::getInt('boarddesign', 'GET', 0);
 $applied = false;
-$confirmText = '';
-$confirmTitle = '';
-$confirmHref = '';
 
 // Übernehmen ändert Daten und geht deshalb nur per POST mit CSRF-Token
 if ($boarddesign === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -55,28 +52,28 @@ if ($boarddesign === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
         );
         $applied = true;
     }
+}
+
+if ($catid > 0) {
+    $confirmTitle = $lang_adm_applycategorydesign_title ?? 'Apply the category design to all boards of this category';
+    $confirmText = $lang_adm_applycategorydesign_text ?? 'Do you really want all boards of this category to take over the design of the category?';
+    $confirmHref = 'boarddesign.php?boarddesign=1&catid=' . $catid;
 } else {
-    if ($catid > 0) {
-        $confirmTitle = 'Alle Boards dieser Kategorie auf Kategorie-Design setzen';
-        $confirmText = 'Sollen wirklich alle Boards in dieser Kategorie auf das Design der Kategorie zurückgesetzt werden?';
-        $confirmHref = 'boarddesign.php?boarddesign=1&catid=' . $catid;
-    } else {
-        $confirmTitle = 'Alle Boards auf Default-Design setzen';
-        $confirmText = 'Sollen wirklich alle Boards und Kategorien auf das Default-Design zurückgesetzt werden?';
-        $confirmHref = 'boarddesign.php?boarddesign=1';
-    }
+    $confirmTitle = $lang_adm_applydefaultdesign_title ?? 'Apply the default design to all boards';
+    $confirmText = $lang_adm_applydefaultdesign_text ?? 'Do you really want all boards and categories to take over the default design?';
+    $confirmHref = 'boarddesign.php?boarddesign=1';
 }
 ?>
 
 <header class="mb-3">
-  <h1 class="h3 mb-0"><i class="bi bi-palette" aria-hidden="true"></i> Board-Design</h1>
+  <h1 class="h3 mb-0"><i class="bi bi-palette" aria-hidden="true"></i> <?php echo Security::escape($lang_adm_boarddesign ?? 'Board design'); ?></h1>
 </header>
 
 <?php if ($applied): ?>
   <div class="alert alert-success" role="alert">
     <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
-    Design wurde uebernommen.
-    <a class="alert-link" href="boards.php">Zurück zur Board-Verwaltung</a>.
+    <?php echo Security::escape($lang_adm_designapplied ?? 'The design has been applied.'); ?>
+    <a class="alert-link" href="boards.php"><?php echo Security::escape($lang_adm_backtoboards ?? 'Back to board management'); ?></a>
   </div>
 <?php else: ?>
   <section class="card shadow-sm border-warning mb-4">
@@ -88,15 +85,16 @@ if ($boarddesign === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
     </header>
     <div class="card-body">
       <p class="mb-3"><?php echo Security::escape($confirmText); ?></p>
+      <p class="small text-body-secondary mb-3"><?php echo Security::escape($lang_adm_designnote_edit ?? 'The Bootstrap 5 layout no longer uses these fields. They are optional and kept for compatibility; changes here have no visible effect in the board.'); ?></p>
       <div class="d-flex flex-wrap gap-2">
         <form action="<?php echo Security::escape($confirmHref); ?>" method="post" class="d-inline">
           <?php echo CSRF::getTokenField(); ?>
           <button type="submit" class="btn btn-warning">
-            <i class="bi bi-check-lg" aria-hidden="true"></i> Ja, anwenden
+            <i class="bi bi-check-lg" aria-hidden="true"></i> <?php echo Security::escape($lang_adm_yesapply ?? 'Yes, apply'); ?>
           </button>
         </form>
         <a href="boards.php" class="btn btn-outline-secondary">
-          <i class="bi bi-x-lg" aria-hidden="true"></i> Abbrechen
+          <i class="bi bi-x-lg" aria-hidden="true"></i> <?php echo Security::escape($lang_adm_cancel ?? 'Cancel'); ?>
         </a>
       </div>
     </div>

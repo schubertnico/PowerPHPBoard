@@ -18,13 +18,21 @@ $filterStatus = Security::getString('status', 'GET');
 $page = max(1, Security::getInt('page', 'GET', 1));
 $perPage = 25;
 
+// Sichtbare Bezeichnungen der Status (die Werte in der Datenbank bleiben englisch)
+$statusLabels = [
+    'Administrator' => $lang_administrator ?? 'Administrator',
+    'Normal user' => $lang_adm_status_normal ?? 'Normal user',
+    'Deactivated' => $lang_deactivated ?? 'Deactivated',
+];
+
 // Sicherer Status-Filter (nur erlaubte Werte)
-$allowedStatus = ['Administrator', 'Normal user', 'Deactivated'];
 $statusWhere = '';
 $statusParams = [];
-if (in_array($filterStatus, $allowedStatus, true)) {
+if (array_key_exists($filterStatus, $statusLabels)) {
     $statusWhere = ' AND status = ?';
     $statusParams = [$filterStatus];
+} else {
+    $filterStatus = '';
 }
 
 if ($username !== '') {
@@ -57,12 +65,14 @@ if ($username !== '') {
 /**
  * Render Status-Badge for ppb_users.status
  */
-$renderStatusBadge = static function (string $status): string {
+$renderStatusBadge = static function (string $status) use ($statusLabels): string {
+    $label = htmlspecialchars($statusLabels[$status] ?? $status, ENT_QUOTES, 'UTF-8');
+
     return match ($status) {
-        'Administrator' => '<span class="badge text-bg-danger">Administrator</span>',
-        'Deactivated' => '<span class="badge text-bg-secondary">Deaktiviert</span>',
-        'Normal user' => '<span class="badge text-bg-success-subtle text-success-emphasis border">Normal</span>',
-        default => '<span class="badge text-bg-light text-dark border">' . htmlspecialchars($status, ENT_QUOTES, 'UTF-8') . '</span>',
+        'Administrator' => '<span class="badge text-bg-danger">' . $label . '</span>',
+        'Deactivated' => '<span class="badge text-bg-secondary">' . $label . '</span>',
+        'Normal user' => '<span class="badge text-bg-success-subtle text-success-emphasis border">' . $label . '</span>',
+        default => '<span class="badge text-bg-light text-dark border">' . $label . '</span>',
     };
 };
 
@@ -77,37 +87,43 @@ $filterUrl = static function (?string $status, int $page = 1): string {
     }
     return 'user.php' . ($params === [] ? '' : '?' . http_build_query($params));
 };
+
+$filters = [
+    ['', '', $lang_adm_all ?? 'All', 'SELECT COUNT(*) c FROM ppb_users'],
+    ['Administrator', 'bi-shield-fill-check', $lang_adm_administrators ?? 'Administrators', "SELECT COUNT(*) c FROM ppb_users WHERE status = 'Administrator'"],
+    ['Normal user', 'bi-person', $lang_adm_normalusers ?? 'Normal users', "SELECT COUNT(*) c FROM ppb_users WHERE status = 'Normal user'"],
+    ['Deactivated', 'bi-person-slash', $lang_deactivated ?? 'Deactivated', "SELECT COUNT(*) c FROM ppb_users WHERE status = 'Deactivated'"],
+];
 ?>
 
 <header class="d-flex flex-wrap align-items-center justify-content-between mb-3 gap-2">
-  <h1 class="h3 mb-0"><i class="bi bi-people" aria-hidden="true"></i> Nutzerverwaltung</h1>
+  <h1 class="h3 mb-0"><i class="bi bi-people" aria-hidden="true"></i> <?php echo Security::escape($lang_adm_usermanagement ?? 'User management'); ?></h1>
   <a class="btn btn-primary btn-sm" href="adduser.php">
-    <i class="bi bi-person-plus" aria-hidden="true"></i> Nutzer anlegen
+    <i class="bi bi-person-plus" aria-hidden="true"></i> <?php echo Security::escape($lang_adm_adduser ?? 'Add user'); ?>
   </a>
 </header>
 
 <section class="card shadow-sm mb-3">
   <header class="card-header bg-secondary-subtle">
-    <h2 class="h6 mb-0"><i class="bi bi-search" aria-hidden="true"></i> Nutzer suchen</h2>
+    <h2 class="h6 mb-0"><i class="bi bi-search" aria-hidden="true"></i> <?php echo Security::escape($lang_adm_searchuser ?? 'Search users'); ?></h2>
   </header>
   <div class="card-body">
     <form action="user.php" method="post" class="row g-2">
       <?php echo CSRF::getTokenField(); ?>
       <div class="col-sm-8">
-        <label for="username" class="form-label fw-semibold">Benutzername</label>
+        <label for="username" class="form-label fw-semibold"><?php echo Security::escape($lang_username ?? 'Username'); ?></label>
         <input id="username" name="username" type="text" class="form-control"
                maxlength="50" value="<?php echo Security::escape($username); ?>"
                aria-describedby="usernameHelp">
       </div>
       <div class="col-sm-4 d-flex align-items-end">
         <button type="submit" class="btn btn-primary w-100">
-          <i class="bi bi-search" aria-hidden="true"></i> Suchen
+          <i class="bi bi-search" aria-hidden="true"></i> <?php echo Security::escape($lang_adm_search ?? 'Search'); ?>
         </button>
       </div>
       <div class="col-12">
         <div id="usernameHelp" class="form-text mt-0">
-          Teil-String reicht; Suche per <code>LIKE %...%</code>. Leer lassen, um alle
-          Nutzer in der Liste unten anzuzeigen.
+          <?php echo Security::escape($lang_adm_searchhelp ?? 'Part of the name is enough. Leave empty to show all users in the list below.'); ?>
         </div>
       </div>
     </form>
@@ -117,33 +133,16 @@ $filterUrl = static function (?string $status, int $page = 1): string {
 <?php if ($username === ''): ?>
   <!-- Filter-Tabs für Listen-Modus -->
   <ul class="nav nav-pills mb-3 small">
-    <li class="nav-item">
-      <a class="nav-link <?php echo $filterStatus === '' ? 'active' : ''; ?>"
-         href="<?php echo Security::escape($filterUrl(null)); ?>">
-        Alle <span class="badge text-bg-secondary ms-1"><?php echo (int) ($db->fetchOne('SELECT COUNT(*) c FROM ppb_users')['c'] ?? 0); ?></span>
-      </a>
-    </li>
-    <li class="nav-item">
-      <a class="nav-link <?php echo $filterStatus === 'Administrator' ? 'active' : ''; ?>"
-         href="<?php echo Security::escape($filterUrl('Administrator')); ?>">
-        <i class="bi bi-shield-fill-check" aria-hidden="true"></i> Administratoren
-        <span class="badge text-bg-secondary ms-1"><?php echo (int) ($db->fetchOne("SELECT COUNT(*) c FROM ppb_users WHERE status = 'Administrator'")['c'] ?? 0); ?></span>
-      </a>
-    </li>
-    <li class="nav-item">
-      <a class="nav-link <?php echo $filterStatus === 'Normal user' ? 'active' : ''; ?>"
-         href="<?php echo Security::escape($filterUrl('Normal user')); ?>">
-        <i class="bi bi-person" aria-hidden="true"></i> Normale Nutzer
-        <span class="badge text-bg-secondary ms-1"><?php echo (int) ($db->fetchOne("SELECT COUNT(*) c FROM ppb_users WHERE status = 'Normal user'")['c'] ?? 0); ?></span>
-      </a>
-    </li>
-    <li class="nav-item">
-      <a class="nav-link <?php echo $filterStatus === 'Deactivated' ? 'active' : ''; ?>"
-         href="<?php echo Security::escape($filterUrl('Deactivated')); ?>">
-        <i class="bi bi-person-slash" aria-hidden="true"></i> Deaktiviert
-        <span class="badge text-bg-secondary ms-1"><?php echo (int) ($db->fetchOne("SELECT COUNT(*) c FROM ppb_users WHERE status = 'Deactivated'")['c'] ?? 0); ?></span>
-      </a>
-    </li>
+    <?php foreach ($filters as [$value, $icon, $label, $countSql]): ?>
+      <li class="nav-item">
+        <a class="nav-link <?php echo $filterStatus === $value ? 'active' : ''; ?>"
+           href="<?php echo Security::escape($filterUrl($value !== '' ? $value : null)); ?>">
+          <?php if ($icon !== ''): ?><i class="bi <?php echo $icon; ?>" aria-hidden="true"></i><?php endif; ?>
+          <?php echo Security::escape($label); ?>
+          <span class="badge text-bg-secondary ms-1"><?php echo (int) ($db->fetchOne($countSql)['c'] ?? 0); ?></span>
+        </a>
+      </li>
+    <?php endforeach; ?>
   </ul>
 <?php endif; ?>
 
@@ -151,11 +150,11 @@ $filterUrl = static function (?string $status, int $page = 1): string {
   <header class="card-header bg-secondary-subtle d-flex flex-wrap align-items-center justify-content-between gap-2">
     <h2 class="h6 mb-0">
       <?php if ($username !== ''): ?>
-        Suchergebnisse für "<?php echo Security::escape($username); ?>"
+        <?php echo Security::escape(sprintf($lang_adm_searchresults ?? 'Search results for "%s"', $username)); ?>
       <?php elseif ($filterStatus !== ''): ?>
-        Nutzerliste – <?php echo Security::escape($filterStatus); ?>
+        <?php echo Security::escape(($lang_adm_userlist ?? 'User list') . ' – ' . $statusLabels[$filterStatus]); ?>
       <?php else: ?>
-        Nutzerliste
+        <?php echo Security::escape($lang_adm_userlist ?? 'User list'); ?>
       <?php endif; ?>
     </h2>
     <span class="badge text-bg-secondary"><?php echo $totalUsers; ?></span>
@@ -163,7 +162,7 @@ $filterUrl = static function (?string $status, int $page = 1): string {
 
   <?php if (count($users) === 0): ?>
     <div class="card-body text-center text-body-secondary">
-      <?php echo $username !== '' ? 'Keine Nutzer gefunden.' : 'Keine Nutzer in dieser Liste.'; ?>
+      <?php echo Security::escape($username !== '' ? ($lang_adm_nousersfound ?? 'No users found.') : ($lang_adm_nousersinlist ?? 'There are no users in this list.')); ?>
     </div>
   <?php else: ?>
     <div class="table-responsive">
@@ -171,11 +170,11 @@ $filterUrl = static function (?string $status, int $page = 1): string {
         <thead class="table-light">
           <tr>
             <th scope="col" style="width:60px;">ID</th>
-            <th scope="col">Benutzername</th>
-            <th scope="col" class="d-none d-md-table-cell">E-Mail</th>
-            <th scope="col" class="d-none d-md-table-cell">Status</th>
-            <th scope="col" class="d-none d-lg-table-cell" style="width:120px;">Registriert</th>
-            <th scope="col" class="text-end" style="width:160px;">Aktion</th>
+            <th scope="col"><?php echo Security::escape($lang_username ?? 'Username'); ?></th>
+            <th scope="col" class="d-none d-md-table-cell"><?php echo Security::escape($lang_email ?? 'Email'); ?></th>
+            <th scope="col" class="d-none d-md-table-cell"><?php echo Security::escape($lang_status ?? 'Status'); ?></th>
+            <th scope="col" class="d-none d-lg-table-cell" style="width:120px;"><?php echo Security::escape($lang_adm_registered ?? 'Registered'); ?></th>
+            <th scope="col" class="text-end" style="width:160px;"><?php echo Security::escape($lang_adm_action ?? 'Action'); ?></th>
           </tr>
         </thead>
         <tbody>
@@ -187,7 +186,7 @@ $filterUrl = static function (?string $status, int $page = 1): string {
               <td>
                 <span class="fw-semibold"><?php echo Security::escape((string) $row['username']); ?></span>
                 <?php if ($row['status'] === 'Administrator'): ?>
-                  <i class="bi bi-shield-fill-check text-danger" aria-hidden="true" title="Administrator"></i>
+                  <i class="bi bi-shield-fill-check text-danger" aria-hidden="true" title="<?php echo Security::escape($statusLabels['Administrator']); ?>"></i>
                 <?php endif; ?>
                 <div class="small text-body-secondary d-md-none">
                   <a class="text-decoration-none" href="mailto:<?php echo Security::escape((string) $row['email']); ?>">
@@ -209,7 +208,7 @@ $filterUrl = static function (?string $status, int $page = 1): string {
               <td class="text-end">
                 <a class="btn btn-outline-primary btn-sm"
                    href="edituser.php?userid=<?php echo (int) $row['id']; ?>">
-                  <i class="bi bi-pencil" aria-hidden="true"></i> Bearbeiten
+                  <i class="bi bi-pencil" aria-hidden="true"></i> <?php echo Security::escape($lang_adm_edit ?? 'Edit'); ?>
                 </a>
               </td>
             </tr>
@@ -221,10 +220,9 @@ $filterUrl = static function (?string $status, int $page = 1): string {
     <?php if ($username === '' && $totalPages > 1): ?>
       <footer class="card-footer bg-light d-flex flex-wrap align-items-center justify-content-between gap-2">
         <small class="text-body-secondary">
-          Seite <?php echo $page; ?> von <?php echo $totalPages; ?>
-          (<?php echo $totalUsers; ?> Nutzer)
+          <?php echo Security::escape(sprintf($lang_adm_pageof ?? 'Page %1$d of %2$d (%3$d users)', $page, $totalPages, $totalUsers)); ?>
         </small>
-        <nav aria-label="Seiten">
+        <nav aria-label="<?php echo Security::escape($lang_pages ?? 'Pages'); ?>">
           <ul class="pagination pagination-sm mb-0">
             <?php for ($i = 1; $i <= $totalPages; $i++): ?>
               <li class="page-item<?php echo $i === $page ? ' active' : ''; ?>"

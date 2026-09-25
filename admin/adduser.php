@@ -39,26 +39,26 @@ if ($adduser === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $logincookie = $logincookie === 'NO' ? 'NO' : 'YES';
 
     if ($username === '' || $email1 === '' || $email2 === '' || $password1 === '' || $password2 === '') {
-        $formError = 'Bitte fülle alle Pflichtfelder aus.';
+        $formError = $lang_adm_fillrequired ?? 'Please fill in all required fields.';
     } elseif (!Validator::isValidUsername($username)) {
-        $formError = 'Der Benutzername muss 2 bis 50 Zeichen lang sein und darf nur Buchstaben, Ziffern sowie . _ - enthalten.';
+        $formError = $lang_usernameinvalid ?? 'The username must be 2 to 50 characters long and may only contain letters, digits and . _ -';
     } elseif ($email1 !== $email2) {
-        $formError = 'Die E-Mail-Adressen stimmen nicht überein.';
+        $formError = $lang_adm_emailsdifferent ?? 'The email addresses do not match.';
     } elseif (!Security::isValidEmail($email1)) {
-        $formError = 'Bitte eine gültige E-Mail-Adresse angeben.';
+        $formError = $lang_insertvalidemail ?? 'Please enter a valid email address.';
     } elseif ($password1 !== $password2) {
-        $formError = 'Die Passwörter stimmen nicht überein.';
+        $formError = $lang_adm_pwdsdifferent ?? 'The passwords do not match.';
     } elseif (!Validator::isStrongPassword($password1)) {
-        $formError = 'Das Passwort muss mindestens 8 Zeichen lang sein.';
+        $formError = $lang_pwdtooshort ?? 'The password must be at least 8 characters long.';
     } elseif (Validator::normalizeHomepage($homepage) === null) {
-        $formError = 'Bitte eine gültige Homepage-Adresse mit http:// oder https:// angeben.';
+        $formError = $lang_homepageinvalid ?? 'Please enter a valid homepage address starting with http:// or https://.';
     } else {
         $homepage = (string) Validator::normalizeHomepage($homepage);
         $existingUser = $db->fetchOne('SELECT id FROM ppb_users WHERE email = ?', [$email1]);
         if ($existingUser !== null) {
-            $formError = 'Diese E-Mail-Adresse ist bereits registriert.';
+            $formError = $lang_emailalreadyexists ?? 'This email address is already registered.';
         } elseif ($db->fetchOne('SELECT id FROM ppb_users WHERE username = ?', [$username]) !== null) {
-            $formError = 'Dieser Benutzername ist bereits vergeben.';
+            $formError = $lang_usernametaken ?? 'This username is already taken.';
         } else {
             $icqInt = (int) $icq;
             $passwordHash = Security::hashPassword($password1);
@@ -83,72 +83,77 @@ if ($adduser === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 $saved = true;
                 $savedUsername = $username;
             } catch (Exception) {
-                $formError = 'Fehler beim Anlegen des Nutzers.';
+                $formError = $lang_adm_usercreatefailed ?? 'The user could not be created.';
             }
         }
     }
 }
+
+// Nach einem Fehler die Eingaben (außer Passwörtern) wieder anzeigen
+$old = static fn (string $field, string $default = ''): string => ($formError !== '' && !$saved)
+    ? Security::getString($field, 'POST', $default)
+    : $default;
 ?>
 
 <header class="mb-3">
-  <h1 class="h3 mb-0"><i class="bi bi-person-plus" aria-hidden="true"></i> Nutzer anlegen</h1>
+  <h1 class="h3 mb-0"><i class="bi bi-person-plus" aria-hidden="true"></i> <?php echo Security::escape($lang_adm_adduser ?? 'Add user'); ?></h1>
 </header>
 
 <?php if ($saved): ?>
   <div class="alert alert-success" role="alert">
-    Nutzer <strong><?php echo Security::escape($savedUsername); ?></strong> wurde angelegt.
-    <?php echo $mailSent
-        ? 'Eine Benachrichtigung wurde per E-Mail versendet.'
-        : 'Die Benachrichtigung per E-Mail konnte nicht versendet werden (Details im Fehlerprotokoll).'; ?>
-    <a class="alert-link" href="user.php?username=<?php echo urlencode($savedUsername); ?>">Zur Nutzerverwaltung</a>.
+    <?php echo sprintf(
+        Security::escape($lang_adm_usercreated ?? 'The user %s has been created.'),
+        '<strong>' . Security::escape($savedUsername) . '</strong>'
+    ); ?>
+    <?php echo Security::escape($mailSent
+        ? ($lang_adm_mailsent ?? 'A notification has been sent by email.')
+        : ($lang_adm_mailfailed ?? 'The email notification could not be sent (see the error log for details).')); ?>
+    <a class="alert-link" href="user.php"><?php echo Security::escape($lang_adm_tousermanagement ?? 'To user management'); ?></a>
   </div>
 <?php endif; ?>
 <?php if ($formError !== ''): ?>
   <div class="alert alert-danger" role="alert"><?php echo Security::escape($formError); ?></div>
 <?php endif; ?>
 
-<?php
-// Nach einem Fehler die Eingaben (außer Passwörtern) wieder anzeigen
-$old = static fn (string $field, string $default = ''): string => ($formError !== '' && !$saved)
-    ? Security::getString($field, 'POST', $default)
-    : $default;
-?>
 <form action="adduser.php?adduser=1" method="post" class="needs-validation" novalidate>
   <?php echo CSRF::getTokenField(); ?>
 
   <section class="card shadow-sm mb-3">
     <header class="card-header bg-secondary-subtle">
-      <h2 class="h6 mb-0"><i class="bi bi-asterisk" aria-hidden="true"></i> Pflichtangaben</h2>
+      <h2 class="h6 mb-0"><i class="bi bi-asterisk" aria-hidden="true"></i> <?php echo Security::escape($lang_requiredinfo ?? 'Required information'); ?></h2>
     </header>
     <div class="card-body">
       <div class="mb-3">
-        <label for="username" class="form-label fw-semibold">Benutzername <span class="text-danger" aria-hidden="true">*</span></label>
+        <label for="username" class="form-label fw-semibold"><?php echo Security::escape($lang_username ?? 'Username'); ?> <span class="text-danger" aria-hidden="true">*</span></label>
         <input id="username" name="username" type="text" class="form-control" maxlength="50" required
-               value="<?php echo Security::escape($old('username')); ?>">
-        <div class="invalid-feedback">Bitte einen Benutzernamen angeben.</div>
+               value="<?php echo Security::escape($old('username')); ?>" aria-describedby="usernameHelp">
+        <div id="usernameHelp" class="form-text"><?php echo Security::escape($lang_usernamehelp ?? '2 to 50 characters: letters (no umlauts), digits and . _ -'); ?></div>
+        <div class="invalid-feedback"><?php echo Security::escape($lang_adm_insertusername ?? 'Please enter a username.'); ?></div>
       </div>
       <div class="row g-3">
         <div class="col-md-6">
-          <label for="email1" class="form-label fw-semibold">E-Mail <span class="text-danger" aria-hidden="true">*</span></label>
+          <label for="email1" class="form-label fw-semibold"><?php echo Security::escape($lang_email ?? 'Email'); ?> <span class="text-danger" aria-hidden="true">*</span></label>
           <input id="email1" name="email1" type="email" class="form-control" maxlength="100" required
                  value="<?php echo Security::escape($old('email1')); ?>">
-          <div class="invalid-feedback">Bitte eine gültige E-Mail eingeben.</div>
+          <div class="invalid-feedback"><?php echo Security::escape($lang_insertvalidemail ?? 'Please enter a valid email address.'); ?></div>
         </div>
         <div class="col-md-6">
-          <label for="email2" class="form-label fw-semibold">E-Mail <small class="text-body-secondary">(Bestätigung)</small></label>
+          <label for="email2" class="form-label fw-semibold"><?php echo Security::escape($lang_email ?? 'Email'); ?> <small class="text-body-secondary">(<?php echo Security::escape($lang_confirmation ?? 'Confirmation'); ?>)</small></label>
           <input id="email2" name="email2" type="email" class="form-control" maxlength="100" required
                  value="<?php echo Security::escape($old('email2')); ?>">
-          <div class="invalid-feedback">Bitte zur Bestätigung wiederholen.</div>
+          <div class="invalid-feedback"><?php echo Security::escape($lang_insertvalidemail ?? 'Please enter a valid email address.'); ?></div>
         </div>
         <div class="col-md-6">
-          <label for="password1" class="form-label fw-semibold">Passwort <span class="text-danger" aria-hidden="true">*</span></label>
-          <input id="password1" name="password1" type="password" class="form-control" minlength="8" maxlength="255" required autocomplete="new-password">
-          <div class="invalid-feedback">Mindestens 8 Zeichen.</div>
+          <label for="password1" class="form-label fw-semibold"><?php echo Security::escape($lang_password ?? 'Password'); ?> <span class="text-danger" aria-hidden="true">*</span></label>
+          <input id="password1" name="password1" type="password" class="form-control" minlength="8" maxlength="255" required autocomplete="new-password"
+                 aria-describedby="password1Help">
+          <div id="password1Help" class="form-text"><?php echo Security::escape($lang_pwdminlength ?? 'At least 8 characters.'); ?></div>
+          <div class="invalid-feedback"><?php echo Security::escape($lang_pwdtooshort ?? 'The password must be at least 8 characters long.'); ?></div>
         </div>
         <div class="col-md-6">
-          <label for="password2" class="form-label fw-semibold">Passwort <small class="text-body-secondary">(Bestätigung)</small></label>
+          <label for="password2" class="form-label fw-semibold"><?php echo Security::escape($lang_password ?? 'Password'); ?> <small class="text-body-secondary">(<?php echo Security::escape($lang_confirmation ?? 'Confirmation'); ?>)</small></label>
           <input id="password2" name="password2" type="password" class="form-control" minlength="8" maxlength="255" required autocomplete="new-password">
-          <div class="invalid-feedback">Bitte zur Bestätigung wiederholen.</div>
+          <div class="invalid-feedback"><?php echo Security::escape($lang_repeatpwd ?? 'Please enter the password again.'); ?></div>
         </div>
       </div>
     </div>
@@ -156,53 +161,53 @@ $old = static fn (string $field, string $default = ''): string => ($formError !=
 
   <section class="card shadow-sm mb-3">
     <header class="card-header bg-secondary-subtle">
-      <h2 class="h6 mb-0"><i class="bi bi-person-plus" aria-hidden="true"></i> Optionale Angaben</h2>
+      <h2 class="h6 mb-0"><i class="bi bi-person-plus" aria-hidden="true"></i> <?php echo Security::escape($lang_optionalinfo ?? 'Optional information'); ?></h2>
     </header>
     <div class="card-body">
       <div class="row g-3">
         <div class="col-md-8">
-          <label for="homepage" class="form-label">Homepage</label>
+          <label for="homepage" class="form-label"><?php echo Security::escape($lang_homepage ?? 'Homepage'); ?></label>
           <input id="homepage" name="homepage" type="text" inputmode="url" class="form-control" maxlength="150"
                  placeholder="https://example.org" value="<?php echo Security::escape($old('homepage')); ?>"
                  aria-describedby="homepageHelp">
-          <div id="homepageHelp" class="form-text">Optional. Fehlt https://, wird es ergänzt.</div>
+          <div id="homepageHelp" class="form-text"><?php echo Security::escape($lang_homepagehelp ?? 'Optional. https:// is added automatically if missing.'); ?></div>
         </div>
         <div class="col-md-4">
-          <label for="icq" class="form-label">ICQ</label>
+          <label for="icq" class="form-label"><?php echo Security::escape($lang_icq ?? 'ICQ number'); ?></label>
           <input id="icq" name="icq" type="number" class="form-control" maxlength="10" min="0"
                  value="<?php echo Security::escape($old('icq')); ?>">
         </div>
         <div class="col-12">
-          <label for="biography" class="form-label">Biografie</label>
+          <label for="biography" class="form-label"><?php echo Security::escape($lang_biography ?? 'Biography'); ?></label>
           <textarea id="biography" name="biography" class="form-control" rows="3"><?php echo Security::escape($old('biography')); ?></textarea>
         </div>
         <div class="col-12">
-          <label for="signature" class="form-label">Signatur</label>
+          <label for="signature" class="form-label"><?php echo Security::escape($lang_signature ?? 'Signature'); ?></label>
           <textarea id="signature" name="signature" class="form-control" rows="3"><?php echo Security::escape($old('signature')); ?></textarea>
         </div>
         <div class="col-md-6">
           <fieldset>
-            <legend class="form-label fw-semibold mb-1 fs-6">E-Mail verbergen</legend>
+            <legend class="form-label fw-semibold mb-1 fs-6"><?php echo Security::escape($lang_hideemail ?? 'Hide email address?'); ?></legend>
             <div class="form-check form-check-inline">
               <input class="form-check-input" type="radio" id="hideY" name="hideemail" value="YES" <?php echo $old('hideemail', 'NO') === 'YES' ? 'checked' : ''; ?>>
-              <label class="form-check-label" for="hideY">ja</label>
+              <label class="form-check-label" for="hideY"><?php echo Security::escape($lang_yes ?? 'yes'); ?></label>
             </div>
             <div class="form-check form-check-inline">
               <input class="form-check-input" type="radio" id="hideN" name="hideemail" value="NO" <?php echo $old('hideemail', 'NO') !== 'YES' ? 'checked' : ''; ?>>
-              <label class="form-check-label" for="hideN">nein</label>
+              <label class="form-check-label" for="hideN"><?php echo Security::escape($lang_no ?? 'no'); ?></label>
             </div>
           </fieldset>
         </div>
         <div class="col-md-6">
           <fieldset>
-            <legend class="form-label fw-semibold mb-1 fs-6">Login merken</legend>
+            <legend class="form-label fw-semibold mb-1 fs-6"><?php echo Security::escape($lang_saveloginincookie ?? 'Remember login?'); ?></legend>
             <div class="form-check form-check-inline">
               <input class="form-check-input" type="radio" id="cookY" name="logincookie" value="YES" <?php echo $old('logincookie', 'YES') !== 'NO' ? 'checked' : ''; ?>>
-              <label class="form-check-label" for="cookY">ja</label>
+              <label class="form-check-label" for="cookY"><?php echo Security::escape($lang_yes ?? 'yes'); ?></label>
             </div>
             <div class="form-check form-check-inline">
               <input class="form-check-input" type="radio" id="cookN" name="logincookie" value="NO" <?php echo $old('logincookie', 'YES') === 'NO' ? 'checked' : ''; ?>>
-              <label class="form-check-label" for="cookN">nein</label>
+              <label class="form-check-label" for="cookN"><?php echo Security::escape($lang_no ?? 'no'); ?></label>
             </div>
           </fieldset>
         </div>
@@ -212,12 +217,12 @@ $old = static fn (string $field, string $default = ''): string => ($formError !=
 
   <div class="d-flex flex-wrap gap-2 mb-4">
     <button type="submit" class="btn btn-primary">
-      <i class="bi bi-person-plus" aria-hidden="true"></i> Nutzer anlegen
+      <i class="bi bi-person-plus" aria-hidden="true"></i> <?php echo Security::escape($lang_adm_adduser ?? 'Add user'); ?>
     </button>
     <button type="reset" class="btn btn-outline-secondary">
-      <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Zurücksetzen
+      <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> <?php echo Security::escape($lang_reset ?? 'Reset'); ?>
     </button>
-    <a class="btn btn-link" href="user.php">Zurück zur Nutzerverwaltung</a>
+    <a class="btn btn-link" href="user.php"><?php echo Security::escape($lang_adm_backtousermanagement ?? 'Back to user management'); ?></a>
   </div>
 </form>
 
