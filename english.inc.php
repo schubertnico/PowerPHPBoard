@@ -225,3 +225,5 @@ $lang_mailsubjectdefault = 'Message from the forum';
 $lang_confirmationmailfailed = 'The confirmation email could not be sent. You can still log in.';
 $lang_accountcreatedbyadmin = 'an account has been created for you at';
 $lang_passwordfromadmin = 'You will receive your password from the board administrator. You can set your own password at any time via "Forgot password?".';
+$lang_threadclosedsuccess = 'You have successfully closed the thread!';
+$lang_homepagehelp = 'Optional. https:// is added automatically if missing.';

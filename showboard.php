@@ -182,6 +182,7 @@ include __DIR__ . '/header.inc.php';
                         }
                     }
               ?>
+                <?php echo ppb_thread_icon((string) ($row['icon'] ?? '')); ?>
                 <a class="link-dark fw-semibold text-decoration-none"
                    href="showthread.php?threadid=<?php echo (int) $row['id']; ?>">
                   <?php echo Security::escape((string) $row['title']); ?>

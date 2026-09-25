@@ -31,6 +31,9 @@ if ($addboard === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $formError = 'Bitte einen Boardtitel angeben.';
     } elseif ($status === 'Private' && $password === '') {
         $formError = 'Wenn der Status "Private" gewählt ist, muss ein Passwort gesetzt werden.';
+    } elseif (!ppb_valid_template_setting(Security::getString('header', 'POST'))
+        || !ppb_valid_template_setting(Security::getString('footer', 'POST'))) {
+        $formError = 'Header- und Footer-Template müssen Dateinamen aus dem Ordner inc/ sein oder leer bleiben.';
     } else {
         // Board-Passwort nur als Hash speichern
         $passwordHash = $status === 'Private' ? BoardAccess::hashPassword($password) : '';
@@ -83,6 +86,12 @@ $categories = $db->fetchAll('SELECT * FROM ppb_boards WHERE type = ? ORDER BY id
   </div>
 <?php endif; ?>
 
+<?php
+// Nach einem Fehler die Eingaben wieder anzeigen
+$old = static fn (string $field, string $default = ''): string => ($formError !== '' && !$saved)
+    ? Security::getString($field, 'POST', $default)
+    : $default;
+?>
 <form action="addboard.php?addboard=1" method="post" class="needs-validation" novalidate>
   <?php echo CSRF::getTokenField(); ?>
   <section class="card shadow-sm mb-3">
@@ -93,16 +102,19 @@ $categories = $db->fetchAll('SELECT * FROM ppb_boards WHERE type = ? ORDER BY id
       <div class="row g-3">
         <div class="col-md-6">
           <label for="title" class="form-label fw-semibold">Titel <span class="text-danger" aria-hidden="true">*</span></label>
-          <input id="title" name="title" type="text" class="form-control" maxlength="100" required>
+          <input id="title" name="title" type="text" class="form-control" maxlength="100" required
+                 value="<?php echo Security::escape($old('title')); ?>">
           <div class="invalid-feedback">Bitte einen Boardtitel angeben.</div>
         </div>
         <div class="col-md-6">
           <label for="description" class="form-label">Beschreibung</label>
-          <input id="description" name="description" type="text" class="form-control" maxlength="150">
+          <input id="description" name="description" type="text" class="form-control" maxlength="150"
+                 value="<?php echo Security::escape($old('description')); ?>">
         </div>
         <div class="col-md-6">
           <label for="mods" class="form-label">Moderatoren</label>
-          <input id="mods" name="mods" type="text" class="form-control" maxlength="250">
+          <input id="mods" name="mods" type="text" class="form-control" maxlength="250"
+                 value="<?php echo Security::escape($old('mods')); ?>">
           <div class="form-text">Komma-getrennte Liste der E-Mail-Adressen, z.B. <code>email1@x,email2@x</code>.</div>
         </div>
         <div class="col-md-6">
@@ -113,7 +125,7 @@ $categories = $db->fetchAll('SELECT * FROM ppb_boards WHERE type = ? ORDER BY id
           <?php else: ?>
             <select id="catid" name="catid" class="form-select" required>
               <?php foreach ($categories as $cat): ?>
-                <option value="<?php echo (int) $cat['id']; ?>"><?php echo Security::escape((string) $cat['title']); ?></option>
+                <option value="<?php echo (int) $cat['id']; ?>" <?php echo $old('catid') === (string) $cat['id'] ? 'selected' : ''; ?>><?php echo Security::escape((string) $cat['title']); ?></option>
               <?php endforeach; ?>
             </select>
           <?php endif; ?>
@@ -122,7 +134,7 @@ $categories = $db->fetchAll('SELECT * FROM ppb_boards WHERE type = ? ORDER BY id
           <label for="status" class="form-label fw-semibold">Status</label>
           <select id="status" name="status" class="form-select">
             <?php foreach (['Open', 'Closed', 'Private'] as $s): ?>
-              <option value="<?php echo $s; ?>"><?php echo $s; ?></option>
+              <option value="<?php echo $s; ?>" <?php echo $old('status', 'Open') === $s ? 'selected' : ''; ?>><?php echo $s; ?></option>
             <?php endforeach; ?>
           </select>
           <div class="form-text">"Closed" deaktiviert neue Threads. "Private" verlangt ein Passwort.</div>

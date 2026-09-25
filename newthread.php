@@ -160,6 +160,7 @@ include __DIR__ . '/header.inc.php';
     </div>
   <?php endif; ?>
 
+  <?php $formIcon = $formError !== '' ? Security::getString('icon', 'POST') : ''; ?>
   <form action="newthread.php?boardid=<?php echo (int) $boardid; ?>&newthread=1"
         method="post" class="needs-validation" novalidate>
     <?php echo CSRF::getTokenField(); ?>
@@ -197,6 +198,7 @@ include __DIR__ . '/header.inc.php';
           </label>
           <input id="title" name="title" type="text" class="form-control"
                  maxlength="150" required
+                 value="<?php echo Security::escape($formError !== '' ? Security::getString('title', 'POST') : ''); ?>"
                  aria-describedby="titleHelp">
           <div id="titleHelp" class="form-text">Eine aussagekräftige Überschrift, max. 150 Zeichen.</div>
           <div class="invalid-feedback">Bitte einen Titel angeben.</div>
@@ -210,14 +212,16 @@ include __DIR__ . '/header.inc.php';
             <?php for ($i = 1; $i <= 14; $i++): ?>
               <div class="form-check form-check-inline mb-0">
                 <input class="form-check-input" type="radio" name="icon"
-                       id="icon<?php echo $i; ?>" value="icon<?php echo $i; ?>.gif">
+                       id="icon<?php echo $i; ?>" value="icon<?php echo $i; ?>.gif"
+                       <?php echo $formIcon === 'icon' . $i . '.gif' ? 'checked' : ''; ?>>
                 <label class="form-check-label" for="icon<?php echo $i; ?>">
                   <img src="images/icon<?php echo $i; ?>.gif" width="15" height="15" alt="Icon <?php echo $i; ?>">
                 </label>
               </div>
             <?php endfor; ?>
             <div class="form-check form-check-inline mb-0">
-              <input class="form-check-input" type="radio" name="icon" id="iconNone" value="" checked>
+              <input class="form-check-input" type="radio" name="icon" id="iconNone" value=""
+                     <?php echo $formIcon === '' ? 'checked' : ''; ?>>
               <label class="form-check-label" for="iconNone">
                 <?php echo $lang_noicon ?? 'No icon'; ?>
               </label>
@@ -231,7 +235,7 @@ include __DIR__ . '/header.inc.php';
             <span class="text-danger" aria-hidden="true">*</span>
           </label>
           <textarea id="text" name="text" class="form-control" rows="12" required
-                    maxlength="<?php echo Validator::POST_MAX; ?>"></textarea>
+                    maxlength="<?php echo Validator::POST_MAX; ?>"><?php echo Security::escape($formError !== '' ? Security::getString('text', 'POST') : ''); ?></textarea>
           <div class="form-text">
             <?php echo $lang_htmlcodeis ?? 'HTML ist'; ?>
             <strong><?php echo ppb_onoff_label($settings['htmlcode'] ?? 'OFF'); ?></strong>,

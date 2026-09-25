@@ -107,6 +107,12 @@ if ($adduser === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
   <div class="alert alert-danger" role="alert"><?php echo Security::escape($formError); ?></div>
 <?php endif; ?>
 
+<?php
+// Nach einem Fehler die Eingaben (außer Passwörtern) wieder anzeigen
+$old = static fn (string $field, string $default = ''): string => ($formError !== '' && !$saved)
+    ? Security::getString($field, 'POST', $default)
+    : $default;
+?>
 <form action="adduser.php?adduser=1" method="post" class="needs-validation" novalidate>
   <?php echo CSRF::getTokenField(); ?>
 
@@ -117,18 +123,21 @@ if ($adduser === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="card-body">
       <div class="mb-3">
         <label for="username" class="form-label fw-semibold">Benutzername <span class="text-danger" aria-hidden="true">*</span></label>
-        <input id="username" name="username" type="text" class="form-control" maxlength="50" required>
+        <input id="username" name="username" type="text" class="form-control" maxlength="50" required
+               value="<?php echo Security::escape($old('username')); ?>">
         <div class="invalid-feedback">Bitte einen Benutzernamen angeben.</div>
       </div>
       <div class="row g-3">
         <div class="col-md-6">
           <label for="email1" class="form-label fw-semibold">E-Mail <span class="text-danger" aria-hidden="true">*</span></label>
-          <input id="email1" name="email1" type="email" class="form-control" maxlength="100" required>
+          <input id="email1" name="email1" type="email" class="form-control" maxlength="100" required
+                 value="<?php echo Security::escape($old('email1')); ?>">
           <div class="invalid-feedback">Bitte eine gültige E-Mail eingeben.</div>
         </div>
         <div class="col-md-6">
           <label for="email2" class="form-label fw-semibold">E-Mail <small class="text-body-secondary">(Bestätigung)</small></label>
-          <input id="email2" name="email2" type="email" class="form-control" maxlength="100" required>
+          <input id="email2" name="email2" type="email" class="form-control" maxlength="100" required
+                 value="<?php echo Security::escape($old('email2')); ?>">
           <div class="invalid-feedback">Bitte zur Bestätigung wiederholen.</div>
         </div>
         <div class="col-md-6">
@@ -153,29 +162,33 @@ if ($adduser === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
       <div class="row g-3">
         <div class="col-md-8">
           <label for="homepage" class="form-label">Homepage</label>
-          <input id="homepage" name="homepage" type="url" class="form-control" maxlength="150" value="https://">
+          <input id="homepage" name="homepage" type="text" inputmode="url" class="form-control" maxlength="150"
+                 placeholder="https://example.org" value="<?php echo Security::escape($old('homepage')); ?>"
+                 aria-describedby="homepageHelp">
+          <div id="homepageHelp" class="form-text">Optional. Fehlt https://, wird es ergänzt.</div>
         </div>
         <div class="col-md-4">
           <label for="icq" class="form-label">ICQ</label>
-          <input id="icq" name="icq" type="number" class="form-control" maxlength="10" min="0">
+          <input id="icq" name="icq" type="number" class="form-control" maxlength="10" min="0"
+                 value="<?php echo Security::escape($old('icq')); ?>">
         </div>
         <div class="col-12">
           <label for="biography" class="form-label">Biografie</label>
-          <textarea id="biography" name="biography" class="form-control" rows="3"></textarea>
+          <textarea id="biography" name="biography" class="form-control" rows="3"><?php echo Security::escape($old('biography')); ?></textarea>
         </div>
         <div class="col-12">
           <label for="signature" class="form-label">Signatur</label>
-          <textarea id="signature" name="signature" class="form-control" rows="3"></textarea>
+          <textarea id="signature" name="signature" class="form-control" rows="3"><?php echo Security::escape($old('signature')); ?></textarea>
         </div>
         <div class="col-md-6">
           <fieldset>
             <legend class="form-label fw-semibold mb-1 fs-6">E-Mail verbergen</legend>
             <div class="form-check form-check-inline">
-              <input class="form-check-input" type="radio" id="hideY" name="hideemail" value="YES">
+              <input class="form-check-input" type="radio" id="hideY" name="hideemail" value="YES" <?php echo $old('hideemail', 'NO') === 'YES' ? 'checked' : ''; ?>>
               <label class="form-check-label" for="hideY">ja</label>
             </div>
             <div class="form-check form-check-inline">
-              <input class="form-check-input" type="radio" id="hideN" name="hideemail" value="NO" checked>
+              <input class="form-check-input" type="radio" id="hideN" name="hideemail" value="NO" <?php echo $old('hideemail', 'NO') !== 'YES' ? 'checked' : ''; ?>>
               <label class="form-check-label" for="hideN">nein</label>
             </div>
           </fieldset>
@@ -184,11 +197,11 @@ if ($adduser === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
           <fieldset>
             <legend class="form-label fw-semibold mb-1 fs-6">Login merken</legend>
             <div class="form-check form-check-inline">
-              <input class="form-check-input" type="radio" id="cookY" name="logincookie" value="YES" checked>
+              <input class="form-check-input" type="radio" id="cookY" name="logincookie" value="YES" <?php echo $old('logincookie', 'YES') !== 'NO' ? 'checked' : ''; ?>>
               <label class="form-check-label" for="cookY">ja</label>
             </div>
             <div class="form-check form-check-inline">
-              <input class="form-check-input" type="radio" id="cookN" name="logincookie" value="NO">
+              <input class="form-check-input" type="radio" id="cookN" name="logincookie" value="NO" <?php echo $old('logincookie', 'YES') === 'NO' ? 'checked' : ''; ?>>
               <label class="form-check-label" for="cookN">nein</label>
             </div>
           </fieldset>

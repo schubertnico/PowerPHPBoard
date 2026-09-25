@@ -13,6 +13,7 @@ use PowerPHPBoard\CSRF;
 use PowerPHPBoard\Database;
 use PowerPHPBoard\Security;
 use PowerPHPBoard\Session;
+use PowerPHPBoard\Validator;
 
 require_once __DIR__ . '/config.inc.php';
 require_once __DIR__ . '/includes/autoload.php';
@@ -55,6 +56,7 @@ $errorBackText = 'Home';
 $successMessage = '';
 $successLink = '';
 $successLinkText = '';
+$formError = '';
 $post = null;
 $canedit = false;
 $adminCanModerate = false;
@@ -85,80 +87,65 @@ if ($postid === 0) {
             $state = 'error';
             $errorMessage = $lang_notallowedtoeditpost ?? 'You are not allowed to edit this post';
         } elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && !CSRF::validateFromPost()) {
-            $state = 'error';
-            $errorMessage = 'Security token invalid. Please try again.';
-            $errorBack = 'javascript:history.back()';
-            $errorBackText = $lang_backtoeditpost ?? 'Back to edit';
-        } elseif ($editpost === 1) {
-            $title = Security::getString('title', 'POST');
-            $text = Security::getString('text', 'POST');
+            $formError = 'Security token invalid. Please try again.';
+        } elseif ($editpost === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $title = trim(Security::getString('title', 'POST'));
+            $text = trim(Security::getString('text', 'POST'));
             $icon = Security::getString('icon', 'POST');
-            $deletepost = Security::getString('deletepost', 'POST');
-            $closethread = Security::getString('closethread', 'POST');
-            $openthread = Security::getString('openthread', 'POST');
+            $isThread = $post['type'] === 'Thread';
+            // Moderationsaktionen nur für Moderatoren und Administratoren
+            $deletepost = $adminCanModerate && Security::getString('deletepost', 'POST') === 'YES';
+            $closethread = $adminCanModerate && $isThread && Security::getString('closethread', 'POST') === 'YES';
+            $openthread = $adminCanModerate && $isThread && Security::getString('openthread', 'POST') === 'YES';
+            $threadLink = 'showthread.php?threadid=' . (int) ($isThread ? $post['id'] : $post['threadid']);
+            $boardLink = 'showboard.php?boardid=' . (int) $post['boardid'];
 
-            if ($text === '') {
-                $state = 'error';
-                $errorMessage = $lang_inserttext ?? 'Please enter text';
-                $errorBack = 'javascript:history.back()';
-                $errorBackText = $lang_backtoeditpost ?? 'Back to edit';
-            } elseif ($post['type'] === 'Thread') {
-                if ($title === '' && $deletepost !== 'YES' && $closethread !== 'YES' && $openthread !== 'YES') {
-                    $state = 'error';
-                    $errorMessage = $lang_inserttitle ?? 'Please enter a title';
-                    $errorBack = 'javascript:history.back()';
-                    $errorBackText = $lang_backtoeditpost ?? 'Back to edit';
-                } elseif ($deletepost === 'YES' && $adminCanModerate) {
-                    $db->query('DELETE FROM ppb_posts WHERE id = ?', [$postid]);
-                    $db->query('DELETE FROM ppb_posts WHERE threadid = ?', [$postid]);
-                    $state = 'success';
-                    $successMessage = $lang_threaddeleted ?? 'Thread deleted';
-                    $successLink = 'showboard.php?boardid=' . (int) $post['boardid'];
-                    $successLinkText = $lang_showboard ?? 'Show board';
-                } elseif ($closethread === 'YES' && $adminCanModerate) {
-                    $db->query("UPDATE ppb_posts SET status = 'Closed' WHERE id = ?", [$postid]);
-                    $state = 'success';
-                    $successMessage = $lang_threadclosed ?? 'Thread closed';
-                    $successLink = 'showboard.php?boardid=' . (int) $post['boardid'];
-                    $successLinkText = $lang_showboard ?? 'Show board';
-                } elseif ($openthread === 'YES' && $adminCanModerate) {
-                    $db->query("UPDATE ppb_posts SET status = 'Open' WHERE id = ?", [$postid]);
-                    $state = 'success';
-                    $successMessage = $lang_threadopened ?? 'Thread opened';
-                    $successLink = 'showboard.php?boardid=' . (int) $post['boardid'];
-                    $successLinkText = $lang_showboard ?? 'Show board';
-                } else {
-                    $title = trim($title);
-                    $text = trim($text);
-                    $validIcons = ['icon1.gif', 'icon2.gif', 'icon3.gif', 'icon4.gif', 'icon5.gif', 'icon6.gif', 'icon7.gif',
-                                   'icon8.gif', 'icon9.gif', 'icon10.gif', 'icon11.gif', 'icon12.gif', 'icon13.gif', 'icon14.gif', ''];
-                    if (!in_array($icon, $validIcons, true)) {
-                        $icon = '';
-                    }
-                    $db->query(
-                        'UPDATE ppb_posts SET title = ?, text = ?, icon = ? WHERE id = ?',
-                        [$title, $text, $icon, $postid]
-                    );
-                    $state = 'success';
-                    $successMessage = $lang_threadedited ?? 'Thread edited';
-                    $successLink = 'showthread.php?threadid=' . (int) $post['id'];
-                    $successLinkText = $lang_showthread ?? 'Show thread';
+            if ($deletepost && $isThread) {
+                $db->query('DELETE FROM ppb_posts WHERE id = ?', [$postid]);
+                $db->query('DELETE FROM ppb_posts WHERE threadid = ?', [$postid]);
+                $state = 'success';
+                $successMessage = $lang_threaddeleted ?? 'Thread deleted';
+                $successLink = $boardLink;
+                $successLinkText = $lang_showboard ?? 'Show board';
+            } elseif ($deletepost) {
+                $db->query('DELETE FROM ppb_posts WHERE id = ?', [$postid]);
+                $state = 'success';
+                $successMessage = $lang_postingdeleted ?? 'Post deleted';
+                $successLink = $threadLink;
+                $successLinkText = $lang_showthread ?? 'Show thread';
+            } elseif ($closethread || $openthread) {
+                $db->query('UPDATE ppb_posts SET status = ? WHERE id = ?', [$closethread ? 'Closed' : 'Open', $postid]);
+                $state = 'success';
+                $successMessage = $closethread
+                    ? ($lang_threadclosedsuccess ?? 'The thread has been closed.')
+                    : ($lang_threadopened ?? 'Thread opened');
+                $successLink = $boardLink;
+                $successLinkText = $lang_showboard ?? 'Show board';
+            } elseif ($text === '') {
+                // Fehler werden über dem Formular angezeigt, die Eingaben bleiben erhalten
+                $formError = $lang_inserttext ?? 'Please enter text';
+            } elseif ($isThread && $title === '') {
+                $formError = $lang_inserttitle ?? 'Please enter a title';
+            } elseif (!Validator::withinLength($text, Validator::POST_MAX)) {
+                $formError = $lang_posttoolong ?? 'Post text is too long.';
+            } elseif ($isThread) {
+                if (ppb_thread_icon($icon) === '') {
+                    $icon = '';
                 }
+                $db->query(
+                    'UPDATE ppb_posts SET title = ?, text = ?, icon = ? WHERE id = ?',
+                    [$title, $text, $icon, $postid]
+                );
+                $state = 'success';
+                $successMessage = $lang_threadedited ?? 'Thread edited';
+                $successLink = $threadLink;
+                $successLinkText = $lang_showthread ?? 'Show thread';
             } else {
-                if ($deletepost === 'YES' && $adminCanModerate) {
-                    $db->query('DELETE FROM ppb_posts WHERE id = ?', [$postid]);
-                    $state = 'success';
-                    $successMessage = $lang_postingdeleted ?? 'Post deleted';
-                    $successLink = 'showthread.php?threadid=' . (int) $post['threadid'];
-                    $successLinkText = $lang_showthread ?? 'Show thread';
-                } else {
-                    $text = trim($text);
-                    $db->query('UPDATE ppb_posts SET text = ? WHERE id = ?', [$text, $postid]);
-                    $state = 'success';
-                    $successMessage = $lang_postingedited ?? 'Post edited';
-                    $successLink = 'showthread.php?threadid=' . (int) $post['threadid'];
-                    $successLinkText = $lang_showthread ?? 'Show thread';
-                }
+                $db->query('UPDATE ppb_posts SET text = ? WHERE id = ?', [$text, $postid]);
+                $state = 'success';
+                $successMessage = $lang_postingedited ?? 'Post edited';
+                $successLink = $threadLink;
+                $successLinkText = $lang_showthread ?? 'Show thread';
             }
         }
     }
@@ -190,7 +177,20 @@ include __DIR__ . '/header.inc.php';
 <?php else:
     assert($post !== null);
     $iconValue = (string) ($post['icon'] ?? '');
+    $titleValue = (string) $post['title'];
+    $textValue = (string) $post['text'];
+    if ($formError !== '') {
+        $iconValue = Security::getString('icon', 'POST');
+        $titleValue = Security::getString('title', 'POST');
+        $textValue = Security::getString('text', 'POST');
+    }
     ?>
+  <?php if ($formError !== ''): ?>
+    <div class="alert alert-danger" role="alert">
+      <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+      <?php echo Security::escape($formError); ?>
+    </div>
+  <?php endif; ?>
   <form action="editpost.php?postid=<?php echo (int) $post['id']; ?>&login=1&editpost=1&catid=<?php echo (int) $catid; ?>&boardid=<?php echo (int) $boardid; ?>"
         method="post" class="needs-validation" novalidate>
     <?php echo CSRF::getTokenField(); ?>
@@ -248,7 +248,7 @@ include __DIR__ . '/header.inc.php';
             </label>
             <input id="title" name="title" type="text" class="form-control"
                    maxlength="150" required
-                   value="<?php echo Security::escape((string) $post['title']); ?>">
+                   value="<?php echo Security::escape($titleValue); ?>">
             <div class="invalid-feedback">Bitte einen Titel angeben.</div>
           </div>
 
@@ -285,7 +285,7 @@ include __DIR__ . '/header.inc.php';
             <?php echo $lang_text ?? 'Text'; ?>
             <span class="text-danger" aria-hidden="true">*</span>
           </label>
-          <textarea id="text" name="text" class="form-control" rows="12" required><?php echo Security::escape((string) $post['text']); ?></textarea>
+          <textarea id="text" name="text" class="form-control" rows="12" required><?php echo Security::escape($textValue); ?></textarea>
           <div class="form-text">
             <?php echo $lang_htmlcodeis ?? 'HTML ist'; ?>
             <strong><?php echo ppb_onoff_label($settings['htmlcode'] ?? 'OFF'); ?></strong>,

@@ -143,12 +143,9 @@ if (!empty($board['title'])) {
 }
 
 // Include header template (HTML5 doctype, head, opening body)
-$headerFile = $settings['header'] ?? '';
-if ($headerFile !== '' && file_exists(__DIR__ . '/inc/' . $headerFile)) {
-    include __DIR__ . '/inc/' . $headerFile;
-} else {
-    include __DIR__ . '/inc/header.ppb';
-}
+// (nur Dateinamen aus inc/, siehe ppb_template_path())
+$headerTemplate = ppb_template_path((string) ($settings['header'] ?? ''));
+include $headerTemplate ?? __DIR__ . '/inc/header.ppb';
 ?>
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark" aria-label="Hauptnavigation">
   <div class="container-xl">

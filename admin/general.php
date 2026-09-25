@@ -8,6 +8,7 @@ declare(strict_types=1);
  * MIT License - Copyright (c) 2026 PowerScripts
  */
 
+use PowerPHPBoard\BoardUrl;
 use PowerPHPBoard\CSRF;
 use PowerPHPBoard\Security;
 
@@ -17,6 +18,7 @@ $row = $db->fetchOne('SELECT * FROM ppb_config WHERE id = ?', [1]) ?? [];
 $editgeneral = Security::getInt('editgeneral', 'GET', 0);
 $saveSuccess = false;
 $formError = '';
+$languages = ['English', 'Deutsch-Sie', 'Deutsch-Du'];
 
 if ($editgeneral === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
     CSRF::validateOrDie();
@@ -37,9 +39,24 @@ if ($editgeneral === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $newpost = Security::getString('newpost', 'POST');
     $language = Security::getString('language', 'POST');
 
-    if ($boardtitle === '' || $boardurl === '' || $adminemail === ''
-        || $bordercolor === '' || $tablebg1 === '' || $tablebg2 === '' || $tablebg3 === '') {
-        $formError = 'Bitte fülle alle Pflichtfelder aus.';
+    // Schalter und Sprache nur mit erlaubten Werten speichern
+    $htmlcode = $htmlcode === 'ON' ? 'ON' : 'OFF';
+    $bbcode = $bbcode === 'OFF' ? 'OFF' : 'ON';
+    $smilies = $smilies === 'OFF' ? 'OFF' : 'ON';
+    if (!in_array($language, $languages, true)) {
+        $language = (string) ($row['language'] ?? 'English');
+    }
+
+    // Die Design-Felder (Farben, Button-Bilder) wirken im Bootstrap-Layout
+    // nicht mehr und sind deshalb optional.
+    if ($boardtitle === '' || $boardurl === '' || $adminemail === '') {
+        $formError = 'Bitte alle Pflichtfelder ausfüllen.';
+    } elseif (BoardUrl::base(['boardurl' => $boardurl]) === null) {
+        $formError = 'Bitte eine gültige Board-URL mit http:// oder https:// angeben, z. B. https://forum.example.org.';
+    } elseif (!Security::isValidEmail($adminemail)) {
+        $formError = 'Bitte eine gültige Admin-E-Mail-Adresse angeben.';
+    } elseif (!ppb_valid_template_setting($header) || !ppb_valid_template_setting($footer)) {
+        $formError = 'Header- und Footer-Template müssen Dateinamen aus dem Ordner inc/ sein oder leer bleiben.';
     } else {
         $db->execute(
             'UPDATE ppb_config SET boardtitle = ?, boardurl = ?, adminemail = ?, header = ?, footer = ?, bordercolor = ?, tablebg1 = ?, tablebg2 = ?, tablebg3 = ?, htmlcode = ?, bbcode = ?, smilies = ?, newthread = ?, newpost = ?, language = ? WHERE id = ?',
@@ -49,9 +66,28 @@ if ($editgeneral === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $saveSuccess = true;
         $row = $db->fetchOne('SELECT * FROM ppb_config WHERE id = ?', [1]) ?? $row;
     }
-}
 
-$languages = ['English', 'Deutsch-Sie', 'Deutsch-Du'];
+    // Nach einem Fehler die Eingaben statt der gespeicherten Werte zeigen
+    if ($formError !== '') {
+        $row = array_merge($row, compact(
+            'boardtitle',
+            'boardurl',
+            'adminemail',
+            'header',
+            'footer',
+            'bordercolor',
+            'tablebg1',
+            'tablebg2',
+            'tablebg3',
+            'htmlcode',
+            'bbcode',
+            'smilies',
+            'newthread',
+            'newpost',
+            'language'
+        ));
+    }
+}
 ?>
 
 <header class="mb-3">
@@ -87,19 +123,23 @@ $languages = ['English', 'Deutsch-Sie', 'Deutsch-Du'];
                  maxlength="200" required
                  value="<?php echo Security::escape((string) ($row['boardtitle'] ?? '')); ?>">
           <div class="form-text">Wird als Marke im Header und Browser-Tab angezeigt.</div>
+          <div class="invalid-feedback">Bitte einen Boardtitel angeben.</div>
         </div>
         <div class="col-md-6">
           <label for="boardurl" class="form-label fw-semibold">Board-URL</label>
           <input id="boardurl" name="boardurl" type="url" class="form-control"
-                 maxlength="250" required
+                 maxlength="250" required placeholder="https://forum.example.org"
                  value="<?php echo Security::escape((string) ($row['boardurl'] ?? '')); ?>">
-          <div class="form-text">Wird in Mails verwendet.</div>
+          <div class="form-text">Adresse des Forums, z. B. https://forum.example.org. Wird für Links in E-Mails verwendet (Registrierung, Passwort vergessen).</div>
+          <div class="invalid-feedback">Bitte die vollständige Adresse mit https:// oder http:// angeben.</div>
         </div>
         <div class="col-md-6">
           <label for="adminemail" class="form-label fw-semibold">Admin-E-Mail</label>
           <input id="adminemail" name="adminemail" type="email" class="form-control"
                  maxlength="100" required
                  value="<?php echo Security::escape((string) ($row['adminemail'] ?? '')); ?>">
+          <div class="form-text">Absender der E-Mails des Forums.</div>
+          <div class="invalid-feedback">Bitte eine gültige E-Mail-Adresse angeben.</div>
         </div>
         <div class="col-md-6">
           <label for="language" class="form-label fw-semibold">Sprache</label>
@@ -149,7 +189,7 @@ $languages = ['English', 'Deutsch-Sie', 'Deutsch-Du'];
           <label for="bordercolor" class="form-label">Rahmenfarbe</label>
           <div class="input-group">
             <input id="bordercolor" name="bordercolor" type="text" class="form-control"
-                   maxlength="7" required
+                   maxlength="7"
                    value="<?php echo Security::escape((string) ($row['bordercolor'] ?? '')); ?>"
                    aria-describedby="bordercolorHelp">
             <span class="input-group-text" style="background:<?php echo Security::escape((string) ($row['bordercolor'] ?? '#000')); ?>;width:40px;" aria-hidden="true">&nbsp;</span>
@@ -160,7 +200,7 @@ $languages = ['English', 'Deutsch-Sie', 'Deutsch-Du'];
           <label for="tablebg1" class="form-label">Tabelle Hintergrund 1</label>
           <div class="input-group">
             <input id="tablebg1" name="tablebg1" type="text" class="form-control"
-                   maxlength="7" required
+                   maxlength="7"
                    value="<?php echo Security::escape((string) ($row['tablebg1'] ?? '')); ?>">
             <span class="input-group-text" style="background:<?php echo Security::escape((string) ($row['tablebg1'] ?? '#fff')); ?>;width:40px;" aria-hidden="true">&nbsp;</span>
           </div>
@@ -170,7 +210,7 @@ $languages = ['English', 'Deutsch-Sie', 'Deutsch-Du'];
           <label for="tablebg2" class="form-label">Tabelle Hintergrund 2</label>
           <div class="input-group">
             <input id="tablebg2" name="tablebg2" type="text" class="form-control"
-                   maxlength="7" required
+                   maxlength="7"
                    value="<?php echo Security::escape((string) ($row['tablebg2'] ?? '')); ?>">
             <span class="input-group-text" style="background:<?php echo Security::escape((string) ($row['tablebg2'] ?? '#eee')); ?>;width:40px;" aria-hidden="true">&nbsp;</span>
           </div>
@@ -180,7 +220,7 @@ $languages = ['English', 'Deutsch-Sie', 'Deutsch-Du'];
           <label for="tablebg3" class="form-label">Tabelle Hintergrund 3</label>
           <div class="input-group">
             <input id="tablebg3" name="tablebg3" type="text" class="form-control"
-                   maxlength="7" required
+                   maxlength="7"
                    value="<?php echo Security::escape((string) ($row['tablebg3'] ?? '')); ?>">
             <span class="input-group-text" style="background:<?php echo Security::escape((string) ($row['tablebg3'] ?? '#ccc')); ?>;width:40px;" aria-hidden="true">&nbsp;</span>
           </div>

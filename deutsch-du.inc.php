@@ -226,3 +226,5 @@ $lang_mailsubjectdefault = 'Nachricht aus dem Forum';
 $lang_confirmationmailfailed = 'Die Bestätigungs-E-Mail konnte nicht versendet werden. Du kannst dich trotzdem einloggen.';
 $lang_accountcreatedbyadmin = 'für dich wurde ein Benutzerkonto angelegt bei';
 $lang_passwordfromadmin = 'Dein Passwort erhältst du von der Forenleitung. Über „Passwort vergessen?“ kannst du jederzeit ein eigenes Passwort festlegen.';
+$lang_threadclosedsuccess = 'Du hast das Thema erfolgreich geschlossen!';
+$lang_homepagehelp = 'Optional. Fehlt https://, wird es automatisch ergänzt.';

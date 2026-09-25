@@ -31,6 +31,45 @@ function ppb_lang(string $key, string $fallback): string
 }
 
 /**
+ * Symbol eines Themas (icon1.gif … icon14.gif) als <img>, sonst ''.
+ */
+function ppb_thread_icon(string $icon): string
+{
+    if (preg_match('/^icon([1-9]|1[0-4])\.gif$/', $icon) !== 1) {
+        return '';
+    }
+
+    return '<img src="images/' . $icon . '" width="15" height="15" alt="" class="ppb-thread-icon me-1">';
+}
+
+/**
+ * Pfad eines eigenen Header-/Footer-Templates aus dem Ordner inc/.
+ *
+ * Erlaubt sind nur Dateinamen ohne Verzeichnisanteil, damit über die
+ * Einstellung keine beliebige Datei eingebunden werden kann.
+ *
+ * @return string|null Absoluter Pfad oder null, wenn der Name unzulässig ist oder die Datei fehlt
+ */
+function ppb_template_path(string $name): ?string
+{
+    if (preg_match('/^[A-Za-z0-9][A-Za-z0-9._-]*$/', $name) !== 1) {
+        return null;
+    }
+    $path = __DIR__ . '/inc/' . $name;
+
+    return is_file($path) ? $path : null;
+}
+
+/**
+ * Gültiger Wert für die Einstellung „Eigenes Header-/Footer-Template“:
+ * leer oder ein vorhandener Dateiname aus inc/
+ */
+function ppb_valid_template_setting(string $name): bool
+{
+    return $name === '' || ppb_template_path($name) !== null;
+}
+
+/**
  * Text der Begrüßungsmail nach der Registrierung oder nach „Benutzer
  * anlegen“ im Adminbereich. Das Passwort steht bewusst nie in der Mail.
  *

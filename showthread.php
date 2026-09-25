@@ -52,7 +52,7 @@ if ($threadid > 0) {
 
 if ($boardid > 0) {
     $board = $db->fetchOne(
-        "SELECT id, status, password, title FROM ppb_boards WHERE id = ? AND type = 'Board'",
+        "SELECT * FROM ppb_boards WHERE id = ? AND type = 'Board'",
         [$boardid]
     );
     if ($board === null) {
@@ -136,7 +136,12 @@ $renderPagination = static function () use ($thread, $db, $current, $current2, $
 <?php else: ?>
 
   <h2 class="h5 text-body-secondary mb-3">
-    <i class="bi bi-card-text" aria-hidden="true"></i>
+    <?php $threadIcon = ppb_thread_icon((string) ($thread['icon'] ?? '')); ?>
+    <?php if ($threadIcon !== ''): ?>
+      <?php echo $threadIcon; ?>
+    <?php else: ?>
+      <i class="bi bi-card-text" aria-hidden="true"></i>
+    <?php endif; ?>
     <?php echo Security::escape($thread['title'] ?? ''); ?>
   </h2>
 
@@ -156,7 +161,12 @@ $renderPagination = static function () use ($thread, $db, $current, $current2, $
     <?php echo ppb_alert($lang_nothreadwithid ?? 'No thread with this ID', 'warning'); ?>
   <?php elseif (count($posts) === 0): ?>
     <?php echo ppb_alert($lang_nopostsinthread ?? 'No posts in this thread', 'info'); ?>
-  <?php else: ?>
+  <?php else:
+      // Bearbeiten nur für Autor, Moderator und Administrator; die IP nur
+      // für Moderator und Administrator
+      $currentUser = $ppbuser !== [] ? $ppbuser : null;
+      $canModerate = Auth::canModerate($currentUser, $board);
+      ?>
     <?php foreach ($posts as $row):
         $author = $db->fetchOne('SELECT * FROM ppb_users WHERE id = ?', [$row['author']]);
         $authorName = $author !== null
@@ -257,11 +267,13 @@ $renderPagination = static function () use ($thread, $db, $current, $current2, $
                     </a>
                   <?php endif; ?>
                 <?php endif; ?>
-                <a class="btn btn-outline-secondary"
-                   href="editpost.php?postid=<?php echo (int) $row['id']; ?>&catid=<?php echo (int) ($catid ?? 0); ?>&boardid=<?php echo (int) $boardid; ?>"
-                   title="<?php echo $lang_editpost ?? 'Edit post'; ?>">
-                  <i class="bi bi-pencil" aria-hidden="true"></i>
-                </a>
+                <?php if (Auth::canEditPost($currentUser, $row, $board)): ?>
+                  <a class="btn btn-outline-secondary"
+                     href="editpost.php?postid=<?php echo (int) $row['id']; ?>&catid=<?php echo (int) ($catid ?? 0); ?>&boardid=<?php echo (int) $boardid; ?>"
+                     title="<?php echo $lang_editpost ?? 'Edit post'; ?>">
+                    <i class="bi bi-pencil" aria-hidden="true"></i>
+                  </a>
+                <?php endif; ?>
                 <a class="btn btn-outline-secondary"
                    href="newpost.php?threadid=<?php echo (int) $thread['id']; ?>&postid=<?php echo (int) $row['id']; ?>"
                    title="<?php echo $lang_writequotedanswer ?? 'Quote reply'; ?>">
@@ -290,13 +302,15 @@ $renderPagination = static function () use ($thread, $db, $current, $current2, $
               <?php endif; ?>
             </div>
 
-            <footer class="card-footer bg-body-tertiary text-end small">
-              <span class="text-body-secondary">IP:</span>
-              <a class="text-decoration-none"
-                 href="showip.php?threadid=<?php echo (int) $thread['id']; ?>&postid=<?php echo (int) $row['id']; ?>">
-                <?php echo $lang_logged ?? 'logged'; ?>
-              </a>
-            </footer>
+            <?php if ($canModerate): ?>
+              <footer class="card-footer bg-body-tertiary text-end small">
+                <span class="text-body-secondary">IP:</span>
+                <a class="text-decoration-none"
+                   href="showip.php?threadid=<?php echo (int) $thread['id']; ?>&postid=<?php echo (int) $row['id']; ?>">
+                  <?php echo $lang_logged ?? 'logged'; ?>
+                </a>
+              </footer>
+            <?php endif; ?>
           </div>
         </div>
       </article>

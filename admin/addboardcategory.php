@@ -23,6 +23,9 @@ if ($addboardcategory === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($title === '') {
         $formError = 'Bitte einen Kategorietitel angeben.';
+    } elseif (!ppb_valid_template_setting(Security::getString('header', 'POST'))
+        || !ppb_valid_template_setting(Security::getString('footer', 'POST'))) {
+        $formError = 'Header- und Footer-Template müssen Dateinamen aus dem Ordner inc/ sein oder leer bleiben.';
     } else {
         $title = trim(strip_tags($title));
         $header = Security::getString('header', 'POST') ?: ($settings['header'] ?? '');
@@ -58,6 +61,12 @@ if ($addboardcategory === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
   <div class="alert alert-danger" role="alert"><?php echo Security::escape($formError); ?></div>
 <?php endif; ?>
 
+<?php
+// Nach einem Fehler die Eingaben wieder anzeigen
+$old = static fn (string $field, string $default = ''): string => ($formError !== '' && !$saved)
+    ? Security::getString($field, 'POST', $default)
+    : $default;
+?>
 <form action="addboardcategory.php?addboardcategory=1" method="post" class="needs-validation" novalidate>
   <?php echo CSRF::getTokenField(); ?>
   <section class="card shadow-sm mb-3">
@@ -67,7 +76,8 @@ if ($addboardcategory === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="card-body">
       <div class="mb-3">
         <label for="title" class="form-label fw-semibold">Titel <span class="text-danger" aria-hidden="true">*</span></label>
-        <input id="title" name="title" type="text" class="form-control" maxlength="100" required>
+        <input id="title" name="title" type="text" class="form-control" maxlength="100" required
+               value="<?php echo Security::escape($old('title')); ?>">
         <div class="invalid-feedback">Bitte einen Kategorietitel eingeben.</div>
       </div>
       <div class="alert alert-info small d-flex align-items-start gap-2 mb-3 mt-2" role="alert">

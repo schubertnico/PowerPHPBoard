@@ -175,6 +175,15 @@ include __DIR__ . '/header.inc.php';
   </div>
 <?php else:
     $user = $ppbuser;
+    $email2Value = (string) $user['email'];
+    if ($formError !== '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+        // Nach einem Fehler die Eingaben statt der gespeicherten Werte zeigen
+        foreach (['username', 'homepage', 'icq', 'biography', 'signature', 'hideemail', 'logincookie'] as $field) {
+            $user[$field] = Security::getString($field, 'POST');
+        }
+        $user['email'] = Security::getString('email1', 'POST');
+        $email2Value = Security::getString('email2', 'POST');
+    }
     $hideEmailValue = $user['hideemail'] === 'YES' ? 'YES' : 'NO';
     $cookieValue = $user['logincookie'] === 'NO' ? 'NO' : 'YES';
     ?>
@@ -235,7 +244,7 @@ include __DIR__ . '/header.inc.php';
                 </label>
                 <input id="email2" name="email2" type="email" class="form-control"
                        maxlength="100" required autocomplete="email"
-                       value="<?php echo Security::escape((string) $user['email']); ?>">
+                       value="<?php echo Security::escape($email2Value); ?>">
                 <div class="invalid-feedback">Die E-Mail-Adressen muessen übereinstimmen.</div>
               </div>
             </div>
@@ -296,7 +305,8 @@ include __DIR__ . '/header.inc.php';
                 <label for="homepage" class="form-label">
                   <?php echo $lang_homepage ?? 'Homepage'; ?>
                 </label>
-                <input id="homepage" name="homepage" type="url" class="form-control"
+                <input id="homepage" name="homepage" type="text" inputmode="url" class="form-control"
+                       autocomplete="url" placeholder="https://example.org"
                        maxlength="150"
                        value="<?php echo Security::escape((string) ($user['homepage'] ?? '')); ?>">
               </div>

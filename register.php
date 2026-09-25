@@ -201,7 +201,8 @@ if ($acception === 0) {
         // Repopulate fields with submitted values when validation failed
         $oldUsername = ($_SERVER['REQUEST_METHOD'] === 'POST') ? Security::getString('username', 'POST') : '';
         $oldEmail1 = ($_SERVER['REQUEST_METHOD'] === 'POST') ? Security::getString('email1', 'POST') : '';
-        $oldHomepage = ($_SERVER['REQUEST_METHOD'] === 'POST') ? Security::getString('homepage', 'POST') : 'https://';
+        $oldEmail2 = ($_SERVER['REQUEST_METHOD'] === 'POST') ? Security::getString('email2', 'POST') : '';
+        $oldHomepage = ($_SERVER['REQUEST_METHOD'] === 'POST') ? Security::getString('homepage', 'POST') : '';
         $oldIcq = ($_SERVER['REQUEST_METHOD'] === 'POST') ? Security::getString('icq', 'POST') : '';
         $oldBio = ($_SERVER['REQUEST_METHOD'] === 'POST') ? Security::getString('biography', 'POST') : '';
         $oldSig = ($_SERVER['REQUEST_METHOD'] === 'POST') ? Security::getString('signature', 'POST') : '';
@@ -269,6 +270,7 @@ if ($acception === 0) {
                 </label>
                 <input id="email2" name="email2" type="email" class="form-control"
                        maxlength="100" required autocomplete="email"
+                       value="<?php echo Security::escape($oldEmail2); ?>"
                        aria-describedby="email2Help">
                 <div id="email2Help" class="form-text">Bitte zur Bestätigung wiederholen.</div>
                 <div class="invalid-feedback">Die E-Mail-Adressen muessen übereinstimmen.</div>
@@ -313,10 +315,13 @@ if ($acception === 0) {
                 <label for="homepage" class="form-label">
                   <?php echo $lang_homepage ?? 'Homepage'; ?>
                 </label>
-                <input id="homepage" name="homepage" type="url" class="form-control"
-                       maxlength="150"
-                       value="<?php echo Security::escape($oldHomepage !== '' ? $oldHomepage : 'https://'); ?>">
-                <div class="form-text">Optional, beginnt mit https:// oder http://.</div>
+                <input id="homepage" name="homepage" type="text" inputmode="url" class="form-control"
+                       maxlength="150" autocomplete="url" placeholder="https://example.org"
+                       value="<?php echo Security::escape($oldHomepage); ?>"
+                       aria-describedby="homepageHelp">
+                <div id="homepageHelp" class="form-text">
+                  <?php echo Security::escape($lang_homepagehelp ?? 'Optional. https:// is added automatically if missing.'); ?>
+                </div>
               </div>
               <div class="col-md-4">
                 <label for="icq" class="form-label">

@@ -88,8 +88,11 @@ if ($row !== null && $editboard === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') 
 
         if ($status === 'Private' && $passwordHash === '') {
             $formError = 'Wenn der Status "Private" gewählt ist, muss ein Passwort gesetzt werden.';
-        } elseif ($title === '' || $description === '' || $bordercolor === '' || $catidPost === 0) {
-            $formError = 'Bitte fülle alle Pflichtfelder aus.';
+        } elseif ($title === '' || $catidPost === 0) {
+            // Beschreibung und Design-Felder sind optional
+            $formError = 'Bitte einen Titel angeben und eine Kategorie wählen.';
+        } elseif (!ppb_valid_template_setting($header) || !ppb_valid_template_setting($footer)) {
+            $formError = 'Header- und Footer-Template müssen Dateinamen aus dem Ordner inc/ sein oder leer bleiben.';
         } else {
             $title = strip_tags($title);
             $description = strip_tags($description);
@@ -106,6 +109,24 @@ if ($row !== null && $editboard === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') 
             CSRF::regenerate();
             $saved = true;
             $row = $db->fetchOne('SELECT * FROM ppb_boards WHERE id = ?', [$boardid]) ?? $row;
+        }
+
+        // Nach einem Fehler die Eingaben zeigen (das gespeicherte Passwort bleibt unberührt)
+        if ($formError !== '') {
+            $row = array_merge($row, compact(
+                'title',
+                'description',
+                'mods',
+                'status',
+                'header',
+                'footer',
+                'bordercolor',
+                'tablebg1',
+                'tablebg2',
+                'tablebg3',
+                'newthread',
+                'newpost'
+            ), ['catid' => $catidPost]);
         }
     }
 }
@@ -152,11 +173,12 @@ if ($row !== null && $editboard === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') 
             <label for="title" class="form-label fw-semibold">Titel</label>
             <input id="title" name="title" type="text" class="form-control"
                    maxlength="100" required value="<?php echo Security::escape((string) $row['title']); ?>">
+            <div class="invalid-feedback">Bitte einen Boardtitel angeben.</div>
           </div>
           <div class="col-md-6">
             <label for="description" class="form-label">Beschreibung</label>
             <input id="description" name="description" type="text" class="form-control"
-                   maxlength="150" required value="<?php echo Security::escape((string) $row['description']); ?>">
+                   maxlength="150" value="<?php echo Security::escape((string) $row['description']); ?>">
           </div>
           <div class="col-md-6">
             <label for="mods" class="form-label">Moderatoren</label>
@@ -231,7 +253,7 @@ if ($row !== null && $editboard === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') 
           <div class="col-md-3">
             <label for="bordercolor" class="form-label">Rahmenfarbe</label>
             <div class="input-group">
-              <input id="bordercolor" name="bordercolor" type="text" class="form-control" maxlength="7" required
+              <input id="bordercolor" name="bordercolor" type="text" class="form-control" maxlength="7"
                      value="<?php echo Security::escape((string) $row['bordercolor']); ?>"
                      aria-describedby="bordercolorHelp">
               <span class="input-group-text" style="background:<?php echo Security::escape((string) $row['bordercolor']); ?>;width:38px;" aria-hidden="true">&nbsp;</span>

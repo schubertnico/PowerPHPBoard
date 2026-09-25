@@ -24,10 +24,7 @@ if ($loggedin === 'YES' && isset($ppbuser['id']) && isset($db)) {
 }
 
 // Include custom footer template if set
-$footerFile = $settings['footer'] ?? '';
-if ($footerFile !== '' && file_exists(__DIR__ . '/inc/' . $footerFile)) {
-    include __DIR__ . '/inc/' . $footerFile;
-} else {
-    include __DIR__ . '/inc/footer.ppb';
-}
+// (nur Dateinamen aus inc/, siehe ppb_template_path())
+$footerTemplate = ppb_template_path((string) ($settings['footer'] ?? ''));
+include $footerTemplate ?? __DIR__ . '/inc/footer.ppb';
 ?>

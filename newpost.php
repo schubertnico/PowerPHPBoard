@@ -123,9 +123,10 @@ if (!empty($board['title']) && !empty($thread['title']) && $hasAccess
 
 include __DIR__ . '/header.inc.php';
 
-// Zitat nur mit Zugang zum Board und nur aus demselben Thema
-$quoteText = '';
-if ($postid > 0 && !$postCreated && $hasAccess && !empty($thread['id'])) {
+// Zitat nur mit Zugang zum Board und nur aus demselben Thema; nach einem
+// Fehler bleibt der eingegebene Text stehen
+$quoteText = $formError !== '' ? Security::getString('text', 'POST') : '';
+if ($postid > 0 && !$postCreated && $formError === '' && $hasAccess && !empty($thread['id'])) {
     $quotePost = $db->fetchOne(
         'SELECT text FROM ppb_posts WHERE id = ? AND (id = ? OR threadid = ?)',
         [$postid, $thread['id'], $thread['id']]

@@ -95,7 +95,14 @@ if ($row !== null && $edituser === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     }
+
+    // Nach einem Fehler die Eingaben (außer Passwörtern) zeigen
+    if ($formError !== '') {
+        $row = array_merge($row, compact('username', 'homepage', 'icq', 'biography', 'signature', 'hideemail', 'logincookie', 'status'));
+        $row['email'] = $email1;
+    }
 }
+$email2Value = $row !== null ? (string) ($formError !== '' ? Security::getString('email2', 'POST') : $row['email']) : '';
 ?>
 
 <header class="mb-3">
@@ -133,6 +140,7 @@ if ($row !== null && $edituser === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
             <label for="username" class="form-label fw-semibold">Benutzername</label>
             <input id="username" name="username" type="text" class="form-control"
                    maxlength="50" required value="<?php echo Security::escape((string) $row['username']); ?>">
+            <div class="invalid-feedback">Bitte einen Benutzernamen angeben.</div>
           </div>
           <div class="col-md-6">
             <label for="status" class="form-label fw-semibold">Status</label>
@@ -153,7 +161,7 @@ if ($row !== null && $edituser === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
           <div class="col-md-6">
             <label for="email2" class="form-label fw-semibold">E-Mail (Bestätigung)</label>
             <input id="email2" name="email2" type="email" class="form-control"
-                   maxlength="100" required value="<?php echo Security::escape((string) $row['email']); ?>">
+                   maxlength="100" required value="<?php echo Security::escape($email2Value); ?>">
           </div>
           <div class="col-md-6">
             <label for="password1" class="form-label">Neues Passwort</label>
@@ -178,7 +186,8 @@ if ($row !== null && $edituser === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="row g-3">
           <div class="col-md-8">
             <label for="homepage" class="form-label">Homepage</label>
-            <input id="homepage" name="homepage" type="url" class="form-control" maxlength="150"
+            <input id="homepage" name="homepage" type="text" inputmode="url" class="form-control" maxlength="150"
+                   placeholder="https://example.org"
                    value="<?php echo Security::escape((string) ($row['homepage'] ?? '')); ?>">
           </div>
           <div class="col-md-4">

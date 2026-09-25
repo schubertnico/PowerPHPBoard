@@ -56,8 +56,11 @@ if ($row !== null && $editboardcategory === 1 && $_SERVER['REQUEST_METHOD'] === 
         $newthread = Security::getString('newthread', 'POST');
         $newpost = Security::getString('newpost', 'POST');
 
-        if ($title === '' || $bordercolor === '' || $tablebg1 === '' || $tablebg2 === '' || $tablebg3 === '') {
-            $formError = 'Bitte fülle alle Pflichtfelder aus.';
+        // Die Design-Felder sind optional
+        if ($title === '') {
+            $formError = 'Bitte einen Kategorietitel angeben.';
+        } elseif (!ppb_valid_template_setting($header) || !ppb_valid_template_setting($footer)) {
+            $formError = 'Header- und Footer-Template müssen Dateinamen aus dem Ordner inc/ sein oder leer bleiben.';
         } else {
             $title = trim(strip_tags($title));
             $db->execute(
@@ -67,6 +70,21 @@ if ($row !== null && $editboardcategory === 1 && $_SERVER['REQUEST_METHOD'] === 
             CSRF::regenerate();
             $saved = true;
             $row = $db->fetchOne('SELECT * FROM ppb_boards WHERE id = ?', [$catid]) ?? $row;
+        }
+
+        // Nach einem Fehler die Eingaben zeigen
+        if ($formError !== '') {
+            $row = array_merge($row, compact(
+                'title',
+                'header',
+                'footer',
+                'bordercolor',
+                'tablebg1',
+                'tablebg2',
+                'tablebg3',
+                'newthread',
+                'newpost'
+            ));
         }
     }
 }
@@ -107,6 +125,7 @@ if ($row !== null && $editboardcategory === 1 && $_SERVER['REQUEST_METHOD'] === 
           <label for="title" class="form-label fw-semibold">Titel</label>
           <input id="title" name="title" type="text" class="form-control"
                  maxlength="100" required value="<?php echo Security::escape((string) $row['title']); ?>">
+          <div class="invalid-feedback">Bitte einen Kategorietitel angeben.</div>
         </div>
         <div class="alert alert-info small d-flex align-items-start gap-2 mt-3 mb-3" role="alert">
           <i class="bi bi-info-circle-fill fs-5" aria-hidden="true"></i>
@@ -134,7 +153,7 @@ if ($row !== null && $editboardcategory === 1 && $_SERVER['REQUEST_METHOD'] === 
           <div class="col-md-3">
             <label for="bordercolor" class="form-label">Rahmenfarbe</label>
             <div class="input-group">
-              <input id="bordercolor" name="bordercolor" type="text" class="form-control" maxlength="7" required
+              <input id="bordercolor" name="bordercolor" type="text" class="form-control" maxlength="7"
                      value="<?php echo Security::escape((string) $row['bordercolor']); ?>">
               <span class="input-group-text" style="background:<?php echo Security::escape((string) $row['bordercolor']); ?>;width:38px;" aria-hidden="true">&nbsp;</span>
             </div>
