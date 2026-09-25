@@ -29,6 +29,7 @@ namespace PowerPHPBoard;
 use PDO;
 use PDOException;
 use PDOStatement;
+use SensitiveParameter;
 
 /**
  * PDO-based database abstraction layer
@@ -41,13 +42,14 @@ class Database
     private readonly PDO $pdo;
 
     /**
-     * @param array{server: string, user: string, password: string, database: string} $config
+     * @param array{server: string, user: string, password: string, database: string, port?: int} $config
      */
-    private function __construct(array $config)
+    private function __construct(#[SensitiveParameter] array $config)
     {
         $dsn = sprintf(
-            'mysql:host=%s;dbname=%s;charset=utf8mb4',
+            'mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4',
             $config['server'],
+            $config['port'] ?? 3306,
             $config['database']
         );
 
@@ -68,9 +70,9 @@ class Database
     /**
      * Get singleton instance
      *
-     * @param array{server: string, user: string, password: string, database: string}|null $config
+     * @param array{server: string, user: string, password: string, database: string, port?: int}|null $config
      */
-    public static function getInstance(?array $config = null): self
+    public static function getInstance(#[SensitiveParameter] ?array $config = null): self
     {
         if (!self::$instance instanceof self) {
             if ($config === null) {

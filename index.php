@@ -8,7 +8,22 @@ declare(strict_types=1);
  * MIT License - Copyright (c) 2026 PowerScripts
  */
 
+use PowerPHPBoard\Installer\InstallState;
 use PowerPHPBoard\Security;
+
+require_once __DIR__ . '/config.inc.php';
+require_once __DIR__ . '/includes/Installer/LocalConfig.php';
+require_once __DIR__ . '/includes/Installer/DatabaseSetup.php';
+require_once __DIR__ . '/includes/Installer/InstallState.php';
+
+// Noch nicht installiert (keine Konfiguration bzw. keine Tabellen) und der
+// Web-Installer liegt bereit? Dann dorthin statt zu einem Datenbankfehler.
+// Die Sperrlogik in InstallState verhindert, dass ein Datenbankausfall eines
+// eingerichteten Forums hierher führt.
+if (InstallState::shouldRedirectToInstaller(__DIR__, $mysql)) {
+    header('Location: install/', true, 302);
+    exit;
+}
 
 include __DIR__ . '/header.inc.php';
 

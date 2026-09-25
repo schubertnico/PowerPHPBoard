@@ -35,7 +35,10 @@ services:
       MYSQL_PASSWORD: powerphpboard_secret
     volumes:
       - powerphpboard_mysql_data:/var/lib/mysql
-      - ../install.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      # Beim ersten Start (leeres Volume) in alphabetischer Reihenfolge:
+      # zuerst das Schema, danach die Testkonten (nur lokal, siehe dev-seed.sql)
+      - ../install.sql:/docker-entrypoint-initdb.d/01-install.sql:ro
+      - ./dev-seed.sql:/docker-entrypoint-initdb.d/02-dev-seed.sql:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_secret"]
       interval: 10s

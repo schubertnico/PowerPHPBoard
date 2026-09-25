@@ -1,0 +1,12 @@
+# =====================================================================
+#  PowerPHPBoard - install/templates/.htaccess
+# ---------------------------------------------------------------------
+#  Seitenvorlagen des Web-Installers. Sie werden nur von
+#  install/installer.php eingebunden und nie direkt aufgerufen.
+# =====================================================================
+Require all denied
+
+<IfModule !mod_authz_core.c>
+    Order deny,allow
+    Deny from all
+</IfModule>

@@ -108,25 +108,28 @@ cd PowerPHPBoard
 # Abhaengigkeiten installieren
 composer install
 
-# Konfiguration erstellen
-cp config.inc.php.example config.inc.php
-# config.inc.php anpassen
-
-# Datenbank einrichten
-mysql -u root -p < install/install.sql
+# Leere Datenbank anlegen, dann den Web-Installer aufrufen:
+# er legt Tabellen, Administrator und config.local.php an
+php -S localhost:8085     # http://localhost:8085/install/
 ```
+
+Zugangsdaten gehören in `config.local.php` (nicht versioniert) oder in
+Umgebungsvariablen – nie in `config.inc.php`. Siehe INSTALLATION.md, Abschnitt
+„Konfiguration“.
 
 ### Mit Docker (empfohlen)
 
 ```bash
-# Container starten
-docker-compose up -d
+cd .docker
+
+# Container starten (lädt install.sql und die Testkonten aus dev-seed.sql)
+docker compose up -d
 
 # Logs anzeigen
-docker-compose logs -f
+docker compose logs -f
 
 # Container stoppen
-docker-compose down
+docker compose down
 ```
 
 ### Tests ausfuehren

@@ -10,16 +10,17 @@ Für eine Kurzfassung siehe [README.md](README.md) Abschnitt "Schnellstart".
 
 1. [Systemanforderungen](#systemanforderungen)
 2. [Schnellinstallation](#schnellinstallation)
-3. [Docker Installation](#docker-installation)
-4. [Manuelle Installation auf Live-Server](#manuelle-installation-auf-live-server)
-5. [Webserver-Konfiguration](#webserver-konfiguration)
-6. [Datenbank einrichten](#datenbank-einrichten)
-7. [Konfiguration](#konfiguration)
-8. [E-Mail-Versand (SMTP)](#e-mail-versand-smtp)
-9. [Erste Schritte](#erste-schritte)
-10. [Upgrade](#upgrade)
-11. [Sicherheits-Checkliste](#sicherheits-checkliste)
-12. [Fehlerbehebung](#fehlerbehebung)
+3. [Installation mit dem Web-Installer](#installation-mit-dem-web-installer)
+4. [Docker Installation](#docker-installation)
+5. [Manuelle Installation auf Live-Server](#manuelle-installation-auf-live-server)
+6. [Webserver-Konfiguration](#webserver-konfiguration)
+7. [Datenbank einrichten](#datenbank-einrichten)
+8. [Konfiguration](#konfiguration)
+9. [E-Mail-Versand (SMTP)](#e-mail-versand-smtp)
+10. [Erste Schritte](#erste-schritte)
+11. [Upgrade](#upgrade)
+12. [Sicherheits-Checkliste](#sicherheits-checkliste)
+13. [Fehlerbehebung](#fehlerbehebung)
 
 ---
 
@@ -113,6 +114,101 @@ cd .docker && docker compose up -d --build && cd ..
 
 Fuer Produktion ohne Docker siehe [Manuelle Installation auf Live-Server](#manuelle-installation-auf-live-server).
 
+Für Shared Hosting und alle Server ohne Docker: Dateien hochladen, leere Datenbank
+anlegen, `/install/` im Browser aufrufen – siehe
+[Installation mit dem Web-Installer](#installation-mit-dem-web-installer).
+
+---
+
+## Installation mit dem Web-Installer
+
+Der empfohlene Weg für jeden Server ohne Docker – gerade auch für Shared Hosting
+ohne Shell-Zugang. Der Installer legt die Tabellen aus `install.sql` an, erstellt
+den ersten Administrator und schreibt die Zugangsdaten in `config.local.php`.
+Er ist seit Version 2.3.0 enthalten und ersetzt den früheren Standard-Administrator
+„Gott“ mit öffentlich bekanntem Passwort.
+
+### Voraussetzungen
+
+- PHP 8.4 oder neuer mit den Erweiterungen `pdo_mysql` und `mbstring`
+- MySQL 8.0+ oder MariaDB 10.5+ mit einer **leeren** Datenbank
+- Schreibrechte für `logs/`; damit der Installer `config.local.php` selbst anlegen
+  kann, auch für das Forumverzeichnis (sonst laden Sie die Datei von Hand hoch)
+- Empfohlen: HTTPS, damit die Zugangsdaten verschlüsselt übertragen werden
+
+### Schritt für Schritt (Shared Hosting)
+
+1. **Dateien hochladen.** Den Inhalt des Release-Archivs per FTP/SFTP in das
+   Zielverzeichnis kopieren, z. B. `/forum/`. Auch die versteckten
+   `.htaccess`-Dateien übertragen (im FTP-Programm „versteckte Dateien anzeigen“
+   einschalten) – sie schützen `config.local.php`, `includes/`, `logs/` und Co.
+2. **Rechte setzen.** `logs/` muss für PHP beschreibbar sein (je nach Hoster
+   `755`, `775` oder `777`). Ist auch das Forumverzeichnis beschreibbar, legt der
+   Installer `config.local.php` selbst an.
+3. **Datenbank anlegen.** Im Kundenmenü des Hosters eine neue MySQL-/MariaDB-Datenbank
+   erstellen (Zeichensatz `utf8mb4`, falls wählbar). Server, Port, Datenbankname,
+   Benutzer und Passwort notieren.
+4. **Installer aufrufen.** `https://ihre-domain.de/forum/install/` öffnen. Wer die
+   Startseite des noch nicht eingerichteten Forums aufruft, landet automatisch dort.
+5. **Assistent durchlaufen:**
+
+   | Schritt | Inhalt |
+   |---------|--------|
+   | 1 Systemprüfung | PHP-Version, Erweiterungen, Schreibrechte, Hinweis auf HTTPS. Rote Punkte müssen behoben werden, gelbe sind Hinweise. |
+   | 2 Datenbank | Server (meist `localhost`), Port (`3306`), Name der Datenbank, Benutzer, Passwort. Die Verbindung wird sofort geprüft. Enthält die Datenbank schon `ppb_`-Tabellen, bricht der Installer ab, statt etwas zu überschreiben. |
+   | 3 Forum | Name, Adresse (URL, aus der aktuellen Anfrage vorbelegt – bitte prüfen, sie steht in allen Links der Forum-Mails), E-Mail-Adresse, Sprache (English, Deutsch Sie-Form, Deutsch Du-Form), optional SMTP-Server, Port und Absender. HTML in Beiträgen bleibt aus Sicherheitsgründen ausgeschaltet. |
+   | 4 Administrator | Benutzername (2–50 Zeichen: Buchstaben, Ziffern sowie `. _ -`), E-Mail-Adresse, Passwort (mindestens 8 Zeichen) mit Wiederholung – dieselben Regeln wie bei der Registrierung. |
+   | 5 Abschluss | Zusammenfassung mit „Ändern“-Links. „Jetzt installieren“ legt Tabellen und Administrator an, schreibt `config.local.php` und sperrt den Installer. |
+
+6. **`config.local.php` prüfen.** Hat der Installer die Datei geschrieben, versucht er,
+   die Rechte auf `640` zu setzen – im FTP-Programm kontrollieren. Konnte er sie nicht
+   schreiben, bietet die Abschlussseite „config.local.php herunterladen“ an (der Inhalt
+   steht zusätzlich zum Kopieren darunter). Die Datei per FTP in das Forumverzeichnis
+   neben `config.inc.php` legen, Rechte `640` setzen und die Abschlussseite neu laden.
+7. **`install/` löschen.** Der Installer ist nach dem Abschluss gesperrt, gehört aber
+   nicht auf ein laufendes Forum.
+8. **Anmelden** mit E-Mail-Adresse und Passwort des neuen Administrators, unter
+   `/admin/` das erste Board anlegen (siehe [Erste Schritte](#erste-schritte)).
+
+### Sperre
+
+Der Installer verweigert jeden Aufruf mit HTTP 403 und dem Hinweis, `install/` zu
+löschen, sobald eine dieser Bedingungen gilt:
+
+- `install/.installed` existiert (schreibt der Installer am Ende),
+- `config.local.php` existiert,
+- die konfigurierte Datenbank enthält bereits eine Zeile in `ppb_config`,
+- es ist eine Datenbank per Umgebungsvariablen oder angepasster `config.inc.php`
+  eingerichtet, die gerade nicht erreichbar ist – ein Datenbankausfall öffnet den
+  Installer also nicht wieder.
+
+Die Startseite leitet nur dann auf `install/` weiter, wenn der Installer vorhanden
+und nicht gesperrt ist; sonst verhält sie sich wie bisher (bei einem Ausfall der
+Datenbank erscheint die Meldung „Datenbankfehler“).
+
+**Wirklich neu installieren:** Datensicherung anlegen, `config.local.php` und
+`install/.installed` löschen, eine leere Datenbank verwenden (oder die `ppb_`-Tabellen
+selbst entfernen) und `install/` erneut hochladen.
+
+### Sicherheitshinweise
+
+- Solange das Forum nicht eingerichtet ist, kann jeder den Installer aufrufen, der
+  die Adresse kennt. Deshalb: hochladen, installieren, `install/` löschen – am besten
+  in einem Zug.
+- Nach Möglichkeit über HTTPS installieren.
+- Zugangsdaten stehen nur in `config.local.php`. Der Installer schreibt sie weder in
+  Logs noch in Fehlermeldungen (im Security-Log stehen nur Fehlercodes); das
+  Administrator-Passwort liegt auch in der Session nur als Argon2id-Hash vor.
+
+### Ohne Web-Installer (Kommandozeile)
+
+```bash
+mysql -u ppb_user -p forum_db < install.sql
+# config.local.php von Hand anlegen (Vorlage unter „Konfiguration“)
+php bin/create-admin.php --user=Admin --email=admin@example.com
+# danach im Adminbereich unter „Allgemein“ Board-URL und E-Mail-Adresse eintragen
+```
+
 ---
 
 ## Docker Installation
@@ -196,8 +292,19 @@ docker compose up -d --build
 docker compose down -v
 ```
 
-Beim ersten Start wird `install.sql` automatisch in die DB geladen und ein Admin-Account
-angelegt (siehe [Erste Schritte](#erste-schritte)).
+Beim ersten Start (leeres Datenbank-Volume) lädt MySQL zuerst `install.sql` und danach
+`.docker/dev-seed.sql`. Der Dev-Seed legt **nur für die lokale Entwicklung** zwei
+Testkonten an (Anmeldung per E-Mail-Adresse):
+
+| Benutzer     | Rolle         | E-Mail                   | Passwort    |
+|--------------|---------------|--------------------------|-------------|
+| `RalphAdmin` | Administrator | `ralphadmin@example.com` | `Test1234!` |
+| `RalphUser`  | Normal user   | `ralphuser@example.com`  | `Test1234!` |
+
+`dev-seed.sql` liegt unter `.docker/` und ist damit per `.gitattributes` aus dem
+Release-Paket ausgeschlossen. Im Docker-Stack kommen die Zugangsdaten aus den
+Umgebungsvariablen in `docker-compose.yml`; der Web-Installer ist dort gesperrt,
+weil die Datenbank bereits eingerichtet ist.
 
 ---
 
@@ -228,8 +335,11 @@ git clone https://github.com/schubertnico/PowerPHPBoard.git forum
 cd forum
 rm -rf tests docs todos .docker .github phpunit.xml phpstan.neon psalm.xml \
        phpmd.xml rector.php infection.json5 .php-cs-fixer.php \
-       create-admin.php install_bugfix_*.sql
+       install_bugfix_*.sql
 ```
+
+`install/` bleibt bis zum Ende der Einrichtung liegen (siehe Schritt 5) und wird
+danach gelöscht.
 
 ### 2. Produktions-Dependencies installieren
 
@@ -253,20 +363,35 @@ find /var/www/forum -type f -exec chmod 640 {} \;
 # Log-Verzeichnis muss beschreibbar sein
 chmod 770 /var/www/forum/logs
 
-# Nur Webserver darf config.inc.php lesen
-chmod 640 /var/www/forum/config.inc.php
+# Nur für den Web-Installer: Forumverzeichnis vorübergehend beschreibbar,
+# damit er config.local.php anlegen kann (danach wieder 750)
+chmod 770 /var/www/forum
+
+# Nach der Installation: Zugangsdaten nur für den Webserver lesbar
+chmod 640 /var/www/forum/config.local.php
 ```
 
 ### 4. `.htaccess` nicht entfernen
 
-Das Repository enthaelt **sieben** `.htaccess`-Dateien (Root, includes/, inc/, logs/,
-docs/, todos/, tests/). Die Root-`.htaccess` ist essenziell fuer:
+Das Repository enthaelt **neun** `.htaccess`-Dateien (Root, includes/, inc/, logs/,
+docs/, todos/, tests/, bin/, install/templates/). Die Root-`.htaccess` ist essenziell für:
 
-- Blockieren sensibler Dateien (config.inc.php, *.sql, includes/, logs/ ...)
+- Blockieren sensibler Dateien (config.inc.php, config.local.php, *.sql, includes/, logs/, bin/ ...)
 - Security-Header (X-Frame-Options, Referrer-Policy, ...)
 - Directory-Listing aus
 
 Achte darauf, dass dein FTP/Deploy-Tool versteckte Dateien (dotfiles) uebertraegt!
+
+### 5. Web-Installer aufrufen
+
+`https://forum.example.com/install/` öffnen und die fünf Schritte durchlaufen – siehe
+[Installation mit dem Web-Installer](#installation-mit-dem-web-installer). Danach
+`install/` löschen und die Rechte des Forumverzeichnisses wieder auf `750` setzen:
+
+```bash
+rm -rf /var/www/forum/install
+chmod 750 /var/www/forum
+```
 
 ---
 
@@ -337,13 +462,16 @@ server {
     # Dotfiles komplett blockieren
     location ~ /\. { deny all; return 404; }
 
-    # Sensible Verzeichnisse
-    location ~ ^/(includes|inc|tests|docs|todos|logs|vendor|node_modules)/ {
+    # Sensible Verzeichnisse (inkl. CLI-Werkzeuge und Installer-Vorlagen)
+    location ~ ^/(includes|inc|tests|docs|todos|logs|vendor|node_modules|bin|install/templates)/ {
         deny all; return 404;
     }
 
+    # Nach der Installation: Web-Installer komplett sperren (bzw. install/ löschen)
+    # location ^~ /install/ { deny all; return 404; }
+
     # Sensible Dateien (Root-Ebene)
-    location ~ ^/(config\.inc\.php|config\.inc\.local\.php|header\.inc\.php|footer\.inc\.php|functions\.inc\.php|english\.inc\.php|deutsch-(du|sie)\.inc\.php|install\.sql|install_bugfix.*\.sql|create-admin\.php|composer\.(json|lock)|phpstan\.neon|psalm\.xml|phpmd\.xml|phpunit\.xml|rector\.php|infection\.json5|\.php-cs-fixer\.php|README\.(md|html)|CONTRIBUTING\.md|SECURITY\.md|INSTALLATION\.md|LICENSE|Dockerfile|docker-compose\.yml)$ {
+    location ~ ^/(config\.inc\.php|config\.local\.php|config\.inc\.local\.php|header\.inc\.php|footer\.inc\.php|functions\.inc\.php|english\.inc\.php|deutsch-(du|sie)\.inc\.php|install\.sql|install_bugfix.*\.sql|create-admin\.php|composer\.(json|lock)|phpstan\.neon|psalm\.xml|phpmd\.xml|phpunit\.xml|rector\.php|infection\.json5|\.php-cs-fixer\.php|README\.(md|html)|CONTRIBUTING\.md|SECURITY\.md|INSTALLATION\.md|LICENSE|Dockerfile|docker-compose\.yml)$ {
         deny all; return 404;
     }
 
@@ -403,11 +531,16 @@ FLUSH PRIVILEGES;
 
 ### 2. Schema importieren
 
+Das übernimmt normalerweise der [Web-Installer](#installation-mit-dem-web-installer) –
+er liest dieselbe Datei `install.sql` ein. Von Hand:
+
 ```bash
 mysql -u ppb_user -p PowerPHPBoard_v2 < install.sql
 ```
 
-Damit sind alle Tabellen inklusive Rate-Limit- und Password-Reset-Tokens angelegt.
+Damit sind alle Tabellen inklusive Rate-Limit- und Password-Reset-Tokens angelegt,
+außerdem die Zeile mit den Forum-Einstellungen (`ppb_config`, `id = 1`) mit sicheren
+Vorgaben: HTML in Beiträgen aus, BBCode und Smilies an.
 
 ### 3. Schema-Uebersicht
 
@@ -427,50 +560,78 @@ Damit sind alle Tabellen inklusive Rate-Limit- und Password-Reset-Tokens angeleg
 
 ### 4. Admin-Konto
 
-`install.sql` legt automatisch den Admin-User **"Gott"** mit Legacy-Passwort-Hash an.
-Dieser wird beim ersten Login automatisch auf Argon2id migriert.
+`install.sql` legt seit 2.3.0 **keinen** Administrator mehr an (früher gab es den
+Standard-Administrator „Gott“ mit öffentlich bekanntem Passwort). Den ersten
+Administrator erstellt:
 
-**Sofort nach Installation:**
+- der **Web-Installer** in Schritt 4, oder
+- das **CLI-Werkzeug** auf der Kommandozeile (das Passwort wird abgefragt, unter Linux/macOS verdeckt):
 
-1. Mit "Gott" + Initial-Passwort einloggen.
-2. Profil oeffnen, Passwort **und** E-Mail aendern.
-3. Alternativ einen eigenen Admin anlegen und "Gott" ueber phpMyAdmin loeschen.
+  ```bash
+  php bin/create-admin.php --user=Admin --email=admin@example.com
+  ```
+
+  Mit `--update` statt `--user` wird ein bestehendes Konto (per E-Mail gefunden)
+  zum Administrator und bekommt ein neues Passwort – der Notfallweg, wenn niemand
+  mehr Zugang zum Adminbereich hat. Für Skripte liest `--password-stdin` das
+  Passwort aus der Standardeingabe. Über das Web ist das Skript gesperrt
+  (`.htaccess` und Prüfung auf `PHP_SAPI`).
+
+Ältere Installationen, die das Konto „Gott“ noch haben: Passwort ändern oder das
+Konto löschen.
 
 ---
 
 ## Konfiguration
 
-### `config.inc.php`
+### Rangfolge der Zugangsdaten
 
-Die `config.inc.php` ist im Repository bereits vorhanden und wird via Environment-
-Variablen parametriert. Struktur:
+`config.inc.php` enthält seit 2.3.0 keine Zugangsdaten mehr und wird bei jedem Update
+überschrieben. Datenbank- und Mail-Einstellungen werden in dieser Reihenfolge gelesen
+(höchste zuerst):
+
+1. **`config.local.php`** – schreibt der Web-Installer, kann auch von Hand angelegt werden
+2. **Umgebungsvariablen** `PPB_DB_HOST`, `PPB_DB_PORT`, `PPB_DB_USER`, `PPB_DB_PASS`,
+   `PPB_DB_NAME`, `PPB_MAIL_HOST`, `PPB_MAIL_PORT`, `PPB_MAIL_FROM`
+3. **Vorgaben**: `localhost:3306`, Benutzer `root` ohne Passwort, Datenbank
+   `PowerPHPBoard_v2`, Mail über `mailpit:1025`
+
+`config.local.php` gewinnt, weil sie die ausdrückliche Einstellung genau dieser
+Installation ist. Im Docker-Stack gibt es die Datei nicht – dort greifen die
+Umgebungsvariablen. Fehlt in `config.local.php` ein Schlüssel (z. B. der ganze
+`mail`-Block), gilt der Wert der nächsten Stufe.
+
+#### Variante A: `config.local.php` (empfohlen, legt der Web-Installer an)
 
 ```php
 <?php
+
 declare(strict_types=1);
 
-$mysql = [
-    'server'   => getenv('PPB_DB_HOST') ?: 'localhost',
-    'user'     => getenv('PPB_DB_USER') ?: 'root',
-    'password' => getenv('PPB_DB_PASS') ?: '',
-    'database' => getenv('PPB_DB_NAME') ?: 'PowerPHPBoard_v2',
+return [
+    'mysql' => [
+        'server' => 'localhost',
+        'port' => 3306,
+        'user' => 'forum_user',
+        'password' => 'GEHEIMES_PASSWORT',
+        'database' => 'forum_prod',
+    ],
+    'mail' => [
+        'host' => 'smtp.example.com',
+        'port' => 25,
+        'from' => 'noreply@example.com',
+    ],
 ];
-
-$mail = [
-    'host' => getenv('PPB_MAIL_HOST') ?: 'mailpit',
-    'port' => (int) (getenv('PPB_MAIL_PORT') ?: 1025),
-    'from' => getenv('PPB_MAIL_FROM') ?: 'noreply@powerphpboard.local',
-];
-
-define('PPB_VERSION', '2.2.1');
-define('PPB_SESSION_LIFETIME', 3600);
-define('PPB_CSRF_ENABLED', true);
-define('PPB_DEBUG', (bool) (getenv('PPB_DEBUG') ?: false));
 ```
 
-Zur Konfiguration stehen zwei Wege offen:
+- Liegt neben `config.inc.php` im Forumverzeichnis, ist per `.gitignore` von der
+  Versionierung ausgeschlossen und per `.htaccess` vor direktem Abruf geschützt.
+- Rechte `640` (bzw. `600`), damit andere Konten auf dem Server sie nicht lesen.
+- Die Datei gibt nur ein Array zurück. Sonderzeichen in Passwörtern bitte in
+  einfachen Anführungszeichen schreiben und `'` sowie `\` mit `\` maskieren – oder die
+  Datei vom Installer erzeugen lassen, der das automatisch richtig macht.
 
-#### Variante A: Environment-Variablen im Webserver
+#### Variante B: Environment-Variablen im Webserver
 
 **Apache (`.htaccess` oder VirtualHost):**
 ```apache
@@ -496,26 +657,7 @@ env[PPB_MAIL_PORT] = 587
 env[PPB_MAIL_FROM] = noreply@example.com
 ```
 
-#### Variante B: `config.local.inc.php` nebenbei (nicht versioniert)
-
-Lege eine `config.local.inc.php` im Projekt-Root an, die NICHT committed wird
-(siehe `.gitignore`):
-
-```php
-<?php
-putenv('PPB_DB_HOST=db.internal');
-putenv('PPB_DB_USER=forum_user');
-putenv('PPB_DB_PASS=GEHEIMES_PASSWORT');
-putenv('PPB_DB_NAME=forum_prod');
-```
-
-Und binde sie am Anfang der `config.inc.php` ein:
-
-```php
-if (file_exists(__DIR__ . '/config.local.inc.php')) {
-    require_once __DIR__ . '/config.local.inc.php';
-}
-```
+Ein abweichender Datenbank-Port wird mit `PPB_DB_PORT` gesetzt (Standard `3306`).
 
 ### Board-Einstellungen
 
@@ -525,7 +667,8 @@ Nach der Installation im Admin-Panel unter "Allgemein" setzen:
 - **Board-URL**: Vollständige URL (für Links in E-Mails)
 - **Admin-E-Mail**: Absender-Adresse (Fallback: `$mail['from']`)
 - **Sprache**: `English`, `Deutsch-Sie` oder `Deutsch-Du` (Default ab 2.2.0: `Deutsch-Du`)
-- **HTML in Beiträgen**: `an` oder `aus` (Achtung: auf `aus` ist sicherer)
+- **HTML in Beiträgen**: `an` oder `aus` – seit 2.3.0 standardmäßig `aus`; `an`
+  erlaubt HTML-Code in Beiträgen und damit Cross-Site-Scripting (nicht empfohlen)
 - **BBCode in Beiträgen**, **Smilies in Beiträgen**: `an`/`aus`
 
 ---
@@ -584,9 +727,9 @@ Du solltest die leere Boardlist mit dem Standard-Theme sehen.
 
 ### 2. Als Admin einloggen
 
-Der initial angelegte Admin heisst **"Gott"**. Login-Email und Initial-Passwort
-findest du in `install.sql` (Zeile mit `INSERT INTO ppb_users`). **Passwort sofort
-aendern!**
+Mit E-Mail-Adresse und Passwort des Administrators anmelden, den Sie im Web-Installer
+(Schritt 4) bzw. mit `bin/create-admin.php` angelegt haben. Im Docker-Stack gibt es
+die Testkonten aus `.docker/dev-seed.sql` (siehe [Docker Installation](#docker-installation)).
 
 ### 3. Erstes Board erstellen
 
@@ -614,6 +757,32 @@ Im Admin unter "General Settings":
 ---
 
 ## Upgrade
+
+### Von 2.2.x auf 2.3.0 (Web-Installer)
+
+Für ein Update ist der Web-Installer **nicht** nötig: Es gibt keine Datenbank-Migration,
+Datenbank und Zugangsdaten bleiben gültig.
+
+1. **Backup** von Datenbank und Dateien anlegen (siehe unten bei 2.1.0).
+2. **Zugangsdaten sichern.** Die neue `config.inc.php` enthält keine Zugangsdaten mehr
+   und ersetzt die alte.
+   - Wer Umgebungsvariablen nutzt (`SetEnv`, PHP-FPM, Docker): nichts zu tun.
+   - Wer Zugangsdaten direkt in `config.inc.php` eingetragen hatte: **vor** dem Hochladen
+     eine `config.local.php` mit diesen Werten anlegen (Vorlage unter
+     [Konfiguration](#konfiguration)).
+3. **Dateien aktualisieren** (`git pull` bzw. Upload per FTP). Das Verzeichnis `install/`
+   dabei weglassen oder direkt danach löschen.
+4. Ein altes `create-admin.php` im Forumverzeichnis löschen – es ist durch
+   `bin/create-admin.php` (nur Kommandozeile) ersetzt.
+5. **Empfehlungen** im Adminbereich unter „Allgemein“: „HTML in Beiträgen“ auf `aus`
+   stellen und die Board-URL eintragen (sie steht in den Links der Forum-Mails).
+   Existiert noch das frühere Standardkonto „Gott“, dessen Passwort ändern oder das
+   Konto löschen.
+
+Leitet die Startseite nach dem Update auf `install/` weiter, findet das Forum seine
+Zugangsdaten nicht (z. B. weil die alte `config.inc.php` überschrieben wurde):
+`config.local.php` anlegen und `install/` löschen. Der Installer selbst würde die
+vorhandenen Tabellen nicht überschreiben, sondern mit einem Hinweis abbrechen.
 
 ### Von v2.1.x nach 2.2.0 (Bootstrap-5-Frontend)
 
@@ -697,18 +866,24 @@ Vor dem Go-Live abhaken:
 - [ ] `session.cookie_secure = On` (nur bei HTTPS)
 - [ ] `ServerTokens Prod`, `ServerSignature Off`
 - [ ] `AllowOverride All` in Apache, damit `.htaccess` greift
-- [ ] `.htaccess`-Dateien vollstaendig uebertragen (Root, includes/, inc/, logs/, docs/, todos/, tests/)
+- [ ] `.htaccess`-Dateien vollständig übertragen (Root, includes/, inc/, logs/, docs/, todos/, tests/, bin/, install/templates/)
+- [ ] Verzeichnis `install/` nach der Installation **gelöscht**
+- [ ] `config.local.php` hat die Rechte `640` (bzw. `600`)
+- [ ] Test: `curl -I https://forum.example.com/config.local.php` → HTTP 403
+- [ ] Test: `curl -I https://forum.example.com/install/` → HTTP 404 (gelöscht) bzw. 403 (gesperrt)
 - [ ] Test: `curl -I https://forum.example.com/config.inc.php` → HTTP 403
 - [ ] Test: `curl -I https://forum.example.com/includes/Security.php` → HTTP 403
 - [ ] Test: `curl -I https://forum.example.com/.git/HEAD` → HTTP 403
 - [ ] Test: `curl -I https://forum.example.com/install.sql` → HTTP 403
 - [ ] Test: Security-Header via `curl -I https://.../` sichtbar (X-Frame-Options, X-Content-Type-Options, Referrer-Policy)
-- [ ] Admin-Passwort des Initial-Accounts **geaendert**
+- [ ] Kein Konto mit bekanntem Standardpasswort (früheres „Gott“-Konto geändert oder gelöscht)
+- [ ] „HTML in Beiträgen“ im Adminbereich ausgeschaltet, Board-URL eingetragen
 - [ ] Admin-Email auf existierende Adresse gesetzt
 - [ ] SMTP getestet (Passwort-Reset-Mail kommt an)
 - [ ] Rate-Limit getestet (10x falsches Login loest Lock aus)
 - [ ] DB-Backup-Strategie eingerichtet (mindestens taeglich)
-- [ ] `create-admin.php` und `install_bugfix_*.sql` **geloescht** oder unerreichbar
+- [ ] Altes `create-admin.php` im Hauptverzeichnis und `install_bugfix_*.sql` **gelöscht** oder unerreichbar
+- [ ] Test: `curl -I https://forum.example.com/bin/create-admin.php` → HTTP 403
 - [ ] `logs/`-Verzeichnis ist ausserhalb des DocumentRoot oder per `.htaccess` gesperrt
 - [ ] Composer installiert nur Prod-Dependencies (`--no-dev`)
 - [ ] `vendor/`, `tests/`, `docs/`, `.docker/`, `.github/` sind per `.htaccess` und/oder Webserver-Config gesperrt
@@ -716,6 +891,31 @@ Vor dem Go-Live abhaken:
 ---
 
 ## Fehlerbehebung
+
+### Web-Installer: „Der Installer ist gesperrt“
+
+Das ist Absicht, sobald das Forum eingerichtet ist (siehe
+[Sperre](#sperre)). Die Seite nennt den Grund: Sperrdatei `install/.installed`,
+vorhandene `config.local.php`, eingerichtete Datenbank oder eine konfigurierte, aber
+gerade nicht erreichbare Datenbank. Im letzten Fall zuerst die Datenbank bzw. die
+Zugangsdaten prüfen. Für eine bewusste Neuinstallation `config.local.php` und
+`install/.installed` löschen und eine leere Datenbank verwenden.
+
+### Web-Installer: „Diese Datenbank enthält bereits PowerPHPBoard-Tabellen“
+
+Der Installer überschreibt keine Daten. Für ein Update wird er nicht gebraucht
+(siehe [Upgrade](#von-22x-auf-230-web-installer)); für eine Neuinstallation eine leere
+Datenbank wählen oder die `ppb_`-Tabellen nach einer Datensicherung selbst löschen.
+Schlägt eine Installation mittendrin fehl, entfernt der Installer die in diesem Lauf
+angelegten Tabellen automatisch wieder.
+
+### Web-Installer: Verbindung zur Datenbank schlägt fehl
+
+Die Meldung nennt die Ursache ohne Zugangsdaten, z. B. „Benutzername oder Passwort ist
+falsch“ (MySQL-Fehler 1045), „Die Datenbank existiert nicht“ (1049), „keine
+Berechtigung“ (1044) oder „Server nicht erreichbar“ (2002). Server, Port und
+Datenbankname stehen im Kundenmenü des Hosters; bei vielen Hostern ist der Server
+**nicht** `localhost`. Im Security-Log (`logs/security.log`) steht nur der Fehlercode.
 
 ### "Class not found" Fehler
 

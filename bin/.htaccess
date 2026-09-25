@@ -1,0 +1,12 @@
+# =====================================================================
+#  PowerPHPBoard - bin/.htaccess
+# ---------------------------------------------------------------------
+#  Kommandozeilen-Werkzeuge (z. B. create-admin.php). Sie laufen nur
+#  per CLI und dürfen niemals per HTTP erreichbar sein.
+# =====================================================================
+Require all denied
+
+<IfModule !mod_authz_core.c>
+    Order deny,allow
+    Deny from all
+</IfModule>

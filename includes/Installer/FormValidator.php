@@ -1,0 +1,305 @@
+<?php
+
+declare(strict_types=1);
+
+/**
+ * PowerPHPBoard - Eingabeprüfung des Web-Installers
+ *
+ * MIT License - Copyright (c) 2026 PowerScripts
+ */
+
+namespace PowerPHPBoard\Installer;
+
+use PowerPHPBoard\Security;
+use PowerPHPBoard\Validator;
+use SensitiveParameter;
+
+/**
+ * Prüft die Formulare der Installer-Schritte 2 bis 4.
+ *
+ * Jede Methode liefert die bereinigten Werte und eine Liste von
+ * Fehlermeldungen, deren Schlüssel dem Feldnamen im Formular entspricht.
+ *
+ * @phpstan-import-type MysqlConfig from LocalConfig
+ * @phpstan-import-type MailConfig from LocalConfig
+ *
+ * @phpstan-type ForumSettings array{boardtitle: string, boardurl: string, adminemail: string, language: string, mail: MailConfig|null}
+ * @phpstan-type AdminInput array{username: string, email: string, password: string}
+ */
+final class FormValidator
+{
+    public const int BOARDTITLE_MAX = 200;
+
+    public const int BOARDURL_MAX = 250;
+
+    public const int EMAIL_MAX = 100;
+
+    public const int DB_NAME_MAX = 64;
+
+    public const int DB_USER_MAX = 80;
+
+    public const int HOST_MAX = 255;
+
+    public const int DEFAULT_DB_PORT = 3306;
+
+    /**
+     * Forumsprachen wie in ppb_config.language (Wert => Beschriftung).
+     */
+    public const array LANGUAGES = [
+        'Deutsch-Sie' => 'Deutsch (Sie-Form)',
+        'Deutsch-Du' => 'Deutsch (Du-Form)',
+        'English' => 'English',
+    ];
+
+    /**
+     * Schritt 2: Datenbankzugang.
+     *
+     * Das Passwort wird bewusst nicht getrimmt – Datenbankpasswörter werden
+     * genau so verwendet, wie sie eingegeben wurden.
+     *
+     * @param array<array-key, mixed> $input
+     *
+     * @return array{values: MysqlConfig, errors: array<string, string>}
+     */
+    public static function database(#[SensitiveParameter] array $input): array
+    {
+        $host = self::text($input, 'db_host');
+        $port = self::port(self::text($input, 'db_port'), self::DEFAULT_DB_PORT);
+        $name = self::text($input, 'db_name');
+        $user = self::text($input, 'db_user');
+        $password = is_string($input['db_password'] ?? null) ? $input['db_password'] : '';
+
+        $errors = array_filter([
+            'db_host' => self::fieldError(
+                $host,
+                self::isHostname($host),
+                'Bitte geben Sie den Datenbank-Server an (oft „localhost“).',
+                'Der Servername enthält ungültige Zeichen.'
+            ),
+            'db_port' => $port === null ? 'Der Port muss eine Zahl zwischen 1 und 65535 sein.' : null,
+            'db_name' => self::fieldError(
+                $name,
+                preg_match('/^[A-Za-z0-9_$-]{1,' . self::DB_NAME_MAX . '}$/', $name) === 1,
+                'Bitte geben Sie den Namen der Datenbank an.',
+                'Der Datenbankname darf nur Buchstaben, Ziffern sowie _ - $ enthalten (höchstens 64 Zeichen).'
+            ),
+            'db_user' => self::fieldError(
+                $user,
+                self::isPlainText($user, self::DB_USER_MAX),
+                'Bitte geben Sie den Datenbank-Benutzer an.',
+                'Der Benutzername ist zu lang oder enthält ungültige Zeichen.'
+            ),
+        ]);
+
+        return [
+            'values' => [
+                'server' => $host,
+                'port' => $port ?? self::DEFAULT_DB_PORT,
+                'user' => $user,
+                'password' => $password,
+                'database' => $name,
+            ],
+            'errors' => $errors,
+        ];
+    }
+
+    /**
+     * Schritt 3: Forum-Einstellungen und optional SMTP.
+     *
+     * @param array<array-key, mixed> $input
+     *
+     * @return array{values: ForumSettings, errors: array<string, string>}
+     */
+    public static function forum(array $input): array
+    {
+        $title = self::text($input, 'board_title');
+        $url = rtrim(self::text($input, 'board_url'), '/');
+        $email = self::text($input, 'board_email');
+        $language = self::text($input, 'board_language');
+
+        $errors = array_filter([
+            'board_title' => self::fieldError(
+                $title,
+                self::isPlainText($title, self::BOARDTITLE_MAX),
+                'Bitte geben Sie einen Namen für das Forum an.',
+                'Der Forumname darf höchstens 200 Zeichen lang sein und keine Steuer- oder ungültigen Zeichen enthalten.'
+            ),
+            'board_url' => self::fieldError(
+                $url,
+                self::isWebUrl($url) && Validator::withinLength($url, self::BOARDURL_MAX),
+                'Bitte geben Sie die Adresse des Forums an.',
+                'Bitte geben Sie eine vollständige Adresse mit http:// oder https:// an (höchstens 250 Zeichen).'
+            ),
+            'board_email' => self::isEmail($email) ? null : 'Bitte geben Sie eine gültige E-Mail-Adresse an.',
+            'board_language' => array_key_exists($language, self::LANGUAGES)
+                ? null
+                : 'Bitte wählen Sie eine Sprache aus der Liste.',
+        ]);
+
+        [$mail, $mailErrors] = self::mail($input, $email);
+
+        return [
+            'values' => [
+                'boardtitle' => $title,
+                'boardurl' => $url,
+                'adminemail' => $email,
+                'language' => $language,
+                'mail' => $mail,
+            ],
+            'errors' => $errors + $mailErrors,
+        ];
+    }
+
+    /**
+     * Schritt 4: Administrator-Konto – dieselben Regeln wie bei der Registrierung.
+     *
+     * Das Passwort wird wie in register.php/login.php getrimmt, damit die
+     * spätere Anmeldung mit exakt derselben Eingabe funktioniert.
+     *
+     * @param array<array-key, mixed> $input
+     *
+     * @return array{values: AdminInput, errors: array<string, string>}
+     */
+    public static function admin(#[SensitiveParameter] array $input): array
+    {
+        $errors = [];
+
+        $username = self::text($input, 'admin_username');
+        if (!Validator::isValidUsername($username)) {
+            $errors['admin_username'] = 'Der Benutzername muss 2 bis 50 Zeichen lang sein und darf nur Buchstaben, Ziffern sowie . _ - enthalten.';
+        }
+
+        $email = self::text($input, 'admin_email');
+        if (!self::isEmail($email)) {
+            $errors['admin_email'] = 'Bitte geben Sie eine gültige E-Mail-Adresse an (höchstens 100 Zeichen).';
+        }
+
+        $password = self::text($input, 'admin_password');
+        $confirm = self::text($input, 'admin_password_confirm');
+        if (!Validator::isStrongPassword($password)) {
+            $errors['admin_password'] = 'Das Passwort muss mindestens ' . Validator::PASSWORD_MIN . ' Zeichen lang sein.';
+        } elseif ($password !== $confirm) {
+            $errors['admin_password_confirm'] = 'Die beiden Passwörter stimmen nicht überein.';
+        }
+
+        return [
+            'values' => [
+                'username' => $username,
+                'email' => $email,
+                'password' => $password,
+            ],
+            'errors' => $errors,
+        ];
+    }
+
+    /**
+     * Einfacher Hostname, IPv4 oder IPv6 in eckigen Klammern. Semikolon und
+     * Gleichheitszeichen sind ausgeschlossen, damit nichts in den PDO-DSN
+     * eingeschleust werden kann.
+     */
+    public static function isHostname(string $host): bool
+    {
+        return strlen($host) <= self::HOST_MAX
+            && preg_match('/^(?:[A-Za-z0-9](?:[A-Za-z0-9_.-]*[A-Za-z0-9])?|\[[0-9A-Fa-f:.]+\])$/', $host) === 1;
+    }
+
+    public static function isWebUrl(string $url): bool
+    {
+        if (filter_var($url, FILTER_VALIDATE_URL) === false) {
+            return false;
+        }
+
+        $scheme = strtolower((string) parse_url($url, PHP_URL_SCHEME));
+
+        return in_array($scheme, ['http', 'https'], true);
+    }
+
+    /**
+     * SMTP ist optional: Ohne Host bleiben die Vorgaben bzw. Umgebungsvariablen aktiv.
+     *
+     * @param array<array-key, mixed> $input
+     *
+     * @return array{0: MailConfig|null, 1: array<string, string>}
+     */
+    private static function mail(array $input, string $boardEmail): array
+    {
+        $host = self::text($input, 'smtp_host');
+        if ($host === '') {
+            return [null, []];
+        }
+
+        $errors = [];
+        if (!self::isHostname($host)) {
+            $errors['smtp_host'] = 'Der SMTP-Server enthält ungültige Zeichen.';
+        }
+
+        $port = self::port(self::text($input, 'smtp_port'), 25);
+        if ($port === null) {
+            $errors['smtp_port'] = 'Der SMTP-Port muss eine Zahl zwischen 1 und 65535 sein.';
+        }
+
+        $from = self::text($input, 'smtp_from');
+        if ($from === '') {
+            $from = $boardEmail;
+        } elseif (!self::isEmail($from)) {
+            $errors['smtp_from'] = 'Bitte geben Sie eine gültige Absenderadresse an oder lassen Sie das Feld leer.';
+        }
+
+        return [['host' => $host, 'port' => $port ?? 25, 'from' => $from], $errors];
+    }
+
+    /**
+     * Leerer Wert ergibt den Standardport, ungültiger Wert null.
+     */
+    private static function port(string $value, int $default): ?int
+    {
+        if ($value === '') {
+            return $default;
+        }
+
+        $port = filter_var($value, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 65535]]);
+
+        return $port === false ? null : $port;
+    }
+
+    private static function isEmail(string $email): bool
+    {
+        return $email !== ''
+            && Validator::withinLength($email, self::EMAIL_MAX)
+            && Security::isValidEmail($email);
+    }
+
+    /**
+     * Fehlermeldung für ein Pflichtfeld: eigene Meldung für leere Eingaben,
+     * null bei gültigem Wert.
+     */
+    private static function fieldError(string $value, bool $valid, string $emptyMessage, string $invalidMessage): ?string
+    {
+        if ($value === '') {
+            return $emptyMessage;
+        }
+
+        return $valid ? null : $invalidMessage;
+    }
+
+    /**
+     * Nicht leer, gültiges UTF-8, höchstens $max Zeichen, keine Steuerzeichen.
+     */
+    private static function isPlainText(string $value, int $max): bool
+    {
+        return $value !== ''
+            && mb_check_encoding($value, 'UTF-8')
+            && Validator::withinLength($value, $max)
+            && preg_match('/[\x00-\x1F\x7F]/', $value) !== 1;
+    }
+
+    /**
+     * @param array<array-key, mixed> $input
+     */
+    private static function text(array $input, string $key): string
+    {
+        $value = $input[$key] ?? '';
+
+        return is_string($value) ? trim($value) : '';
+    }
+}

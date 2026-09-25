@@ -1,5 +1,18 @@
 #
-# Tabellenstruktur f�r Tabelle `ppb_boards`
+# PowerPHPBoard – Datenbankschema
+#
+# Einzige Schemaquelle: Der Web-Installer (install/) liest diese Datei ein.
+# Sie lässt sich auch direkt einspielen:
+#
+#   mysql -u BENUTZER -p DATENBANK < install.sql
+#
+# Diese Datei legt bewusst KEINEN Administrator an. Den ersten Administrator
+# erstellt der Web-Installer oder das CLI-Werkzeug bin/create-admin.php.
+# Für den Docker-Entwicklungsstack legt .docker/dev-seed.sql Testkonten an.
+#
+
+#
+# Tabellenstruktur für Tabelle `ppb_boards`
 #
 
 CREATE TABLE ppb_boards (
@@ -26,7 +39,7 @@ CREATE TABLE ppb_boards (
 # --------------------------------------------------------
 
 #
-# Tabellenstruktur f�r Tabelle `ppb_config`
+# Tabellenstruktur für Tabelle `ppb_config`
 #
 
 CREATE TABLE ppb_config (
@@ -40,7 +53,7 @@ CREATE TABLE ppb_config (
   tablebg1 varchar(7) NOT NULL default '',
   tablebg2 varchar(7) NOT NULL default '',
   tablebg3 varchar(7) NOT NULL default '',
-  htmlcode enum('ON','OFF') NOT NULL default 'ON',
+  htmlcode enum('ON','OFF') NOT NULL default 'OFF',
   bbcode enum('ON','OFF') NOT NULL default 'ON',
   smilies enum('ON','OFF') NOT NULL default 'ON',
   newthread varchar(250) NOT NULL default '',
@@ -51,7 +64,7 @@ CREATE TABLE ppb_config (
 # --------------------------------------------------------
 
 #
-# Tabellenstruktur f�r Tabelle `ppb_posts`
+# Tabellenstruktur für Tabelle `ppb_posts`
 #
 
 CREATE TABLE ppb_posts (
@@ -74,7 +87,7 @@ CREATE TABLE ppb_posts (
 # --------------------------------------------------------
 
 #
-# Tabellenstruktur f�r Tabelle `ppb_users`
+# Tabellenstruktur für Tabelle `ppb_users`
 #
 
 CREATE TABLE ppb_users (
@@ -97,7 +110,7 @@ CREATE TABLE ppb_users (
 # --------------------------------------------------------
 
 #
-# Tabellenstruktur fuer Tabelle `ppb_visits`
+# Tabellenstruktur für Tabelle `ppb_visits`
 #
 
 CREATE TABLE ppb_visits (
@@ -112,7 +125,7 @@ CREATE TABLE ppb_visits (
 # --------------------------------------------------------
 
 #
-# Tabellenstruktur fuer Tabelle `ppb_password_resets`
+# Tabellenstruktur für Tabelle `ppb_password_resets`
 #
 
 CREATE TABLE ppb_password_resets (
@@ -130,7 +143,7 @@ CREATE TABLE ppb_password_resets (
 # --------------------------------------------------------
 
 #
-# Tabellenstruktur fuer Tabelle `ppb_rate_limits`
+# Tabellenstruktur für Tabelle `ppb_rate_limits`
 #
 
 CREATE TABLE ppb_rate_limits (
@@ -144,15 +157,15 @@ CREATE TABLE ppb_rate_limits (
   UNIQUE KEY idx_rl_action_identifier (action, identifier),
   INDEX idx_rl_window (window_start)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+# --------------------------------------------------------
 
 #
-# Administrator erstellen
+# Forum-Einstellungen (genau eine Zeile mit id = 1)
+#
+# Boardtitel, Board-URL, Admin-E-Mail und Sprache setzt der Web-Installer.
+# HTML in Beiträgen ist aus Sicherheitsgründen ausgeschaltet; die Farben
+# entsprechen den Vorgaben im Adminbereich.
 #
 
-INSERT INTO ppb_users (username, email, password, homepage, icq, biography, signature, hideemail, logincookie, status, registered, lastvisit) VALUES('Gott', 'gott@powerscripts.org', 'Z290dA==', 'http://www.powerscripts.org', '', 'Hab in sieben Tagen die Welt erschaffen ;)', 'MfG Gott', 'YES', 'YES', 'Administrator', '0', '0');
-
-#
-# Konfiguration erstellen
-#
-
-INSERT INTO ppb_config (boardtitle) VALUES('PowerPHPBoard 2.2.1');
+INSERT INTO ppb_config (id, boardtitle, boardurl, adminemail, header, footer, bordercolor, tablebg1, tablebg2, tablebg3, htmlcode, bbcode, smilies, newthread, newpost, language)
+VALUES (1, 'PowerPHPBoard 2.2.1', '', '', '', '', '#000000', '#FFFFFF', '#F0F0F0', '#E0E0E0', 'OFF', 'ON', 'ON', 'images/newthread.gif', 'images/newpost.gif', 'Deutsch-Du');
