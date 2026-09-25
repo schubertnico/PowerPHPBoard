@@ -9,8 +9,13 @@ declare(strict_types=1);
  */
 
 use PowerPHPBoard\Auth;
+use PowerPHPBoard\BoardUrl;
 use PowerPHPBoard\CSRF;
 use PowerPHPBoard\Database;
+use PowerPHPBoard\DatabaseRateLimitStorage;
+use PowerPHPBoard\ErrorHandler;
+use PowerPHPBoard\Mailer;
+use PowerPHPBoard\RateLimiter;
 use PowerPHPBoard\Security;
 use PowerPHPBoard\Session;
 
@@ -46,6 +51,16 @@ $sendmail = Security::getString('sendmail');
 $state = 'form';
 $errorText = '';
 $recipient = null;
+$title = '';
+$emailcontent = '';
+
+// Schutz vor Spam über das Forum: höchstens 10 Mails pro Stunde und Benutzer
+$mailLimiter = new RateLimiter(
+    new DatabaseRateLimitStorage($db),
+    maxAttempts: 10,
+    windowSeconds: 3600,
+    lockSeconds: 3600
+);
 
 if ($userid === 0) {
     $state = 'select';
@@ -62,17 +77,36 @@ if ($userid === 0) {
             $title = Security::getString('title', 'POST');
             $emailcontent = Security::getString('emailcontent', 'POST');
 
+            $limitKey = 'user:' . (int) $ppbuser['id'];
             if ($title === '' || $emailcontent === '') {
                 $errorText = $lang_insertvaluesforall ?? 'Please fill in all fields';
+            } elseif (!$mailLimiter->check('sendmail', $limitKey)) {
+                $errorText = $lang_toomanyattempts ?? 'Too many attempts. Please try again later.';
             } else {
-                $message = $emailcontent . "\n\n\n" .
-                    ($lang_thisemailwassentthrough ?? 'This email was sent through') . ' ' .
-                    ($settings['boardurl'] ?? '') . "\n" .
-                    'PowerPHPBoard (C) 2001-2026 PowerScripts';
-                $headers = 'From: ' . $ppbuser['username'] . ' <' . $ppbuser['email'] . '>';
-                mail((string) $recipient['email'], $title, $message, $headers);
-                CSRF::regenerate();
-                $state = 'sent';
+                // Absender ist das Forum; Antworten gehen per Reply-To an den Benutzer
+                $boardUrl = BoardUrl::base($settings);
+                $boardName = (string) ($settings['boardtitle'] ?? 'PowerPHPBoard')
+                    . ($boardUrl !== null ? ' (' . $boardUrl . ')' : '');
+                $message = $emailcontent . "\n\n-- \n" . sprintf(
+                    $lang_mailsentvia ?? '%1$s sent you this email via %2$s. Replies go directly to %1$s.',
+                    (string) $ppbuser['username'],
+                    $boardName
+                );
+                $mailLimiter->recordFailure('sendmail', $limitKey);
+                $sent = Mailer::fromConfig($mail ?? [])->send(
+                    (string) $recipient['email'],
+                    Mailer::senderAddress($settings, $mail ?? []),
+                    $title,
+                    $message,
+                    (string) $ppbuser['email']
+                );
+                if ($sent) {
+                    CSRF::regenerate();
+                    $state = 'sent';
+                } else {
+                    ErrorHandler::logConfigurationError('Benutzer-Mail konnte nicht versendet werden (SMTP-Einstellungen prüfen).');
+                    $errorText = $lang_emailsendfailed ?? 'The email could not be sent. Please try again later.';
+                }
             }
         }
     }
@@ -104,8 +138,7 @@ include __DIR__ . '/header.inc.php';
         </p>
         <a href="showprofile.php?userid=<?php echo (int) $recipient['id']; ?>" class="btn btn-primary">
           <i class="bi bi-person" aria-hidden="true"></i>
-          <?php echo Security::escape((string) $recipient['username']); ?>'s
-          <?php echo $lang_profile ?? 'Profile'; ?>
+          <?php echo Security::escape(sprintf($lang_profileof ?? 'Profile of %s', (string) $recipient['username'])); ?>
         </a>
       </div>
     </div>
@@ -148,7 +181,7 @@ include __DIR__ . '/header.inc.php';
             </label>
             <input id="title" name="title" type="text" class="form-control"
                    maxlength="150" required
-                   value="eMail through PowerPHPBoard">
+                   value="<?php echo Security::escape($title !== '' ? $title : ($lang_mailsubjectdefault ?? 'Message from the forum')); ?>">
             <div class="invalid-feedback">Bitte einen Betreff angeben.</div>
           </div>
           <div class="mb-3">
@@ -156,7 +189,7 @@ include __DIR__ . '/header.inc.php';
               <?php echo $lang_text ?? 'Text'; ?>
               <span class="text-danger" aria-hidden="true">*</span>
             </label>
-            <textarea id="emailcontent" name="emailcontent" class="form-control" rows="8" required></textarea>
+            <textarea id="emailcontent" name="emailcontent" class="form-control" rows="8" required><?php echo Security::escape($emailcontent); ?></textarea>
             <div class="invalid-feedback">Bitte einen Inhalt eingeben.</div>
           </div>
         </div>

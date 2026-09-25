@@ -9,6 +9,7 @@ declare(strict_types=1);
  */
 
 use PowerPHPBoard\CSRF;
+use PowerPHPBoard\ErrorHandler;
 use PowerPHPBoard\Mailer;
 use PowerPHPBoard\Security;
 use PowerPHPBoard\Validator;
@@ -19,6 +20,7 @@ $acception = Security::getInt('acception', 'REQUEST');
 $register = Security::getInt('register', 'POST');
 $registrationDone = false;
 $registrationLogin = false;
+$registrationMailSent = true;
 $formError = '';
 
 if ($acception === 0) {
@@ -136,24 +138,17 @@ if ($acception === 0) {
                                 [$username, $email1, $passwordHash, $homepage, $icqNum, $biography, $signature, $hideemail, $logincookie, $now]
                             );
 
-                            $subject = ($settings['boardtitle'] ?? 'PowerPHPBoard') . ' ' . ($lang_registration ?? 'Registration');
-                            $message = ($lang_hello ?? 'Hello') . " $username,\n\n" .
-                                ($lang_youregisteredsuccessfull ?? 'You have registered successfully at') . ' ' . ($settings['boardurl'] ?? '') . "\n\n" .
-                                ($lang_hereisyourlogininformation ?? 'Your login information:') . "\n\n" .
-                                '     ' . ($lang_username ?? 'Username') . ":  $username\n" .
-                                '     ' . ($lang_email ?? 'Email') . ":  $email1\n\n" .
-                                ($lang_youcanloginhere ?? 'Login here') . ': ' . ($settings['boardurl'] ?? '') . "/login.php\n\n" .
-                                ($lang_donotanswertoautomail ?? 'This is an automated message, please do not reply.');
-
-                            $mailer = new Mailer(
-                                (string) ($mail['host'] ?? 'mailpit'),
-                                (int) ($mail['port'] ?? 1025)
+                            $subject = ($settings['boardtitle'] ?? 'PowerPHPBoard') . ' – ' . ($lang_registration ?? 'Registration');
+                            $message = ppb_welcome_mail_text($settings, $username, $email1, false);
+                            $registrationMailSent = Mailer::fromConfig($mail ?? [])->send(
+                                $email1,
+                                Mailer::senderAddress($settings, $mail ?? []),
+                                $subject,
+                                $message
                             );
-                            $fromAddress = (string) ($settings['adminemail'] ?? '');
-                            if ($fromAddress === '' || !Security::isValidEmail($fromAddress)) {
-                                $fromAddress = (string) ($mail['from'] ?? 'noreply@powerphpboard.local');
+                            if (!$registrationMailSent) {
+                                ErrorHandler::logConfigurationError('Registrierungsmail an Benutzer „' . $username . '“ konnte nicht versendet werden (SMTP-Einstellungen prüfen).');
                             }
-                            $mailer->send($email1, $fromAddress, $subject, $message);
 
                             $registrationDone = true;
                             $registrationLogin = ($logincookie === 'YES');
@@ -181,6 +176,11 @@ if ($acception === 0) {
           <p class="mb-3">
             <?php echo $lang_registrationsuccessfull ?? 'Registration successful!'; ?>
           </p>
+          <?php if (!$registrationMailSent): ?>
+            <div class="alert alert-warning small" role="alert">
+              <?php echo Security::escape($lang_confirmationmailfailed ?? 'The confirmation email could not be sent. You can still log in.'); ?>
+            </div>
+          <?php endif; ?>
           <?php if ($registrationLogin): ?>
             <a href="login.php?catid=<?php echo (int) $catid; ?>&boardid=<?php echo (int) $boardid; ?>"
                class="btn btn-primary">

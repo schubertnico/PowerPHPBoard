@@ -39,6 +39,52 @@ final class MailerTest extends TestCase
         Mailer::buildMessage(to: 'not-an-email', from: 'a@b.c', subject: 'x', body: 'y');
     }
 
+    public function testAddsReplyToHeader(): void
+    {
+        $msg = Mailer::buildMessage('a@example.org', 'board@example.org', 'x', 'y', 'anna@example.org');
+
+        $this->assertStringContainsString("Reply-To: anna@example.org\r\n", $msg);
+        $this->assertStringContainsString("From: board@example.org\r\n", $msg);
+    }
+
+    public function testRejectsInvalidReplyTo(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        Mailer::buildMessage('a@example.org', 'board@example.org', 'x', 'y', "anna@example.org\r\nBcc: victim@example.org");
+    }
+
+    public function testSubjectCannotInjectHeaders(): void
+    {
+        $msg = Mailer::buildMessage('a@example.org', 'b@example.org', "Hallo\r\nBcc: victim@example.org", 'y');
+
+        $this->assertStringNotContainsString("\r\nBcc:", $msg);
+    }
+
+    public function testDotStuffingPreventsSmtpCommandInjection(): void
+    {
+        // Eine Zeile "." würde die Nachricht beenden, danach folgende Zeilen
+        // führte der SMTP-Server als Befehle aus.
+        $msg = Mailer::buildMessage('a@example.org', 'b@example.org', 's', "Hallo\n.\nRCPT TO:<victim@example.org>\n.Punkt");
+        $stuffed = Mailer::dotStuff($msg);
+
+        $this->assertStringNotContainsString("\r\n.\r\n", $stuffed);
+        $this->assertStringContainsString("\r\n..\r\nRCPT TO:<victim@example.org>\r\n..Punkt", $stuffed);
+    }
+
+    public function testFactoryAndSenderAddressUseConfiguration(): void
+    {
+        $this->assertInstanceOf(Mailer::class, Mailer::fromConfig(['host' => 'mailpit', 'port' => 1025]));
+        $this->assertSame('admin@example.org', Mailer::senderAddress(['adminemail' => 'admin@example.org'], ['from' => 'noreply@example.org']));
+        $this->assertSame('noreply@example.org', Mailer::senderAddress(['adminemail' => ''], ['from' => 'noreply@example.org']));
+        $this->assertSame('noreply@powerphpboard.local', Mailer::senderAddress([], []));
+    }
+
+    public function testSendReturnsFalseForInvalidReplyTo(): void
+    {
+        $mailer = new Mailer('127.0.0.1', 1, 1);
+        $this->assertFalse($mailer->send('to@example.com', 'from@example.com', 'x', 'y', 'not-an-email'));
+    }
+
     public function testSendReturnsFalseForInvalidRecipient(): void
     {
         $mailer = new Mailer('127.0.0.1', 1, 1);

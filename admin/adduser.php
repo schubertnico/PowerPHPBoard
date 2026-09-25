@@ -9,6 +9,8 @@ declare(strict_types=1);
  */
 
 use PowerPHPBoard\CSRF;
+use PowerPHPBoard\ErrorHandler;
+use PowerPHPBoard\Mailer;
 use PowerPHPBoard\Security;
 use PowerPHPBoard\Validator;
 
@@ -17,6 +19,7 @@ include __DIR__ . '/header.inc.php';
 $adduser = Security::getInt('adduser', 'GET', 0);
 $saved = false;
 $savedUsername = '';
+$mailSent = true;
 $formError = '';
 
 if ($adduser === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -60,17 +63,16 @@ if ($adduser === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     [$username, $email1, $passwordHash, $homepage, $icqInt, $biography, $signature, $hideemail, $logincookie, $now]
                 );
                 CSRF::regenerate();
-                @mail(
+                // Benachrichtigung über SMTP; das Passwort steht nicht in der Mail
+                $mailSent = Mailer::fromConfig($mail ?? [])->send(
                     $email1,
-                    ($settings['boardtitle'] ?? '') . ' Registration',
-                    "Hallo {$username},\n\nDu wurdest auf "
-                        . ($settings['boardurl'] ?? '') . "/ angelegt.\n\n"
-                        . "  Username: {$username}\n"
-                        . "  E-Mail:   {$email1}\n"
-                        . "  Passwort: {$password2}\n\n"
-                        . 'Login: ' . ($settings['boardurl'] ?? '') . "/login.php\n",
-                    'FROM: ' . ($settings['adminemail'] ?? '')
+                    Mailer::senderAddress($settings, $mail ?? []),
+                    ($settings['boardtitle'] ?? 'PowerPHPBoard') . ' – ' . ($lang_registration ?? 'Registration'),
+                    ppb_welcome_mail_text($settings, $username, $email1, true)
                 );
+                if (!$mailSent) {
+                    ErrorHandler::logConfigurationError('Benachrichtigung an neu angelegten Benutzer „' . $username . '“ konnte nicht versendet werden (SMTP-Einstellungen prüfen).');
+                }
                 $saved = true;
                 $savedUsername = $username;
             } catch (Exception) {
@@ -88,6 +90,9 @@ if ($adduser === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
 <?php if ($saved): ?>
   <div class="alert alert-success" role="alert">
     Nutzer <strong><?php echo Security::escape($savedUsername); ?></strong> wurde angelegt.
+    <?php echo $mailSent
+        ? 'Eine Benachrichtigung wurde per E-Mail versendet.'
+        : 'Die Benachrichtigung per E-Mail konnte nicht versendet werden (Details im Fehlerprotokoll).'; ?>
     <a class="alert-link" href="user.php?username=<?php echo urlencode($savedUsername); ?>">Zur Nutzerverwaltung</a>.
   </div>
 <?php endif; ?>

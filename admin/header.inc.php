@@ -36,6 +36,15 @@ if ($settingsRow !== null) {
     $settings = $settingsRow;
 }
 
+// Sprachdatei und Hilfsfunktionen wie im Frontend
+$langFile = match ($settings['language'] ?? 'English') {
+    'Deutsch-Sie' => 'deutsch-sie.inc.php',
+    'Deutsch-Du' => 'deutsch-du.inc.php',
+    default => 'english.inc.php',
+};
+require_once __DIR__ . '/../' . $langFile;
+require_once __DIR__ . '/../functions.inc.php';
+
 // Angemeldeter Benutzer (deaktivierte Konten gelten als abgemeldet)
 $ppbuser = Auth::currentUser($db) ?? [];
 $loggedin = $ppbuser !== [] ? 'YES' : 'NO';

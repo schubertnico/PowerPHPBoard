@@ -100,15 +100,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $send === 1) {
                 . $resetUrl . "\n\n"
                 . ($lang_ifyoudidntrequestmail ?? 'If you did not request this, you can ignore this email.') . "\n";
 
-            $fromAddress = (string) ($settings['adminemail'] ?? '');
-            if ($fromAddress === '' || !Security::isValidEmail($fromAddress)) {
-                $fromAddress = (string) ($mail['from'] ?? 'noreply@powerphpboard.local');
-            }
-            $mailer = new Mailer(
-                (string) ($mail['host'] ?? 'mailpit'),
-                (int) ($mail['port'] ?? 1025)
-            );
-            if (!$mailer->send($email, $fromAddress, $subject, $message)) {
+            $mailer = Mailer::fromConfig($mail ?? []);
+            if (!$mailer->send($email, Mailer::senderAddress($settings, $mail ?? []), $subject, $message)) {
                 ErrorHandler::logConfigurationError(
                     'Passwort-Reset-Mail an Benutzer #' . (int) $user['id'] . ' konnte nicht versendet werden (SMTP-Einstellungen prüfen).'
                 );

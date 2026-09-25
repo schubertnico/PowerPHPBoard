@@ -9,6 +9,7 @@ declare(strict_types=1);
  */
 
 use PowerPHPBoard\BoardAccess;
+use PowerPHPBoard\BoardUrl;
 use PowerPHPBoard\CSRF;
 use PowerPHPBoard\Database;
 use PowerPHPBoard\DatabaseRateLimitStorage;
@@ -27,6 +28,44 @@ function ppb_lang(string $key, string $fallback): string
     $value = $GLOBALS['lang_' . $key] ?? null;
 
     return is_string($value) && $value !== '' ? $value : $fallback;
+}
+
+/**
+ * Text der Begrüßungsmail nach der Registrierung oder nach „Benutzer
+ * anlegen“ im Adminbereich. Das Passwort steht bewusst nie in der Mail.
+ *
+ * @param array<string, mixed> $settings Zeile aus ppb_config
+ */
+function ppb_welcome_mail_text(array $settings, string $username, string $email, bool $createdByAdmin): string
+{
+    $boardTitle = (string) ($settings['boardtitle'] ?? 'PowerPHPBoard');
+    $baseUrl = BoardUrl::base($settings);
+    $intro = $createdByAdmin
+        ? ppb_lang('accountcreatedbyadmin', 'an account has been created for you at')
+        : ppb_lang('youregisteredsuccessfull', 'you have successfully registered at');
+
+    $lines = [
+        ppb_lang('hello', 'Hello') . ' ' . $username . ',',
+        '',
+        $intro . ' ' . $boardTitle . ($baseUrl !== null ? ' (' . $baseUrl . ')' : '') . '.',
+        '',
+        ppb_lang('hereisyourlogininformation', 'Here is your login information:'),
+        '',
+        '    ' . ppb_lang('username', 'Username') . ': ' . $username,
+        '    ' . ppb_lang('email', 'Email') . ': ' . $email,
+        '',
+    ];
+    if ($createdByAdmin) {
+        $lines[] = ppb_lang('passwordfromadmin', 'You will receive your password from the board administrator. You can set your own password at any time via "Forgot password?".');
+        $lines[] = '';
+    }
+    if ($baseUrl !== null) {
+        $lines[] = ppb_lang('youcanloginhere', 'You can log in here:') . ' ' . BoardUrl::link($baseUrl, 'login.php');
+        $lines[] = '';
+    }
+    $lines[] = ppb_lang('donotanswertoautomail', 'Please do not reply to this automatically generated email.');
+
+    return implode("\n", $lines);
 }
 
 /**
