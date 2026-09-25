@@ -10,6 +10,7 @@ declare(strict_types=1);
 
 use PowerPHPBoard\CSRF;
 use PowerPHPBoard\Security;
+use PowerPHPBoard\Validator;
 
 include __DIR__ . '/header.inc.php';
 
@@ -46,7 +47,10 @@ if ($row !== null && $edituser === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $formError = 'Bitte eine gültige E-Mail-Adresse angeben.';
     } elseif ($passwordWillChange && $password1 !== $password2) {
         $formError = 'Die Passwörter stimmen nicht überein.';
+    } elseif (Validator::normalizeHomepage($homepage) === null) {
+        $formError = 'Bitte eine gültige Homepage-Adresse mit http:// oder https:// angeben.';
     } else {
+        $homepage = (string) Validator::normalizeHomepage($homepage);
         $existingUser = $db->fetchOne(
             'SELECT id FROM ppb_users WHERE email = ? AND id != ?',
             [$email1, $row['id']]

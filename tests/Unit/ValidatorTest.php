@@ -39,4 +39,34 @@ final class ValidatorTest extends TestCase
         $this->assertFalse(Validator::isStrongPassword('1234567'));
         $this->assertTrue(Validator::isStrongPassword('Password1'));
     }
+
+    public function testHomepageEmptyValuesBecomeEmptyString(): void
+    {
+        $this->assertSame('', Validator::normalizeHomepage(''));
+        $this->assertSame('', Validator::normalizeHomepage('   '));
+        $this->assertSame('', Validator::normalizeHomepage('https://'));
+        $this->assertSame('', Validator::normalizeHomepage('http://'));
+    }
+
+    public function testHomepageWithoutSchemeGetsHttps(): void
+    {
+        $this->assertSame('https://example.org', Validator::normalizeHomepage('example.org'));
+        $this->assertSame('https://www.example.org/pfad?a=1', Validator::normalizeHomepage(' www.example.org/pfad?a=1 '));
+        $this->assertSame('http://example.org', Validator::normalizeHomepage('http://example.org'));
+    }
+
+    public function testHomepageRejectsDangerousSchemes(): void
+    {
+        $this->assertNull(Validator::normalizeHomepage('javascript:alert(1)'));
+        $this->assertNull(Validator::normalizeHomepage('JavaScript://%0aalert(1)'));
+        $this->assertNull(Validator::normalizeHomepage('data:text/html,<script>alert(1)</script>'));
+        $this->assertNull(Validator::normalizeHomepage('vbscript:msgbox(1)'));
+        $this->assertNull(Validator::normalizeHomepage('https://exa mple.org'));
+        $this->assertNull(Validator::normalizeHomepage('https://example.org/"onmouseover="alert(1)'));
+    }
+
+    public function testHomepageRespectsMaxLength(): void
+    {
+        $this->assertNull(Validator::normalizeHomepage('https://example.org/' . str_repeat('a', Validator::HOMEPAGE_MAX)));
+    }
 }

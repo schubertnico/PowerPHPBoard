@@ -212,3 +212,5 @@ $lang_currentpwdnote = 'Only required if you change email or password';
 $lang_leaveemptynochange = 'Leave empty to keep current password';
 $lang_posttoolong = 'Post text is too long.';
 $lang_loginfirst = 'You have to log in first';
+
+$lang_homepageinvalid = 'Please enter a valid homepage address starting with http:// or https://.';

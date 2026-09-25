@@ -213,3 +213,5 @@ $lang_currentpwdnote = 'Nur erforderlich, wenn Sie E-Mail oder Passwort &auml;nd
 $lang_leaveemptynochange = 'Leer lassen, um das aktuelle Passwort zu behalten';
 $lang_posttoolong = 'Der Beitragstext ist zu lang.';
 $lang_loginfirst = 'Sie m&uuml;ssen Sich zuerst einloggen';
+
+$lang_homepageinvalid = 'Bitte geben Sie eine gültige Homepage-Adresse mit http:// oder https:// an.';

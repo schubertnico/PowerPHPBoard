@@ -9,6 +9,7 @@ declare(strict_types=1);
  */
 
 use PowerPHPBoard\Security;
+use PowerPHPBoard\TextFormatter;
 
 include __DIR__ . '/header.inc.php';
 
@@ -77,8 +78,9 @@ if ($userid > 0) {
 
           <dt class="col-sm-4 col-md-3"><?php echo $lang_homepage ?? 'Homepage'; ?></dt>
           <dd class="col-sm-8 col-md-9">
-            <?php if (!empty($user['homepage']) && $user['homepage'] !== 'http://'): ?>
-              <a class="text-decoration-none" href="<?php echo Security::escape((string) $user['homepage']); ?>"
+            <?php $homepageUrl = TextFormatter::sanitizeUrl((string) ($user['homepage'] ?? '')); ?>
+            <?php if ($homepageUrl !== null): ?>
+              <a class="text-decoration-none" href="<?php echo Security::escape($homepageUrl); ?>"
                  target="_blank" rel="noopener noreferrer">
                 <i class="bi bi-globe" aria-hidden="true"></i>
                 <?php echo Security::escape((string) $user['homepage']); ?>

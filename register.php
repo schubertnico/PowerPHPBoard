@@ -92,6 +92,8 @@ if ($acception === 0) {
                 || !Validator::withinLength($signature, Validator::SIGNATURE_MAX)
                 || !Validator::withinLength($homepage, Validator::HOMEPAGE_MAX)) {
                 $formError = $lang_inputstoolong ?? 'One or more fields exceed the allowed length';
+            } elseif (Validator::normalizeHomepage($homepage) === null) {
+                $formError = $lang_homepageinvalid ?? 'Please enter a valid homepage address starting with http:// or https://.';
             } else {
                 $icqNum = 0;
                 $icqValid = true;
@@ -120,7 +122,7 @@ if ($acception === 0) {
 
                         $biography = strip_tags($biography);
                         $signature = strip_tags($signature, '<b><i><u><strong><em><br><a>');
-                        $homepage = filter_var($homepage, FILTER_VALIDATE_URL) ? $homepage : '';
+                        $homepage = (string) Validator::normalizeHomepage($homepage);
                         $hideemail = in_array($hideemail, ['YES', 'NO'], true) ? $hideemail : 'NO';
                         $logincookie = in_array($logincookie, ['YES', 'NO'], true) ? $logincookie : 'YES';
 

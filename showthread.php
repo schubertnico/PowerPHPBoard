@@ -320,9 +320,10 @@ $renderPagination = static function () use ($thread, $db, $current, $current2, $
                       <i class="bi bi-envelope" aria-hidden="true"></i>
                     </a>
                   <?php endif; ?>
-                  <?php if (!empty($author['homepage']) && $author['homepage'] !== 'http://'): ?>
+                  <?php $homepageUrl = TextFormatter::sanitizeUrl((string) ($author['homepage'] ?? '')); ?>
+                  <?php if ($homepageUrl !== null): ?>
                     <a class="btn btn-outline-secondary"
-                       href="<?php echo Security::escape((string) $author['homepage']); ?>"
+                       href="<?php echo Security::escape($homepageUrl); ?>"
                        target="_blank" rel="noopener noreferrer"
                        title="<?php echo $lang_homepage ?? 'Homepage'; ?>">
                       <i class="bi bi-globe" aria-hidden="true"></i>

@@ -48,4 +48,32 @@ final class Validator
     {
         return mb_strlen($password) >= self::PASSWORD_MIN;
     }
+
+    /**
+     * Normalisiert die optionale Homepage-Angabe aus Profil und Registrierung.
+     *
+     * Leere Eingaben (auch ein allein stehendes "https://") ergeben '', eine
+     * Adresse ohne Schema wie "example.org" wird zu "https://example.org".
+     * Nur http(s)-Adressen sind erlaubt; alles andere (javascript:, data:, …)
+     * sowie zu lange Adressen ergeben null.
+     *
+     * @return string|null '' = keine Homepage, null = ungültig
+     */
+    public static function normalizeHomepage(string $homepage): ?string
+    {
+        $homepage = trim($homepage);
+        if ($homepage === '' || in_array(strtolower($homepage), ['http://', 'https://'], true)) {
+            return '';
+        }
+        if (preg_match('~^[a-z][a-z0-9+.\-]*:~i', $homepage) !== 1) {
+            $homepage = 'https://' . $homepage;
+        }
+
+        $url = TextFormatter::sanitizeUrl($homepage);
+        if ($url === null || filter_var($url, FILTER_VALIDATE_URL) === false) {
+            return null;
+        }
+
+        return self::withinLength($url, self::HOMEPAGE_MAX) ? $url : null;
+    }
 }

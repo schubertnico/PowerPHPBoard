@@ -102,6 +102,8 @@ if ($loggedin === 'YES' && $_SERVER['REQUEST_METHOD'] === 'POST' && $editprofile
             || !Validator::withinLength($signature, Validator::SIGNATURE_MAX)
             || !Validator::withinLength($homepage, Validator::HOMEPAGE_MAX)) {
             $formError = $lang_inputstoolong ?? 'One or more fields exceed the allowed length';
+        } elseif (Validator::normalizeHomepage($homepage) === null) {
+            $formError = $lang_homepageinvalid ?? 'Please enter a valid homepage address starting with http:// or https://.';
         } else {
             $existingByUsername = $db->fetchOne(
                 'SELECT id FROM ppb_users WHERE username = ? AND id != ?',
@@ -133,7 +135,7 @@ if ($loggedin === 'YES' && $_SERVER['REQUEST_METHOD'] === 'POST' && $editprofile
                         $username,
                         $email1,
                         $finalPasswordHash,
-                        $homepage,
+                        (string) Validator::normalizeHomepage($homepage),
                         $icq,
                         strip_tags($biography),
                         $signature,
