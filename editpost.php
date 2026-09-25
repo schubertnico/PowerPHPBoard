@@ -265,7 +265,7 @@ include __DIR__ . '/header.inc.php';
                          id="icon<?php echo $i; ?>" value="<?php echo $val; ?>"
                          <?php echo $iconValue === $val ? 'checked' : ''; ?>>
                   <label class="form-check-label" for="icon<?php echo $i; ?>">
-                    <img src="images/<?php echo $val; ?>" width="15" height="15" alt="Icon <?php echo $i; ?>">
+                    <img src="images/<?php echo $val; ?>" width="15" height="15" alt="<?php echo Security::escape(($lang_icon ?? 'Icon') . ' ' . $i); ?>">
                   </label>
                 </div>
               <?php endfor; ?>

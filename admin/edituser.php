@@ -103,8 +103,12 @@ if ($row !== null && $edituser === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // Nach einem Fehler die Eingaben (außer Passwörtern) zeigen
+    // Nach einem Fehler die Eingaben (außer Passwörtern) zeigen; ein
+    // abgelehnter Status wird nicht übernommen
     if ($formError !== '') {
+        if ($statusError !== null) {
+            $status = (string) $row['status'];
+        }
         $row = array_merge($row, compact('username', 'homepage', 'icq', 'biography', 'signature', 'hideemail', 'logincookie', 'status'));
         $row['email'] = $email1;
     }
