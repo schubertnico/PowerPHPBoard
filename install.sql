@@ -168,4 +168,4 @@ CREATE TABLE ppb_rate_limits (
 #
 
 INSERT INTO ppb_config (id, boardtitle, boardurl, adminemail, header, footer, bordercolor, tablebg1, tablebg2, tablebg3, htmlcode, bbcode, smilies, newthread, newpost, language)
-VALUES (1, 'PowerPHPBoard 2.2.1', '', '', '', '', '#000000', '#FFFFFF', '#F0F0F0', '#E0E0E0', 'OFF', 'ON', 'ON', 'images/newthread.gif', 'images/newpost.gif', 'Deutsch-Du');
+VALUES (1, 'PowerPHPBoard 2.3.0', '', '', '', '', '#000000', '#FFFFFF', '#F0F0F0', '#E0E0E0', 'OFF', 'ON', 'ON', 'images/newthread.gif', 'images/newpost.gif', 'Deutsch-Du');

@@ -58,7 +58,7 @@ if (is_file(__DIR__ . '/' . LocalConfig::FILENAME)) {
 }
 
 // Application settings
-define('PPB_VERSION', '2.0.0');
+define('PPB_VERSION', '2.3.0');
 define('PPB_SESSION_LIFETIME', 3600);
 define('PPB_CSRF_ENABLED', true);
 define('PPB_DEBUG', (bool)(getenv('PPB_DEBUG') ?: false));

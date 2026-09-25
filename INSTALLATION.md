@@ -778,6 +778,16 @@ Datenbank und Zugangsdaten bleiben gültig.
    stellen und die Board-URL eintragen (sie steht in den Links der Forum-Mails).
    Existiert noch das frühere Standardkonto „Gott“, dessen Passwort ändern oder das
    Konto löschen.
+6. **Alte Board-Passwortkopien entfernen** (empfohlen, z. B. in phpMyAdmin). Bis 2.2.x
+   stand für angemeldete Mitglieder eine Base64-Kopie des Board-Passworts in
+   `ppb_visits`. 2.3.0 speichert dort nur noch einen Zugangsnachweis und stellt die
+   Board-Passwörter selbst beim ersten richtigen Aufruf auf Argon2id um. Die alten
+   Kopien löscht diese Anweisung; Mitglieder privater Boards geben das Passwort danach
+   einmal neu ein:
+
+   ```sql
+   UPDATE ppb_visits SET password = '' WHERE type = 'Board';
+   ```
 
 Leitet die Startseite nach dem Update auf `install/` weiter, findet das Forum seine
 Zugangsdaten nicht (z. B. weil die alte `config.inc.php` überschrieben wurde):

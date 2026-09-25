@@ -2,7 +2,7 @@
 
 [![PHP](https://img.shields.io/badge/PHP-8.4-blue?style=flat-square)](https://www.php.net/)
 [![Bootstrap](https://img.shields.io/badge/Bootstrap-5.3.3-7952B3?style=flat-square)](https://getbootstrap.com/)
-[![tests](https://img.shields.io/badge/tests-198%20passing-brightgreen?style=flat-square)](#testing)
+[![tests](https://img.shields.io/badge/tests-511%20passing-brightgreen?style=flat-square)](#testing)
 [![lighthouse](https://img.shields.io/badge/Lighthouse-100%2F100%2F100%2F100-brightgreen?style=flat-square)](#accessibility)
 [![license](https://img.shields.io/badge/license-MIT-yellow?style=flat-square)](LICENSE)
 
@@ -814,6 +814,41 @@ auf dunklem Hintergrund unleserlich werden.
   (`--user`, `--email`, `--update`, `--password-stdin`), ersetzt das alte `create-admin.php`
 - 212 neue Unit-Tests für Validierung, Erzeugung von `config.local.php` inklusive
   Sonderzeichen, Sperrlogik, Schema-Aufteilung und Datenbank-Einrichtung
+
+#### Sicherheit
+- Gespeichertes XSS geschlossen: Beiträge werden immer escaped, bei „HTML an“ nur
+  attributlose Formatierungs-Tags; Links und Bilder nur mit http(s), auch `[url=…]`
+  und die Homepage im Profil
+- Passwort-Reset-Link nur noch aus der konfigurierten Board-URL, nie aus dem Host-Header
+- Deaktivierte Konten können sich nicht mehr anmelden, offene Sitzungen werden beendet
+- Private Boards: Passwörter als Argon2id-Hash (alte Werte werden beim ersten richtigen
+  Passwort umgestellt), Zugangsnachweis statt Passwortkopie in `ppb_visits`,
+  Zitatfunktion und Brotkrumen ohne Zugang gesperrt, Sperre nach Fehlversuchen
+- SMTP-Punktverdopplung gegen das Einschleusen weiterer Empfänger, IP-Anzeige nur für
+  Moderatoren des betroffenen Boards, Header-/Footer-Templates nur aus `inc/`,
+  „Design anwenden“ nur per POST mit CSRF-Schutz
+
+#### Fehlerbehebungen
+- Registrierung und „Benutzer anlegen“ nicht mehr durch ein vorbelegtes „https://“ blockiert
+- Alle Mails über den SMTP-Mailer, Fehlschläge werden gemeldet, kein Klartext-Passwort
+  mehr per Mail
+- Eingaben bleiben nach Fehlern erhalten, Design-Felder sind optional, ein falsches
+  Board-Passwort wird gemeldet
+- Letzter Administrator und eigener Status sind geschützt; Benutzernamen und
+  Passwörter werden auch im Adminbereich geprüft
+- Themen-Symbole werden angezeigt; Bearbeiten und IP-Anzeige nur für Berechtigte
+- `PPB_VERSION` stimmt wieder mit dem Release überein
+
+#### Sprache & Oberfläche
+- Drei synchrone Sprachdateien in UTF-8 ohne HTML-Entitäten, einheitliches Siezen
+  bzw. Duzen, Adminbereich vollständig übersetzt
+- Neutrale Forenränge („Neuling“ bis „Legende“) statt Marine-Rängen, gleiche Schwellen
+- BBCode-Hilfe zeigt die tatsächlich unterstützten Tags, gerendert mit dem TextFormatter
+
+#### Video-Anleitungen
+- Vertonte Schritt-für-Schritt-Videos zu Installation, Einstellungen, Forenstruktur,
+  privaten Boards, Registrierung, Beiträgen, Moderation und Passwort-Reset auf
+  [powerscripts.org](https://www.powerscripts.org/projects-3.html)
 
 ### Version 2.2.1 – 2026-05-10 (i18n + CI)
 
