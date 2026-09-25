@@ -262,7 +262,7 @@ if ($row !== null && $editboard === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') 
             <input class="form-check-input" type="checkbox" id="deleteconfirm"
                    name="deleteconfirm" value="YES">
             <label class="form-check-label text-danger" for="deleteconfirm">
-              <?php echo Security::escape(sprintf($lang_adm_deleteconfirm ?? 'Deletion confirmation: I understand that all %d threads including all posts will be removed permanently.', $threadsInBoard)); ?>
+              <?php echo Security::escape(sprintf($lang_adm_deleteconfirm ?? 'Deletion confirmation: I understand that all threads of this board (%d) including all posts will be removed permanently.', $threadsInBoard)); ?>
             </label>
           </div>
         <?php endif; ?>
