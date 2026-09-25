@@ -66,7 +66,7 @@ $threadCreated = false;
 if (!empty($board['title']) && $hasAccess && ($board['status'] ?? '') !== 'Closed'
     && $_SERVER['REQUEST_METHOD'] === 'POST' && $newthread === 1) {
     if (!CSRF::validateFromPost()) {
-        $formError = 'Security token invalid. Please try again.';
+        $formError = $lang_csrfinvalid ?? 'The security token is invalid. Please reload the page and try again.';
     } else {
         $title = Security::getString('title', 'POST');
         $text = Security::getString('text', 'POST');
@@ -129,7 +129,7 @@ include __DIR__ . '/header.inc.php';
   default_error(
       $lang_boardclosedcannotopenthread ?? 'Board is closed, cannot create thread',
       'showboard.php?boardid=' . (int) ($board['id'] ?? 0),
-      ($lang_backto ?? 'Back to') . ' "' . ($board['title'] ?? '') . '" ' . ($lang_board ?? 'board')
+      sprintf($lang_backtoboard ?? 'Back to the board "%s"', (string) ($board['title'] ?? ''))
   );
       ?>
 <?php elseif ($threadCreated): ?>
@@ -137,18 +137,16 @@ include __DIR__ . '/header.inc.php';
     <header class="card-header bg-success text-white">
       <h2 class="h6 mb-0">
         <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
-        <?php echo $lang_statusmessage ?? 'Status'; ?>
+        <?php echo Security::escape($lang_statusmessage ?? 'Status'); ?>
       </h2>
     </header>
     <div class="card-body">
       <p class="mb-3">
-        <?php echo $lang_openedthreadsuccessfull ?? 'Thread created successfully'; ?>
+        <?php echo Security::escape($lang_openedthreadsuccessfull ?? 'Thread created successfully'); ?>
       </p>
       <a href="showboard.php?boardid=<?php echo (int) $boardid; ?>" class="btn btn-primary">
         <i class="bi bi-arrow-left" aria-hidden="true"></i>
-        <?php echo $lang_backto ?? 'Back to'; ?>
-        "<?php echo Security::escape((string) $board['title']); ?>"
-        <?php echo $lang_board ?? 'board'; ?>
+        <?php echo Security::escape(sprintf($lang_backtoboard ?? 'Back to the board "%s"', (string) ($board['title'] ?? ''))); ?>
       </a>
     </div>
   </div>
@@ -169,7 +167,7 @@ include __DIR__ . '/header.inc.php';
       <header class="card-header bg-secondary-subtle">
         <h1 class="h5 mb-0">
           <i class="bi bi-plus-circle" aria-hidden="true"></i>
-          <?php echo $lang_newthread ?? 'New Thread'; ?>
+          <?php echo Security::escape($lang_newthread ?? 'New Thread'); ?>
           <small class="text-body-secondary">&middot; <?php echo Security::escape((string) $board['title']); ?></small>
         </h1>
       </header>
@@ -179,13 +177,13 @@ include __DIR__ . '/header.inc.php';
           <div class="alert alert-warning small d-flex align-items-center gap-2" role="alert">
             <i class="bi bi-info-circle" aria-hidden="true"></i>
             <div>
-              <?php echo $lang_loginfirst ?? 'You have to log in first.'; ?>
+              <?php echo Security::escape($lang_loginfirst ?? 'You have to log in first.'); ?>
               <a class="alert-link" href="login.php">
-                <?php echo $lang_login ?? 'Login'; ?>
+                <?php echo Security::escape($lang_login ?? 'Login'); ?>
               </a>
-              oder
+              <?php echo Security::escape($lang_or ?? 'or'); ?>
               <a class="alert-link" href="register.php">
-                <?php echo $lang_wanttoregister ?? 'Register'; ?>
+                <?php echo Security::escape($lang_wanttoregister ?? 'Register'); ?>
               </a>
             </div>
           </div>
@@ -193,20 +191,20 @@ include __DIR__ . '/header.inc.php';
 
         <div class="mb-3">
           <label for="title" class="form-label fw-semibold">
-            <?php echo $lang_title ?? 'Title'; ?>
+            <?php echo Security::escape($lang_title ?? 'Title'); ?>
             <span class="text-danger" aria-hidden="true">*</span>
           </label>
           <input id="title" name="title" type="text" class="form-control"
                  maxlength="150" required
                  value="<?php echo Security::escape($formError !== '' ? Security::getString('title', 'POST') : ''); ?>"
                  aria-describedby="titleHelp">
-          <div id="titleHelp" class="form-text">Eine aussagekräftige Überschrift, max. 150 Zeichen.</div>
-          <div class="invalid-feedback">Bitte einen Titel angeben.</div>
+          <div id="titleHelp" class="form-text"><?php echo Security::escape($lang_titlehelp ?? 'A meaningful title, up to 150 characters.'); ?></div>
+          <div class="invalid-feedback"><?php echo Security::escape($lang_inserttitle ?? 'Please enter a title.'); ?></div>
         </div>
 
         <fieldset class="mb-3">
           <legend class="form-label fw-semibold mb-2 fs-6">
-            <?php echo $lang_icon ?? 'Icon'; ?>
+            <?php echo Security::escape($lang_icon ?? 'Icon'); ?>
           </legend>
           <div class="d-flex flex-wrap gap-2 align-items-center">
             <?php for ($i = 1; $i <= 14; $i++): ?>
@@ -223,7 +221,7 @@ include __DIR__ . '/header.inc.php';
               <input class="form-check-input" type="radio" name="icon" id="iconNone" value=""
                      <?php echo $formIcon === '' ? 'checked' : ''; ?>>
               <label class="form-check-label" for="iconNone">
-                <?php echo $lang_noicon ?? 'No icon'; ?>
+                <?php echo Security::escape($lang_noicon ?? 'No icon'); ?>
               </label>
             </div>
           </div>
@@ -231,38 +229,36 @@ include __DIR__ . '/header.inc.php';
 
         <div class="mb-3">
           <label for="text" class="form-label fw-semibold">
-            <?php echo $lang_text ?? 'Text'; ?>
+            <?php echo Security::escape($lang_text ?? 'Text'); ?>
             <span class="text-danger" aria-hidden="true">*</span>
           </label>
           <textarea id="text" name="text" class="form-control" rows="12" required
                     maxlength="<?php echo Validator::POST_MAX; ?>"><?php echo Security::escape($formError !== '' ? Security::getString('text', 'POST') : ''); ?></textarea>
           <div class="form-text">
-            <?php echo $lang_htmlcodeis ?? 'HTML ist'; ?>
-            <strong><?php echo ppb_onoff_label($settings['htmlcode'] ?? 'OFF'); ?></strong>,
+            <?php echo Security::escape($lang_htmlcodeis ?? 'HTML ist'); ?>
+            <strong><?php echo Security::escape(ppb_onoff_label($settings['htmlcode'] ?? 'OFF')); ?></strong>,
             <a href="bbcode.php?catid=<?php echo (int) ($catid ?? 0); ?>&boardid=<?php echo (int) $boardid; ?>" target="_blank" rel="noopener">
-              <?php echo $lang_bbcodeis ?? 'BBCode ist'; ?>
-              <strong><?php echo ppb_onoff_label($settings['bbcode'] ?? 'ON'); ?></strong>
-            </a>,
+              <?php echo Security::escape($lang_bbcodeis ?? 'BBCode ist'); ?>
+              <strong><?php echo Security::escape(ppb_onoff_label($settings['bbcode'] ?? 'ON')); ?></strong></a>,
             <a href="smilies.php?catid=<?php echo (int) ($catid ?? 0); ?>&boardid=<?php echo (int) $boardid; ?>" target="_blank" rel="noopener">
-              <?php echo $lang_smiliesare ?? 'Smilies sind'; ?>
-              <strong><?php echo ppb_onoff_label($settings['smilies'] ?? 'ON'); ?></strong>
-            </a>.
+              <?php echo Security::escape($lang_smiliesare ?? 'Smilies sind'); ?>
+              <strong><?php echo Security::escape(ppb_onoff_label($settings['smilies'] ?? 'ON')); ?></strong></a>.
           </div>
-          <div class="invalid-feedback">Bitte einen Beitragstext eingeben.</div>
+          <div class="invalid-feedback"><?php echo Security::escape($lang_inserttext ?? 'Please enter a text.'); ?></div>
         </div>
       </div>
       <footer class="card-footer bg-light d-flex flex-wrap gap-2">
         <button type="submit" class="btn btn-primary">
           <i class="bi bi-send" aria-hidden="true"></i>
-          <?php echo $lang_send ?? 'Send'; ?>
+          <?php echo Security::escape($lang_send ?? 'Send'); ?>
         </button>
         <button type="reset" class="btn btn-outline-secondary">
           <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
-          <?php echo $lang_reset ?? 'Reset'; ?>
+          <?php echo Security::escape($lang_reset ?? 'Reset'); ?>
         </button>
         <a class="btn btn-link"
            href="showboard.php?boardid=<?php echo (int) $boardid; ?>">
-          <?php echo $lang_back ?? 'Back'; ?>
+          <?php echo Security::escape($lang_back ?? 'Back'); ?>
         </a>
       </footer>
     </section>

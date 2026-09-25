@@ -46,20 +46,20 @@ if ($catid > 0) {
             <thead class="table-light">
               <tr>
                 <th scope="col" class="text-center" style="width:48px;">
-                  <span class="visually-hidden">Status</span>
+                  <span class="visually-hidden"><?php echo Security::escape($lang_status ?? 'Status'); ?></span>
                 </th>
-                <th scope="col"><?php echo $lang_board ?? 'Board'; ?></th>
+                <th scope="col"><?php echo Security::escape($lang_board ?? 'Board'); ?></th>
                 <th scope="col" class="text-end" style="width:80px;">
-                  <?php echo $lang_postings ?? 'Posts'; ?>
+                  <?php echo Security::escape($lang_postings ?? 'Posts'); ?>
                 </th>
                 <th scope="col" class="text-end" style="width:80px;">
-                  <?php echo $lang_threads ?? 'Threads'; ?>
+                  <?php echo Security::escape($lang_threads ?? 'Threads'); ?>
                 </th>
                 <th scope="col" class="d-none d-md-table-cell" style="width:220px;">
-                  <?php echo $lang_lastpost ?? 'Last Post'; ?>
+                  <?php echo Security::escape($lang_lastpost ?? 'Last Post'); ?>
                 </th>
                 <th scope="col" class="d-none d-lg-table-cell" style="width:160px;">
-                  <?php echo $lang_moderatedby ?? 'Moderators'; ?>
+                  <?php echo Security::escape($lang_moderatedby ?? 'Moderators'); ?>
                 </th>
               </tr>
             </thead>
@@ -109,7 +109,7 @@ if ($catid > 0) {
                   <?php endif; ?>
                   <?php if ((int) $boardRow['lastchange'] > 0): ?>
                     <div class="small text-body-secondary d-md-none">
-                      <?php echo $lang_lastpost ?? 'Last Post'; ?>:
+                      <?php echo Security::escape($lang_lastpost ?? 'Last Post'); ?>:
                       <?php echo Security::escape(date('d.m.Y - H:i', (int) $boardRow['lastchange'])); ?>
                     </div>
                   <?php endif; ?>
@@ -142,17 +142,17 @@ if ($catid > 0) {
                           ?>
                     <a href="<?php echo Security::escape($lastPostLink); ?>"
                        class="text-decoration-none"
-                       title="<?php echo $lang_jumptolastpost ?? 'Jump to last post'; ?>">
+                       title="<?php echo Security::escape($lang_jumptolastpost ?? 'Jump to last post'); ?>">
                       <i class="bi bi-arrow-right-circle" aria-hidden="true"></i>
                     </a>
                     <?php echo Security::escape($dateAndTime); ?><br>
-                    <span class="text-body-secondary">von</span>
+                    <span class="text-body-secondary"><?php echo Security::escape($lang_by ?? 'by'); ?></span>
                     <?php echo Security::escape((string) $lastAuthor['username']); ?>
                   <?php else: ?>
-                    <span class="text-body-secondary"><?php echo $lang_nopostings ?? 'No posts'; ?></span>
+                    <span class="text-body-secondary"><?php echo Security::escape($lang_nopostings ?? 'No posts'); ?></span>
                   <?php endif; ?>
                   <?php else: ?>
-                    <span class="text-body-secondary"><?php echo $lang_nopostings ?? 'No posts'; ?></span>
+                    <span class="text-body-secondary"><?php echo Security::escape($lang_nopostings ?? 'No posts'); ?></span>
                   <?php endif; ?>
                 </td>
                 <td class="d-none d-lg-table-cell small">
@@ -192,7 +192,7 @@ if ($catid > 0) {
         </div>
       <?php else: ?>
         <div class="card-body text-center text-body-secondary">
-          <?php echo $lang_noboardsincat ?? 'No boards in this category'; ?>
+          <?php echo Security::escape($lang_noboardsincat ?? 'No boards in this category'); ?>
         </div>
       <?php endif; ?>
     </section>
@@ -201,7 +201,7 @@ if ($catid > 0) {
   <?php echo ppb_alert(
       $lang_nocatsindb ?? 'No categories found',
       'warning',
-      'Hinweis'
+      $lang_notice ?? 'Notice'
   ); ?>
 <?php endif; ?>
 
@@ -219,10 +219,10 @@ $onlineUsers = $db->fetchAll(
 );
 ?>
 
-<section class="card shadow-sm mb-4" aria-label="Aktuell online">
+<section class="card shadow-sm mb-4" aria-label="<?php echo Security::escape($lang_currentlyonline ?? 'Currently online'); ?>">
   <header class="card-header bg-secondary-subtle d-flex align-items-center gap-2">
     <i class="bi bi-people-fill" aria-hidden="true"></i>
-    <h2 class="h6 mb-0">Benutzer online</h2>
+    <h2 class="h6 mb-0"><?php echo Security::escape($lang_usersonline ?? 'Users online'); ?></h2>
     <span class="badge text-bg-primary ms-auto"><?php echo count($onlineUsers); ?></span>
   </header>
   <div class="card-body">
@@ -241,21 +241,21 @@ $onlineUsers = $db->fetchAll(
       </p>
     <?php else: ?>
       <p class="mb-0 text-body-secondary small">
-        <?php echo $lang_noregisteredonline ?? 'No registered users online'; ?>
+        <?php echo Security::escape($lang_noregisteredonline ?? 'No registered users online'); ?>
       </p>
     <?php endif; ?>
   </div>
 </section>
 
-<aside class="text-body-secondary small d-flex flex-wrap gap-3 mb-4" aria-label="Legende">
+<aside class="text-body-secondary small d-flex flex-wrap gap-3 mb-4" aria-label="<?php echo Security::escape($lang_legend ?? 'Legend'); ?>">
   <span><i class="bi bi-chat-dots-fill text-primary" aria-hidden="true"></i>
-    <?php echo $lang_newpostings ?? 'New posts'; ?></span>
+    <?php echo Security::escape($lang_newpostings ?? 'New posts'); ?></span>
   <span><i class="bi bi-chat-dots text-secondary" aria-hidden="true"></i>
-    <?php echo $lang_nonewpostings ?? 'No new posts'; ?></span>
+    <?php echo Security::escape($lang_nonewpostings ?? 'No new posts'); ?></span>
   <span><i class="bi bi-lock-fill text-secondary" aria-hidden="true"></i>
-    <?php echo $lang_closedboard ?? 'Closed'; ?></span>
+    <?php echo Security::escape($lang_closedboard ?? 'Closed'); ?></span>
   <span><i class="bi bi-shield-lock-fill text-warning" aria-hidden="true"></i>
-    <?php echo $lang_privateboard ?? 'Private'; ?></span>
+    <?php echo Security::escape($lang_privateboard ?? 'Private'); ?></span>
 </aside>
 
 <?php include __DIR__ . '/footer.inc.php'; ?>

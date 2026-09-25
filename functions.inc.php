@@ -70,6 +70,60 @@ function ppb_valid_template_setting(string $name): bool
 }
 
 /**
+ * Die alten Design-Felder (Templates, Farben, Button-Bilder) für die
+ * Formulare im Adminbereich. Sie wirken im Bootstrap-Layout nicht mehr,
+ * sind optional und bleiben nur aus Kompatibilitätsgründen erhalten.
+ *
+ * @param array<string, mixed> $values Aktuelle Werte (header, footer, bordercolor, …)
+ * @param string $note Hinweistext über den Feldern
+ *
+ * @return string HTML
+ */
+function ppb_admin_design_fields(array $values, string $note): string
+{
+    $value = static fn (string $key): string => Security::escape((string) ($values[$key] ?? ''));
+    $label = static fn (string $key, string $fallback): string => Security::escape(ppb_lang($key, $fallback));
+
+    $html = '<div class="alert alert-info small d-flex align-items-start gap-2 mb-3" role="alert">'
+        . '<i class="bi bi-info-circle-fill fs-5" aria-hidden="true"></i><div><strong>'
+        . $label('notice', 'Notice') . ':</strong> ' . Security::escape($note) . '</div></div>'
+        . '<div class="row g-3">';
+
+    foreach (['header' => ['adm_headertemplate', 'Custom header template'], 'footer' => ['adm_footertemplate', 'Custom footer template']] as $field => [$key, $fallback]) {
+        $html .= '<div class="col-md-6"><label for="' . $field . '" class="form-label">' . $label($key, $fallback) . '</label>'
+            . '<input id="' . $field . '" name="' . $field . '" type="text" class="form-control" maxlength="250"'
+            . ' value="' . $value($field) . '" aria-describedby="' . $field . 'Help">'
+            . '<div id="' . $field . 'Help" class="form-text">' . $label('adm_templatehelp', 'File name from the inc/ folder; empty = default.') . '</div></div>';
+    }
+
+    $colors = [
+        'bordercolor' => ['adm_bordercolor', 'Border colour', 'adm_colorhelp', 'Hex colour code, e.g. #000000'],
+        'tablebg1' => ['adm_tablebg1', 'Table background 1', 'adm_tablebg1help', 'Light row'],
+        'tablebg2' => ['adm_tablebg2', 'Table background 2', 'adm_tablebg2help', 'Alternating row'],
+        'tablebg3' => ['adm_tablebg3', 'Table background 3', 'adm_tablebg3help', 'Table header'],
+    ];
+    foreach ($colors as $field => [$key, $fallback, $helpKey, $helpFallback]) {
+        // Nur gültige Hex-Farben als Vorschau, damit kein CSS in das style-Attribut gelangt
+        $color = (string) ($values[$field] ?? '');
+        $swatch = preg_match('/^#[0-9A-Fa-f]{3,6}$/', $color) === 1 ? $color : 'transparent';
+        $html .= '<div class="col-md-3"><label for="' . $field . '" class="form-label">' . $label($key, $fallback) . '</label>'
+            . '<div class="input-group"><input id="' . $field . '" name="' . $field . '" type="text" class="form-control" maxlength="7"'
+            . ' value="' . $value($field) . '">'
+            . '<span class="input-group-text" style="background:' . $swatch . ';width:38px;" aria-hidden="true">&nbsp;</span></div>'
+            . '<div class="form-text">' . $label($helpKey, $helpFallback) . '</div></div>';
+    }
+
+    foreach (['newthread' => ['adm_newthreadimage', 'Image for the "New thread" button'], 'newpost' => ['adm_newpostimage', 'Image for the "New post" button']] as $field => [$key, $fallback]) {
+        $html .= '<div class="col-md-6"><label for="' . $field . '" class="form-label">' . $label($key, $fallback) . '</label>'
+            . '<input id="' . $field . '" name="' . $field . '" type="text" class="form-control" maxlength="250"'
+            . ' value="' . $value($field) . '" aria-describedby="' . $field . 'Help">'
+            . '<div id="' . $field . 'Help" class="form-text">' . $label('adm_buttonimagehelp', 'Path to a 120 × 20 pixel image, e.g. images/newthread.gif') . '</div></div>';
+    }
+
+    return $html . '</div>';
+}
+
+/**
  * Text der Begrüßungsmail nach der Registrierung oder nach „Benutzer
  * anlegen“ im Adminbereich. Das Passwort steht bewusst nie in der Mail.
  *
@@ -172,22 +226,21 @@ function ppb_board_password_form(string $action, string $state, string $heading)
     }
 
     return $html
-        . '<form action="' . Security::escape($action) . '" method="post" class="needs-validation row g-2" novalidate>'
+        . '<form action="' . Security::escape($action) . '" method="post" class="needs-validation" novalidate>'
         . CSRF::getTokenField()
-        . '<div class="col-sm-8">'
         . '<label for="boardpassword" class="form-label fw-semibold">'
         . Security::escape(ppb_lang('boardpassword', 'Board password')) . '</label>'
+        . '<div class="input-group has-validation">'
         . '<input id="boardpassword" name="boardpassword" type="password" class="form-control"'
         . ' maxlength="100" required autocomplete="off" aria-describedby="boardpasswordHelp">'
+        . '<button type="submit" class="btn btn-primary">'
+        . '<i class="bi bi-unlock" aria-hidden="true"></i> '
+        . Security::escape(ppb_lang('requestaccess', 'Unlock')) . '</button>'
         . '<div class="invalid-feedback">' . Security::escape(ppb_lang('insertboardpwd', 'Please enter the board password.')) . '</div>'
         . '</div>'
-        . '<div class="col-sm-4 d-flex align-items-start pt-sm-4 mt-sm-2">'
-        . '<button type="submit" class="btn btn-primary w-100">'
-        . '<i class="bi bi-unlock" aria-hidden="true"></i> '
-        . Security::escape(ppb_lang('requestaccess', 'Unlock')) . '</button></div>'
-        . '<div class="col-12"><div id="boardpasswordHelp" class="form-text mt-0">'
+        . '<div id="boardpasswordHelp" class="form-text">'
         . Security::escape(ppb_lang('boardpasswordhelp', 'Please enter the board password to access this area.'))
-        . '</div></div></form></div></section>';
+        . '</div></form></div></section>';
 }
 
 /**
@@ -212,7 +265,7 @@ function default_error(
 ): void {
     echo '<div class="card shadow-sm border-danger mb-3">'
         . '<div class="card-header bg-danger text-white"><strong>'
-        . Security::escape('Fehler')
+        . Security::escape(ppb_lang('errormessage', 'Error'))
         . '</strong></div>'
         . '<div class="card-body">'
         . '<p class="mb-3">' . Security::escape($message) . '</p>'
@@ -280,20 +333,23 @@ function getrank(int $userId, Database $db): string
     );
     $postCount = (int) ($result['count'] ?? 0);
 
-    return match (true) {
-        $postCount > 8192 => 'Admiral',
-        $postCount > 4096 => 'Vice Admiral',
-        $postCount > 2048 => 'Rear Admiral',
-        $postCount > 1024 => 'Fleet Captain',
-        $postCount > 512 => 'Captain',
-        $postCount > 256 => 'Commander',
-        $postCount > 128 => 'Lt. Commander',
-        $postCount > 64 => 'Lieutenant',
-        $postCount > 32 => 'Lt. Junior Grade',
-        $postCount > 16 => 'Ensign',
-        $postCount > 8 => 'Cadet',
-        default => 'Civilian',
+    // Neutrale Forenränge aus der Sprachdatei; die Schwellen verdoppeln sich je Stufe
+    [$key, $fallback] = match (true) {
+        $postCount > 8192 => ['rank_legend', 'Legend'],
+        $postCount > 4096 => ['rank_oldhand', 'Old hand'],
+        $postCount > 2048 => ['rank_veteran', 'Veteran'],
+        $postCount > 1024 => ['rank_professional', 'Professional'],
+        $postCount > 512 => ['rank_expert', 'Expert'],
+        $postCount > 256 => ['rank_seasoned', 'Seasoned member'],
+        $postCount > 128 => ['rank_experienced', 'Experienced member'],
+        $postCount > 64 => ['rank_regular', 'Regular'],
+        $postCount > 32 => ['rank_active', 'Active member'],
+        $postCount > 16 => ['rank_member', 'Member'],
+        $postCount > 8 => ['rank_beginner', 'Beginner'],
+        default => ['rank_newcomer', 'Newcomer'],
     };
+
+    return ppb_lang($key, $fallback);
 }
 
 /**
@@ -320,7 +376,7 @@ function getpages(int $threadId, Database $db, int $current = 0): string
         return '';
     }
 
-    $output = '<nav aria-label="Seiten"><ul class="pagination pagination-sm mb-0">';
+    $output = '<nav aria-label="' . Security::escape(ppb_lang('pages', 'Pages')) . '"><ul class="pagination pagination-sm mb-0">';
     for ($i = 0; $i < $pageNum; $i++) {
         $pageDisplay = $i + 1;
         $offset = $i * $postsPerPage;
@@ -366,15 +422,17 @@ function truncate_text(string $text, int $length = 100, string $suffix = '...'):
 }
 
 /**
- * Convert legacy ON/OFF / YES/NO setting value to a German label "an"/"aus".
+ * Convert legacy ON/OFF / YES/NO setting value to a localized label ("an"/"aus", "on"/"off").
  *
  * @param string|null $value Setting value (typically 'ON', 'OFF', 'YES', 'NO')
  *
- * @return string 'an' or 'aus'
+ * @return string Label from the language file ($lang_on / $lang_off)
  */
 function ppb_onoff_label(?string $value): string
 {
-    return in_array(strtoupper((string) $value), ['ON', 'YES', '1', 'AN'], true) ? 'an' : 'aus';
+    return in_array(strtoupper((string) $value), ['ON', 'YES', '1', 'AN'], true)
+        ? ppb_lang('on', 'on')
+        : ppb_lang('off', 'off');
 }
 
 /**

@@ -82,7 +82,7 @@ include __DIR__ . '/header.inc.php';
 /**
  * Renders the thread pagination block (top + bottom of the thread).
  */
-$renderPagination = static function () use ($thread, $db, $current, $current2, $current3, $lang_pages, $lang_prevpage, $lang_nextpage): string {
+$renderPagination = static function () use ($thread, $db, $current, $current2, $current3, $lang_pages, $lang_prevpage, $lang_nextpage, $lang_pagenavigation): string {
     if (empty($thread['id'])) {
         return '';
     }
@@ -120,7 +120,8 @@ $renderPagination = static function () use ($thread, $db, $current, $current2, $
         $out .= $pages;
     }
     $out .= '</div>';
-    $out .= '<div class="btn-group" role="group" aria-label="Seitennavigation">';
+    $out .= '<div class="btn-group" role="group" aria-label="'
+        . htmlspecialchars($lang_pagenavigation ?? 'Page navigation', ENT_QUOTES, 'UTF-8') . '">';
     $out .= $prevHtml . $nextHtml;
     $out .= '</div></div>';
     return $out;
@@ -166,6 +167,7 @@ $renderPagination = static function () use ($thread, $db, $current, $current2, $
       // für Moderator und Administrator
       $currentUser = $ppbuser !== [] ? $ppbuser : null;
       $canModerate = Auth::canModerate($currentUser, $board);
+      $formatLabels = ['quote' => $lang_quote ?? 'Quote:', 'image' => $lang_image ?? 'Image'];
       ?>
     <?php foreach ($posts as $row):
         $author = $db->fetchOne('SELECT * FROM ppb_users WHERE id = ?', [$row['author']]);
@@ -181,7 +183,7 @@ $renderPagination = static function () use ($thread, $db, $current, $current2, $
             } elseif ($author['status'] === 'Normal user') {
                 $rank = getrank((int) $author['id'], $db);
             } elseif ($author['status'] === 'Administrator') {
-                $rank = 'Administrator';
+                $rank = $lang_administrator ?? 'Administrator';
                 $rankClass = 'text-danger-emphasis fw-semibold';
             }
         }
@@ -199,7 +201,8 @@ $renderPagination = static function () use ($thread, $db, $current, $current2, $
             $rawText,
             $settings['bbcode'] ?? 'ON',
             $settings['smilies'] ?? 'ON',
-            $settings['htmlcode'] ?? 'OFF'
+            $settings['htmlcode'] ?? 'OFF',
+            $formatLabels
         );
         ?>
       <article class="card shadow-sm mb-3" id="post<?php echo (int) $row['id']; ?>">
@@ -225,11 +228,11 @@ $renderPagination = static function () use ($thread, $db, $current, $current2, $
             <?php if ($author !== null): ?>
               <ul class="list-unstyled small text-body-secondary mb-0">
                 <li>
-                  <span class="fw-semibold"><?php echo $lang_registeredsince ?? 'Registriert:'; ?></span>
+                  <span class="fw-semibold"><?php echo Security::escape($lang_registeredsince ?? 'Registered since:'); ?></span>
                   <?php echo Security::escape(date('d.m.Y', (int) $author['registered'])); ?>
                 </li>
                 <li>
-                  <span class="fw-semibold">Beiträge:</span>
+                  <span class="fw-semibold"><?php echo Security::escape($lang_postcount ?? 'Posts:'); ?></span>
                   <?php echo $authorPostCount; ?>
                 </li>
               </ul>
@@ -240,20 +243,20 @@ $renderPagination = static function () use ($thread, $db, $current, $current2, $
             <header class="card-header bg-light d-flex flex-wrap align-items-center justify-content-between gap-2 py-2">
               <div class="small text-body-secondary">
                 <i class="bi bi-clock" aria-hidden="true"></i>
-                <?php echo $lang_postedon ?? 'Posted on'; ?>
+                <?php echo Security::escape($lang_postedon ?? 'Posted on'); ?>
                 <?php echo Security::escape($postDate); ?>
               </div>
-              <div class="btn-group btn-group-sm" role="group" aria-label="Beitragsaktionen">
+              <div class="btn-group btn-group-sm" role="group" aria-label="<?php echo Security::escape($lang_postactions ?? 'Post actions'); ?>">
                 <?php if ($author !== null): ?>
                   <a class="btn btn-outline-secondary"
                      href="showprofile.php?userid=<?php echo (int) $author['id']; ?>&catid=<?php echo (int) ($catid ?? 0); ?>&boardid=<?php echo (int) $boardid; ?>"
-                     title="<?php echo $lang_profile ?? 'Profile'; ?>">
+                     title="<?php echo Security::escape($lang_profile ?? 'Profile'); ?>">
                     <i class="bi bi-person" aria-hidden="true"></i>
                   </a>
                   <?php if (($author['hideemail'] ?? 'YES') === 'NO'): ?>
                     <a class="btn btn-outline-secondary"
                        href="sendmail.php?userid=<?php echo (int) $author['id']; ?>&catid=<?php echo (int) ($catid ?? 0); ?>&boardid=<?php echo (int) $boardid; ?>"
-                       title="<?php echo $lang_writemail ?? 'Write mail to'; ?> <?php echo Security::escape($authorName); ?>">
+                       title="<?php echo Security::escape($lang_writemail ?? 'Write mail to'); ?> <?php echo Security::escape($authorName); ?>">
                       <i class="bi bi-envelope" aria-hidden="true"></i>
                     </a>
                   <?php endif; ?>
@@ -262,7 +265,7 @@ $renderPagination = static function () use ($thread, $db, $current, $current2, $
                     <a class="btn btn-outline-secondary"
                        href="<?php echo Security::escape($homepageUrl); ?>"
                        target="_blank" rel="noopener noreferrer"
-                       title="<?php echo $lang_homepage ?? 'Homepage'; ?>">
+                       title="<?php echo Security::escape($lang_homepage ?? 'Homepage'); ?>">
                       <i class="bi bi-globe" aria-hidden="true"></i>
                     </a>
                   <?php endif; ?>
@@ -270,13 +273,13 @@ $renderPagination = static function () use ($thread, $db, $current, $current2, $
                 <?php if (Auth::canEditPost($currentUser, $row, $board)): ?>
                   <a class="btn btn-outline-secondary"
                      href="editpost.php?postid=<?php echo (int) $row['id']; ?>&catid=<?php echo (int) ($catid ?? 0); ?>&boardid=<?php echo (int) $boardid; ?>"
-                     title="<?php echo $lang_editpost ?? 'Edit post'; ?>">
+                     title="<?php echo Security::escape($lang_editpost ?? 'Edit post'); ?>">
                     <i class="bi bi-pencil" aria-hidden="true"></i>
                   </a>
                 <?php endif; ?>
                 <a class="btn btn-outline-secondary"
                    href="newpost.php?threadid=<?php echo (int) $thread['id']; ?>&postid=<?php echo (int) $row['id']; ?>"
-                   title="<?php echo $lang_writequotedanswer ?? 'Quote reply'; ?>">
+                   title="<?php echo Security::escape($lang_writequotedanswer ?? 'Quote reply'); ?>">
                   <i class="bi bi-chat-quote" aria-hidden="true"></i>
                 </a>
               </div>
@@ -292,7 +295,8 @@ $renderPagination = static function () use ($thread, $db, $current, $current2, $
                       (string) $author['signature'],
                       $settings['bbcode'] ?? 'ON',
                       $settings['smilies'] ?? 'ON',
-                      'OFF'
+                      'OFF',
+                      $formatLabels
                   );
                   ?>
                 <hr class="text-body-secondary mt-4">
@@ -307,7 +311,7 @@ $renderPagination = static function () use ($thread, $db, $current, $current2, $
                 <span class="text-body-secondary">IP:</span>
                 <a class="text-decoration-none"
                    href="showip.php?threadid=<?php echo (int) $thread['id']; ?>&postid=<?php echo (int) $row['id']; ?>">
-                  <?php echo $lang_logged ?? 'logged'; ?>
+                  <?php echo Security::escape($lang_logged ?? 'logged'); ?>
                 </a>
               </footer>
             <?php endif; ?>
@@ -346,21 +350,21 @@ if ($loggedin === 'YES' && !empty($thread['title'])) {
   <?php if (!empty($board['title'])): ?>
     <div class="d-flex flex-wrap justify-content-end gap-2 mb-4">
       <?php if (($board['status'] ?? '') === 'Closed'): ?>
-        <span class="badge text-bg-secondary"><?php echo $lang_boardclosed ?? 'Board closed'; ?></span>
+        <span class="badge text-bg-secondary"><?php echo Security::escape($lang_boardclosed ?? 'Board closed'); ?></span>
       <?php else: ?>
         <a href="newthread.php?boardid=<?php echo (int) $board['id']; ?>" class="btn btn-primary">
           <i class="bi bi-plus-circle" aria-hidden="true"></i>
-          <?php echo $lang_newthread ?? 'New Thread'; ?>
+          <?php echo Security::escape($lang_newthread ?? 'New Thread'); ?>
         </a>
         <?php if (!empty($thread['title'])): ?>
           <?php if (($thread['status'] ?? '') !== 'Closed'): ?>
             <a href="newpost.php?threadid=<?php echo (int) $thread['id']; ?>&current=<?php echo (int) $current; ?>"
                class="btn btn-success">
               <i class="bi bi-reply" aria-hidden="true"></i>
-              <?php echo $lang_newpost ?? 'New Post'; ?>
+              <?php echo Security::escape($lang_newpost ?? 'New Post'); ?>
             </a>
           <?php else: ?>
-            <span class="badge text-bg-secondary"><?php echo $lang_threadclosed ?? 'Thread closed'; ?></span>
+            <span class="badge text-bg-secondary"><?php echo Security::escape($lang_threadclosed ?? 'Thread closed'); ?></span>
           <?php endif; ?>
         <?php endif; ?>
       <?php endif; ?>

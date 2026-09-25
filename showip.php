@@ -59,37 +59,37 @@ include __DIR__ . '/header.inc.php';
   <div class="col-md-8 col-lg-6">
 
   <?php if ($threadid === 0 || $postid === 0): ?>
-    <?php default_error($lang_choosepost ?? 'Please choose a post', 'index.php', 'Home'); ?>
+    <?php default_error($lang_choosepost ?? 'Please choose a post', 'index.php', $lang_home ?? 'Home'); ?>
   <?php elseif (!$showip): ?>
-    <?php default_error($lang_onlyadminscanviewip ?? 'Only administrators and moderators can view IP addresses', 'index.php', 'Home'); ?>
+    <?php default_error($lang_onlyadminscanviewip ?? 'Only administrators and moderators can view IP addresses', 'index.php', $lang_home ?? 'Home'); ?>
   <?php else: ?>
     <section class="card shadow-sm">
       <header class="card-header bg-secondary-subtle d-flex align-items-center gap-2">
         <i class="bi bi-geo-alt-fill" aria-hidden="true"></i>
         <h1 class="h6 mb-0">
-          <?php echo $lang_ipaddressforpost ?? 'IP Address for post'; ?> #<?php echo (int) $postid; ?>
+          <?php echo Security::escape($lang_ipaddressforpost ?? 'IP Address for post'); ?> #<?php echo (int) $postid; ?>
         </h1>
       </header>
       <div class="card-body">
         <?php if ($post === null): ?>
           <div class="alert alert-warning mb-0" role="alert">
-            <?php echo $lang_nopostwithid ?? 'No post with this ID found'; ?>
+            <?php echo Security::escape($lang_nopostwithid ?? 'No post with this ID found'); ?>
           </div>
         <?php elseif ((int) $post['threadid'] === $threadid || (int) $post['id'] === $threadid): ?>
           <p class="mb-1 small text-body-secondary">
-            <?php echo $lang_ipaddressis ?? 'IP Address is:'; ?>
+            <?php echo Security::escape($lang_ipaddressis ?? 'IP Address is:'); ?>
           </p>
           <code class="fs-5"><?php echo Security::escape($post['ip'] ?? 'Unknown'); ?></code>
         <?php else: ?>
           <div class="alert alert-warning mb-0" role="alert">
-            <?php echo $lang_postingdoesntbelongtothread ?? 'This post does not belong to this thread'; ?>
+            <?php echo Security::escape($lang_postingdoesntbelongtothread ?? 'This post does not belong to this thread'); ?>
           </div>
         <?php endif; ?>
       </div>
       <footer class="card-footer bg-light">
         <a class="btn btn-outline-secondary btn-sm" href="javascript:history.back()">
           <i class="bi bi-arrow-left" aria-hidden="true"></i>
-          <?php echo $lang_back ?? 'Back'; ?>
+          <?php echo Security::escape($lang_back ?? 'Back'); ?>
         </a>
       </footer>
     </section>

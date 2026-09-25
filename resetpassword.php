@@ -54,7 +54,7 @@ $done = false;
 
 if ($tokenValid && $reset !== null && $_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!CSRF::validateFromPost()) {
-        $errorText = 'Security token invalid. Please try again.';
+        $errorText = $lang_csrfinvalid ?? 'The security token is invalid. Please reload the page and try again.';
     } else {
         $p1 = Security::getString('password1', 'POST');
         $p2 = Security::getString('password2', 'POST');
@@ -83,7 +83,7 @@ include __DIR__ . '/header.inc.php';
     default_error(
         $lang_pwdresettokeninvalid ?? 'Invalid or expired reset link.',
         'index.php',
-        'Home'
+        $lang_home ?? 'Home'
     );
       ?>
   <?php elseif ($done): ?>
@@ -91,16 +91,16 @@ include __DIR__ . '/header.inc.php';
       <header class="card-header bg-success text-white">
         <h2 class="h6 mb-0">
           <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
-          <?php echo $lang_statusmessage ?? 'Status'; ?>
+          <?php echo Security::escape($lang_statusmessage ?? 'Status'); ?>
         </h2>
       </header>
       <div class="card-body">
         <p class="mb-3">
-          <?php echo $lang_pwdresetsuccess ?? 'Password has been reset. You can now log in.'; ?>
+          <?php echo Security::escape($lang_pwdresetsuccess ?? 'Password has been reset. You can now log in.'); ?>
         </p>
         <a href="login.php" class="btn btn-primary">
           <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
-          <?php echo $lang_login ?? 'Login'; ?>
+          <?php echo Security::escape($lang_login ?? 'Login'); ?>
         </a>
       </div>
     </div>
@@ -115,7 +115,7 @@ include __DIR__ . '/header.inc.php';
       <header class="card-header bg-secondary-subtle">
         <h1 class="h5 mb-0">
           <i class="bi bi-key" aria-hidden="true"></i>
-          <?php echo $lang_newpassword ?? 'New Password'; ?>
+          <?php echo Security::escape($lang_newpassword ?? 'New Password'); ?>
         </h1>
       </header>
       <div class="card-body">
@@ -124,24 +124,24 @@ include __DIR__ . '/header.inc.php';
           <?php echo CSRF::getTokenField(); ?>
           <div class="mb-3">
             <label for="password1" class="form-label fw-semibold">
-              <?php echo $lang_newpassword ?? 'New password'; ?>
+              <?php echo Security::escape($lang_newpassword ?? 'New password'); ?>
             </label>
             <input id="password1" name="password1" type="password" class="form-control"
                    minlength="8" required autocomplete="new-password" aria-describedby="pwd1Help">
-            <div id="pwd1Help" class="form-text">Mindestens 8 Zeichen.</div>
-            <div class="invalid-feedback">Mindestens 8 Zeichen erforderlich.</div>
+            <div id="pwd1Help" class="form-text"><?php echo Security::escape($lang_pwdminlength ?? 'At least 8 characters.'); ?></div>
+            <div class="invalid-feedback"><?php echo Security::escape($lang_pwdtooshort ?? 'The password must be at least 8 characters long.'); ?></div>
           </div>
           <div class="mb-3">
             <label for="password2" class="form-label fw-semibold">
-              <?php echo $lang_confirmation ?? 'Confirmation'; ?>
+              <?php echo Security::escape($lang_confirmation ?? 'Confirmation'); ?>
             </label>
             <input id="password2" name="password2" type="password" class="form-control"
                    minlength="8" required autocomplete="new-password">
-            <div class="invalid-feedback">Bitte zur Bestätigung wiederholen.</div>
+            <div class="invalid-feedback"><?php echo Security::escape($lang_repeatpwd ?? 'Please enter the password again.'); ?></div>
           </div>
           <button type="submit" class="btn btn-primary">
             <i class="bi bi-shield-check" aria-hidden="true"></i>
-            <?php echo $lang_send ?? 'Send'; ?>
+            <?php echo Security::escape($lang_send ?? 'Send'); ?>
           </button>
         </form>
       </div>

@@ -59,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $send === 1) {
     // dem (fälschbaren) Host-Header der Anfrage.
     $baseUrl = BoardUrl::base($settings);
     if (!CSRF::validateFromPost()) {
-        $errorText = 'Security token invalid. Please try again.';
+        $errorText = $lang_csrfinvalid ?? 'The security token is invalid. Please reload the page and try again.';
     } elseif ($baseUrl === null) {
         ErrorHandler::logConfigurationError(
             'Passwort-Reset nicht möglich: In den allgemeinen Einstellungen ist keine gültige Board-URL eingetragen.'
@@ -94,7 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $send === 1) {
 
             $resetUrl = BoardUrl::link($baseUrl, 'resetpassword.php', ['token' => $rawToken]);
 
-            $subject = ($settings['boardtitle'] ?? 'PowerPHPBoard') . ' - ' . ($lang_passwordreminder ?? 'Password Reset');
+            $subject = ($settings['boardtitle'] ?? 'PowerPHPBoard') . ' – ' . ($lang_passwordreminder ?? 'Reset password');
             $message = ($lang_hello ?? 'Hello') . ' ' . $user['username'] . ",\n\n"
                 . ($lang_pwdresetclicklink ?? 'Click this link within one hour to reset your password:') . "\n\n"
                 . $resetUrl . "\n\n"
@@ -125,13 +125,13 @@ include __DIR__ . '/header.inc.php';
       <header class="card-header bg-success text-white">
         <h2 class="h6 mb-0">
           <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
-          <?php echo $lang_statusmessage ?? 'Status'; ?>
+          <?php echo Security::escape($lang_statusmessage ?? 'Status'); ?>
         </h2>
       </header>
       <div class="card-body">
         <p class="mb-3"><?php echo Security::escape($status); ?></p>
         <a href="index.php" class="btn btn-primary">
-          <i class="bi bi-house-door" aria-hidden="true"></i> Home
+          <i class="bi bi-house-door" aria-hidden="true"></i> <?php echo Security::escape($lang_home ?? 'Home'); ?>
         </a>
       </div>
     </div>
@@ -146,7 +146,7 @@ include __DIR__ . '/header.inc.php';
       <header class="card-header bg-secondary-subtle">
         <h1 class="h5 mb-0">
           <i class="bi bi-envelope-paper" aria-hidden="true"></i>
-          <?php echo $lang_sendpwd ?? 'Send Password'; ?>
+          <?php echo Security::escape($lang_sendpwd ?? 'Send Password'); ?>
         </h1>
       </header>
       <div class="card-body">
@@ -155,22 +155,22 @@ include __DIR__ . '/header.inc.php';
           <input type="hidden" name="send" value="1">
           <div class="mb-3">
             <label for="email" class="form-label fw-semibold">
-              <?php echo $lang_email ?? 'Email'; ?>
+              <?php echo Security::escape($lang_email ?? 'Email'); ?>
             </label>
             <input id="email" name="email" type="email" class="form-control"
                    maxlength="100" required autocomplete="email"
                    aria-describedby="emailHelp">
             <div id="emailHelp" class="form-text">
-              Wir senden einen einmaligen Reset-Link an diese E-Mail-Adresse, falls sie registriert ist.
+              <?php echo Security::escape($lang_pwdresethelp ?? 'If this email address is registered, we will send a one-time reset link to it.'); ?>
             </div>
-            <div class="invalid-feedback">Bitte eine gültige E-Mail-Adresse eingeben.</div>
+            <div class="invalid-feedback"><?php echo Security::escape($lang_insertvalidemail ?? 'Please enter a valid email address.'); ?></div>
           </div>
           <button type="submit" class="btn btn-primary">
             <i class="bi bi-send" aria-hidden="true"></i>
-            <?php echo $lang_send ?? 'Send'; ?>
+            <?php echo Security::escape($lang_send ?? 'Send'); ?>
           </button>
           <a class="btn btn-link" href="login.php?catid=<?php echo (int) $catid; ?>&boardid=<?php echo (int) $boardid; ?>">
-            <?php echo $lang_backtologin ?? 'Back to login'; ?>
+            <?php echo Security::escape($lang_backtologin ?? 'Back to login'); ?>
           </a>
         </form>
       </div>

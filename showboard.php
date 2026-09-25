@@ -80,14 +80,14 @@ include __DIR__ . '/header.inc.php';
     <header class="card-header bg-secondary-subtle d-flex flex-wrap align-items-center justify-content-between gap-2">
       <h2 class="h6 mb-0">
         <i class="bi bi-card-list" aria-hidden="true"></i>
-        <?php echo $lang_thread ?? 'Thread'; ?>
+        <?php echo Security::escape($lang_thread ?? 'Thread'); ?>
       </h2>
       <span class="badge text-bg-secondary"><?php echo count($threads); ?></span>
     </header>
 
     <?php if (count($threads) === 0): ?>
       <div class="card-body text-center text-body-secondary">
-        <?php echo $lang_nothreadsinboard ?? 'No threads in this board'; ?>
+        <?php echo Security::escape($lang_nothreadsinboard ?? 'No threads in this board'); ?>
       </div>
     <?php else: ?>
       <div class="table-responsive">
@@ -95,20 +95,20 @@ include __DIR__ . '/header.inc.php';
           <thead class="table-light">
             <tr>
               <th scope="col" class="text-center" style="width:40px;">
-                <span class="visually-hidden">Status</span>
+                <span class="visually-hidden"><?php echo Security::escape($lang_status ?? 'Status'); ?></span>
               </th>
-              <th scope="col"><?php echo $lang_thread ?? 'Thread'; ?></th>
+              <th scope="col"><?php echo Security::escape($lang_thread ?? 'Thread'); ?></th>
               <th scope="col" class="d-none d-md-table-cell" style="width:140px;">
-                <?php echo $lang_author ?? 'Author'; ?>
+                <?php echo Security::escape($lang_author ?? 'Author'); ?>
               </th>
               <th scope="col" class="text-end d-none d-md-table-cell" style="width:80px;">
-                <?php echo $lang_replys ?? 'Replies'; ?>
+                <?php echo Security::escape($lang_replys ?? 'Replies'); ?>
               </th>
               <th scope="col" class="text-end d-none d-md-table-cell" style="width:80px;">
-                <?php echo $lang_views ?? 'Views'; ?>
+                <?php echo Security::escape($lang_views ?? 'Views'); ?>
               </th>
               <th scope="col" class="d-none d-lg-table-cell" style="width:200px;">
-                <?php echo $lang_lastreply ?? 'Last Reply'; ?>
+                <?php echo Security::escape($lang_lastreply ?? 'Last Reply'); ?>
               </th>
             </tr>
           </thead>
@@ -176,7 +176,7 @@ include __DIR__ . '/header.inc.php';
                                 echo '<a class="text-decoration-none me-1" href="showthread.php?threadid='
                                     . (int) $row['id'] . '&current=' . $currentPosts
                                     . '#post' . (int) $firstUnread['id'] . '" title="'
-                                    . ($lang_jumptofirstunread ?? 'Jump to first unread')
+                                    . Security::escape($lang_jumptofirstunread ?? 'Jump to first unread post')
                                     . '"><i class="bi bi-arrow-right-circle-fill text-primary" aria-hidden="true"></i></a>';
                             }
                         }
@@ -193,15 +193,15 @@ include __DIR__ . '/header.inc.php';
                 <?php endif; ?>
                 <div class="small text-body-secondary d-md-none mt-1">
                   <?php if ($author !== null): ?>
-                    <?php echo $lang_author ?? 'Author'; ?>:
+                    <?php echo Security::escape($lang_author ?? 'Author'); ?>:
                     <a class="text-decoration-none" href="showprofile.php?userid=<?php echo (int) $author['id']; ?>&catid=<?php echo (int) $catid; ?>&boardid=<?php echo (int) $boardid; ?>">
                       <?php echo Security::escape((string) $author['username']); ?>
                     </a>
                     &middot;
                   <?php endif; ?>
-                  <?php echo $lang_replys ?? 'Replies'; ?>: <?php echo $replyCount; ?>
+                  <?php echo Security::escape($lang_replys ?? 'Replies'); ?>: <?php echo $replyCount; ?>
                   &middot;
-                  <?php echo $lang_views ?? 'Views'; ?>: <?php echo (int) $row['views']; ?>
+                  <?php echo Security::escape($lang_views ?? 'Views'); ?>: <?php echo (int) $row['views']; ?>
                 </div>
               </td>
               <td class="d-none d-md-table-cell">
@@ -217,7 +217,7 @@ include __DIR__ . '/header.inc.php';
               <td class="text-end d-none d-md-table-cell"><?php echo (int) $row['views']; ?></td>
               <td class="d-none d-lg-table-cell small">
                 <?php if ($row['lastreply'] == 0): ?>
-                  <span class="text-body-secondary"><?php echo $lang_noreplys ?? 'No replies'; ?></span>
+                  <span class="text-body-secondary"><?php echo Security::escape($lang_noreplys ?? 'No replies'); ?></span>
                 <?php else:
                     $lastAuthor = $db->fetchOne('SELECT username FROM ppb_users WHERE id = ?', [$row['lastauthor']]);
                     if ($lastAuthor !== null):
@@ -233,11 +233,11 @@ include __DIR__ . '/header.inc.php';
                         }
                         ?>
                   <a class="text-decoration-none" href="<?php echo Security::escape($jumpLink); ?>"
-                     title="<?php echo $lang_jumptolastpost ?? 'Jump to last post'; ?>">
+                     title="<?php echo Security::escape($lang_jumptolastpost ?? 'Jump to last post'); ?>">
                     <i class="bi bi-arrow-right-circle" aria-hidden="true"></i>
                   </a>
                   <?php echo Security::escape(date('d.m.Y - H:i', (int) $row['lastreply'])); ?><br>
-                  <span class="text-body-secondary">von</span>
+                  <span class="text-body-secondary"><?php echo Security::escape($lang_by ?? 'by'); ?></span>
                   <?php echo Security::escape((string) $lastAuthor['username']); ?>
                 <?php endif; endif; ?>
               </td>
@@ -269,15 +269,15 @@ include __DIR__ . '/header.inc.php';
 
 <?php endif; ?>
 
-<aside class="text-body-secondary small d-flex flex-wrap gap-3 mb-4" aria-label="Legende">
+<aside class="text-body-secondary small d-flex flex-wrap gap-3 mb-4" aria-label="<?php echo Security::escape($lang_legend ?? 'Legend'); ?>">
   <span><i class="bi bi-chat-square-text-fill text-primary" aria-hidden="true"></i>
-    <?php echo $lang_newreplys ?? 'New replies'; ?></span>
+    <?php echo Security::escape($lang_newreplys ?? 'New replies'); ?></span>
   <span><i class="bi bi-chat-square-text text-secondary" aria-hidden="true"></i>
-    <?php echo $lang_nonewreplys ?? 'No new replies'; ?></span>
+    <?php echo Security::escape($lang_nonewreplys ?? 'No new replies'); ?></span>
   <span><i class="bi bi-fire text-warning" aria-hidden="true"></i>
-    <?php echo $lang_morethan15posts ?? 'More than 15 posts'; ?></span>
+    <?php echo Security::escape($lang_morethan15posts ?? 'More than 15 posts'); ?></span>
   <span><i class="bi bi-lock-fill text-secondary" aria-hidden="true"></i>
-    <?php echo $lang_lockedthread ?? 'Locked thread'; ?></span>
+    <?php echo Security::escape($lang_lockedthread ?? 'Locked thread'); ?></span>
 </aside>
 
 <?php include __DIR__ . '/footer.inc.php'; ?>

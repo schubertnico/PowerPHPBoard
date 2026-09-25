@@ -147,7 +147,7 @@ if (!empty($board['title'])) {
 $headerTemplate = ppb_template_path((string) ($settings['header'] ?? ''));
 include $headerTemplate ?? __DIR__ . '/inc/header.ppb';
 ?>
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark" aria-label="Hauptnavigation">
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark" aria-label="<?php echo Security::escape($lang_mainnav ?? 'Main navigation'); ?>">
   <div class="container-xl">
     <a class="navbar-brand fw-semibold" href="index.php">
       <i class="bi bi-chat-square-text-fill" aria-hidden="true"></i>
@@ -155,18 +155,18 @@ include $headerTemplate ?? __DIR__ . '/inc/header.ppb';
     </a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
             data-bs-target="#ppbNav" aria-controls="ppbNav" aria-expanded="false"
-            aria-label="Navigation umschalten">
+            aria-label="<?php echo Security::escape($lang_togglenav ?? 'Toggle navigation'); ?>">
       <span class="navbar-toggler-icon"></span>
     </button>
     <div class="collapse navbar-collapse" id="ppbNav">
       <ul class="navbar-nav me-auto mb-2 mb-lg-0">
         <li class="nav-item">
-          <a class="nav-link" href="index.php"><i class="bi bi-house-door" aria-hidden="true"></i> Home</a>
+          <a class="nav-link" href="index.php"><i class="bi bi-house-door" aria-hidden="true"></i> <?php echo Security::escape($lang_home ?? 'Home'); ?></a>
         </li>
         <li class="nav-item">
           <a class="nav-link" href="statistics.php?<?php echo Security::escape($navQuery); ?>">
             <i class="bi bi-bar-chart" aria-hidden="true"></i>
-            <?php echo $lang_statistics ?? 'Statistics'; ?>
+            <?php echo Security::escape($lang_statistics ?? 'Statistics'); ?>
           </a>
         </li>
         <li class="nav-item">
@@ -180,46 +180,46 @@ include $headerTemplate ?? __DIR__ . '/inc/header.ppb';
         <?php if ($loggedin === 'YES'): ?>
           <li class="nav-item nav-link mb-0">
             <i class="bi bi-person-check" aria-hidden="true"></i>
-            <?php echo $lang_loggedinas ?? 'Logged in as'; ?>
+            <?php echo Security::escape($lang_loggedinas ?? 'Logged in as'); ?>
             <strong><?php echo Security::escape($ppbuser['username'] ?? ''); ?></strong>
           </li>
-          <?php if (($ppbuser['status'] ?? '') === 'Administrator'): ?>
+          <?php if (Auth::isAdmin($ppbuser !== [] ? $ppbuser : null)): ?>
             <li class="nav-item">
-              <a class="nav-link link-warning" href="admin/" title="Adminbereich">
+              <a class="nav-link link-warning" href="admin/">
                 <i class="bi bi-shield-lock-fill" aria-hidden="true"></i>
-                Adminbereich
+                <?php echo Security::escape($lang_admincenter ?? 'Administration'); ?>
               </a>
             </li>
           <?php endif; ?>
           <li class="nav-item">
             <a class="nav-link" href="profile.php?<?php echo Security::escape($navQuery); ?>">
               <i class="bi bi-person-gear" aria-hidden="true"></i>
-              <?php echo $lang_profile ?? 'Profile'; ?>
+              <?php echo Security::escape($lang_profile ?? 'Profile'); ?>
             </a>
           </li>
           <li class="nav-item">
             <a class="nav-link" href="logout.php?<?php echo Security::escape($navQuery); ?>">
               <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
-              <?php echo $lang_logout ?? 'Logout'; ?>
+              <?php echo Security::escape($lang_logout ?? 'Logout'); ?>
             </a>
           </li>
         <?php else: ?>
           <li class="nav-item">
             <a class="nav-link" href="login.php?<?php echo Security::escape($navQuery); ?>">
               <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
-              <?php echo $lang_login ?? 'Login'; ?>
+              <?php echo Security::escape($lang_login ?? 'Login'); ?>
             </a>
           </li>
           <li class="nav-item">
             <a class="nav-link" href="register.php?<?php echo Security::escape($navQuery); ?>">
               <i class="bi bi-person-plus" aria-hidden="true"></i>
-              <?php echo $lang_register ?? 'Register'; ?>
+              <?php echo Security::escape($lang_register ?? 'Register'); ?>
             </a>
           </li>
           <li class="nav-item">
             <a class="nav-link" href="profile.php?<?php echo Security::escape($navQuery); ?>">
               <i class="bi bi-person" aria-hidden="true"></i>
-              <?php echo $lang_profile ?? 'Profile'; ?>
+              <?php echo Security::escape($lang_profile ?? 'Profile'); ?>
             </a>
           </li>
         <?php endif; ?>
@@ -230,7 +230,7 @@ include $headerTemplate ?? __DIR__ . '/inc/header.ppb';
 
 <main class="container-xl py-4 flex-grow-1" role="main">
 
-<nav aria-label="breadcrumb">
+<nav aria-label="<?php echo Security::escape($lang_breadcrumb ?? 'Breadcrumb'); ?>">
   <ol class="breadcrumb">
     <li class="breadcrumb-item"><a href="index.php"><?php echo Security::escape($settings['boardtitle'] ?? 'PowerPHPBoard'); ?></a></li>
 <?php
@@ -274,7 +274,7 @@ if (!empty($board['title'])):
       <h2 class="h3 mb-2"><?php echo Security::escape((string) $board['title']); ?></h2>
       <?php if (!empty($board['mods'])): ?>
         <p class="text-body-secondary small mb-0">
-          <?php echo $lang_moderatedby ?? 'Moderated by'; ?>:
+          <?php echo Security::escape($lang_moderatedby ?? 'Moderated by'); ?>:
           <?php
               $mods = explode(',', (string) $board['mods']);
           $modLinks = [];
@@ -295,24 +295,24 @@ if (!empty($board['title'])):
         </p>
       <?php endif; ?>
     </div>
-    <div class="d-flex gap-2 flex-wrap" role="group" aria-label="Aktionen">
+    <div class="d-flex gap-2 flex-wrap" role="group" aria-label="<?php echo Security::escape($lang_actions ?? 'Actions'); ?>">
 <?php
     if (($board['status'] ?? '') === 'Closed') {
         echo '<span class="badge text-bg-secondary align-self-center">'
-            . ($lang_boardclosed ?? 'Board closed') . '</span>';
+            . Security::escape($lang_boardclosed ?? 'Board closed') . '</span>';
     } else {
         echo '<a class="btn btn-primary btn-sm" href="newthread.php?boardid='
             . (int) $board['id'] . '"><i class="bi bi-plus-circle" aria-hidden="true"></i> '
-            . ($lang_newthread ?? 'New Thread') . '</a>';
+            . Security::escape($lang_newthread ?? 'New thread') . '</a>';
         if ($threadTitle !== '') {
             if (($thread['status'] ?? '') !== 'Closed') {
                 echo '<a class="btn btn-success btn-sm" href="newpost.php?threadid='
                     . (int) $thread['id'] . '&current=' . (int) $current
                     . '"><i class="bi bi-reply" aria-hidden="true"></i> '
-                    . ($lang_newpost ?? 'New Post') . '</a>';
+                    . Security::escape($lang_newpost ?? 'New post') . '</a>';
             } else {
                 echo '<span class="badge text-bg-secondary align-self-center">'
-                    . ($lang_threadclosed ?? 'Thread closed') . '</span>';
+                    . Security::escape($lang_threadclosed ?? 'Thread closed') . '</span>';
             }
         }
     }

@@ -72,7 +72,7 @@ if ($userid === 0) {
         $state = 'nouser';
     } elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && $sendmail === 'YES') {
         if (!CSRF::validateFromPost()) {
-            $errorText = 'Security token invalid. Please try again.';
+            $errorText = $lang_csrfinvalid ?? 'The security token is invalid. Please reload the page and try again.';
         } else {
             $title = Security::getString('title', 'POST');
             $emailcontent = Security::getString('emailcontent', 'POST');
@@ -129,12 +129,12 @@ include __DIR__ . '/header.inc.php';
       <header class="card-header bg-success text-white">
         <h2 class="h6 mb-0">
           <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
-          <?php echo $lang_statusmessage ?? 'Status'; ?>
+          <?php echo Security::escape($lang_statusmessage ?? 'Status'); ?>
         </h2>
       </header>
       <div class="card-body">
         <p class="mb-3">
-          <?php echo $lang_emailsentsuccessfull ?? 'Email sent successfully'; ?>
+          <?php echo Security::escape($lang_emailsentsuccessfull ?? 'Email sent successfully'); ?>
         </p>
         <a href="showprofile.php?userid=<?php echo (int) $recipient['id']; ?>" class="btn btn-primary">
           <i class="bi bi-person" aria-hidden="true"></i>
@@ -156,18 +156,18 @@ include __DIR__ . '/header.inc.php';
         <header class="card-header bg-secondary-subtle">
           <h1 class="h5 mb-0">
             <i class="bi bi-envelope" aria-hidden="true"></i>
-            <?php echo $lang_sendmail ?? 'Send Email'; ?>
+            <?php echo Security::escape($lang_sendmail ?? 'Send Email'); ?>
           </h1>
         </header>
         <div class="card-body">
           <dl class="row mb-3">
-            <dt class="col-sm-3"><?php echo $lang_from ?? 'From'; ?></dt>
+            <dt class="col-sm-3"><?php echo Security::escape($lang_from ?? 'From'); ?></dt>
             <dd class="col-sm-9">
               <a class="text-decoration-none" href="showprofile.php?userid=<?php echo (int) $ppbuser['id']; ?>">
                 <?php echo Security::escape((string) $ppbuser['username']); ?>
               </a>
             </dd>
-            <dt class="col-sm-3"><?php echo $lang_to ?? 'To'; ?></dt>
+            <dt class="col-sm-3"><?php echo Security::escape($lang_to ?? 'To'); ?></dt>
             <dd class="col-sm-9">
               <a class="text-decoration-none" href="showprofile.php?userid=<?php echo (int) $recipient['id']; ?>">
                 <?php echo Security::escape((string) $recipient['username']); ?>
@@ -176,30 +176,30 @@ include __DIR__ . '/header.inc.php';
           </dl>
           <div class="mb-3">
             <label for="title" class="form-label fw-semibold">
-              <?php echo $lang_title ?? 'Title'; ?>
+              <?php echo Security::escape($lang_subject ?? 'Subject'); ?>
               <span class="text-danger" aria-hidden="true">*</span>
             </label>
             <input id="title" name="title" type="text" class="form-control"
                    maxlength="150" required
                    value="<?php echo Security::escape($title !== '' ? $title : ($lang_mailsubjectdefault ?? 'Message from the forum')); ?>">
-            <div class="invalid-feedback">Bitte einen Betreff angeben.</div>
+            <div class="invalid-feedback"><?php echo Security::escape($lang_insertsubject ?? 'Please enter a subject.'); ?></div>
           </div>
           <div class="mb-3">
             <label for="emailcontent" class="form-label fw-semibold">
-              <?php echo $lang_text ?? 'Text'; ?>
+              <?php echo Security::escape($lang_text ?? 'Text'); ?>
               <span class="text-danger" aria-hidden="true">*</span>
             </label>
             <textarea id="emailcontent" name="emailcontent" class="form-control" rows="8" required><?php echo Security::escape($emailcontent); ?></textarea>
-            <div class="invalid-feedback">Bitte einen Inhalt eingeben.</div>
+            <div class="invalid-feedback"><?php echo Security::escape($lang_inserttext ?? 'Please enter a text.'); ?></div>
           </div>
         </div>
         <footer class="card-footer bg-light">
           <button type="submit" class="btn btn-primary">
             <i class="bi bi-send" aria-hidden="true"></i>
-            <?php echo $lang_send ?? 'Send'; ?>
+            <?php echo Security::escape($lang_send ?? 'Send'); ?>
           </button>
           <a class="btn btn-link" href="showprofile.php?userid=<?php echo (int) $recipient['id']; ?>">
-            <?php echo $lang_back ?? 'Back'; ?>
+            <?php echo Security::escape($lang_back ?? 'Back'); ?>
           </a>
         </footer>
       </section>

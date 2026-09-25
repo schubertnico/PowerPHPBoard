@@ -32,12 +32,12 @@ if ($acception === 0) {
         <header class="card-header bg-secondary-subtle">
           <h1 class="h5 mb-0">
             <i class="bi bi-journal-text" aria-hidden="true"></i>
-            <?php echo $lang_boardrules ?? 'Board Rules'; ?>
+            <?php echo Security::escape($lang_boardrules ?? 'Board Rules'); ?>
           </h1>
         </header>
         <div class="card-body">
           <p class="mb-4">
-            <?php echo $lang_boardrulescontent ?? 'Please read and accept the board rules.'; ?>
+            <?php echo Security::escape($lang_boardrulescontent ?? 'Please read and accept the board rules.'); ?>
           </p>
           <div class="d-flex flex-wrap gap-2">
             <form action="register.php" method="get" class="d-inline">
@@ -46,13 +46,13 @@ if ($acception === 0) {
               <input type="hidden" name="boardid" value="<?php echo (int) $boardid; ?>">
               <button type="submit" class="btn btn-primary">
                 <i class="bi bi-check-circle" aria-hidden="true"></i>
-                <?php echo $lang_agree ?? 'I Agree'; ?>
+                <?php echo Security::escape($lang_agree ?? 'I Agree'); ?>
               </button>
             </form>
             <form action="index.php" method="get" class="d-inline">
               <button type="submit" class="btn btn-outline-secondary">
                 <i class="bi bi-x-circle" aria-hidden="true"></i>
-                <?php echo $lang_disagree ?? 'I Disagree'; ?>
+                <?php echo Security::escape($lang_disagree ?? 'I Disagree'); ?>
               </button>
             </form>
           </div>
@@ -64,7 +64,7 @@ if ($acception === 0) {
 } else {
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && $register === 1) {
         if (!CSRF::validateFromPost()) {
-            $formError = 'Security token invalid. Please try again.';
+            $formError = $lang_csrfinvalid ?? 'The security token is invalid. Please reload the page and try again.';
         } else {
             $username = Security::getString('username', 'POST');
             $email1 = Security::getString('email1', 'POST');
@@ -169,12 +169,12 @@ if ($acception === 0) {
         <header class="card-header bg-success text-white">
           <h2 class="h6 mb-0">
             <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
-            <?php echo $lang_statusmessage ?? 'Status'; ?>
+            <?php echo Security::escape($lang_statusmessage ?? 'Status'); ?>
           </h2>
         </header>
         <div class="card-body">
           <p class="mb-3">
-            <?php echo $lang_registrationsuccessfull ?? 'Registration successful!'; ?>
+            <?php echo Security::escape($lang_registrationsuccessfull ?? 'Registration successful!'); ?>
           </p>
           <?php if (!$registrationMailSent): ?>
             <div class="alert alert-warning small" role="alert">
@@ -185,11 +185,11 @@ if ($acception === 0) {
             <a href="login.php?catid=<?php echo (int) $catid; ?>&boardid=<?php echo (int) $boardid; ?>"
                class="btn btn-primary">
               <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
-              <?php echo $lang_login ?? 'Login'; ?>
+              <?php echo Security::escape($lang_login ?? 'Login'); ?>
             </a>
           <?php else: ?>
             <a href="index.php" class="btn btn-primary">
-              <i class="bi bi-house-door" aria-hidden="true"></i> Home
+              <i class="bi bi-house-door" aria-hidden="true"></i> <?php echo Security::escape($lang_home ?? 'Home'); ?>
             </a>
           <?php endif; ?>
         </div>
@@ -230,13 +230,13 @@ if ($acception === 0) {
           <header class="card-header bg-secondary-subtle">
             <h2 class="h6 mb-0">
               <i class="bi bi-asterisk" aria-hidden="true"></i>
-              <?php echo $lang_requiredinfo ?? 'Required Information'; ?>
+              <?php echo Security::escape($lang_requiredinfo ?? 'Required Information'); ?>
             </h2>
           </header>
           <div class="card-body">
             <div class="mb-3">
               <label for="username" class="form-label fw-semibold">
-                <?php echo $lang_username ?? 'Username'; ?>
+                <?php echo Security::escape($lang_username ?? 'Username'); ?>
                 <span class="text-danger" aria-hidden="true">*</span>
               </label>
               <input id="username" name="username" type="text" class="form-control"
@@ -245,58 +245,58 @@ if ($acception === 0) {
                      value="<?php echo Security::escape($oldUsername); ?>"
                      aria-describedby="usernameHelp">
               <div id="usernameHelp" class="form-text">
-                2-50 Zeichen, erlaubt sind Buchstaben, Ziffern sowie . _ -
+                <?php echo Security::escape($lang_usernamehelp ?? '2 to 50 characters: letters (no umlauts), digits and . _ -'); ?>
               </div>
               <div class="invalid-feedback">
-                <?php echo $lang_usernameinvalid ?? 'Username must be 2-50 chars and only contain letters, digits, . _ -'; ?>
+                <?php echo Security::escape($lang_usernameinvalid ?? 'Username must be 2-50 chars and only contain letters, digits, . _ -'); ?>
               </div>
             </div>
 
             <div class="row g-3">
               <div class="col-md-6">
                 <label for="email1" class="form-label fw-semibold">
-                  <?php echo $lang_email ?? 'Email'; ?>
+                  <?php echo Security::escape($lang_email ?? 'Email'); ?>
                   <span class="text-danger" aria-hidden="true">*</span>
                 </label>
                 <input id="email1" name="email1" type="email" class="form-control"
                        maxlength="100" required autocomplete="email"
                        value="<?php echo Security::escape($oldEmail1); ?>">
-                <div class="invalid-feedback">Bitte eine gültige E-Mail-Adresse eingeben.</div>
+                <div class="invalid-feedback"><?php echo Security::escape($lang_insertvalidemail ?? 'Please enter a valid email address.'); ?></div>
               </div>
               <div class="col-md-6">
                 <label for="email2" class="form-label fw-semibold">
-                  <?php echo $lang_email ?? 'Email'; ?>
-                  <small class="text-body-secondary">(<?php echo $lang_confirmation ?? 'Confirmation'; ?>)</small>
+                  <?php echo Security::escape($lang_email ?? 'Email'); ?>
+                  <small class="text-body-secondary">(<?php echo Security::escape($lang_confirmation ?? 'Confirmation'); ?>)</small>
                 </label>
                 <input id="email2" name="email2" type="email" class="form-control"
                        maxlength="100" required autocomplete="email"
                        value="<?php echo Security::escape($oldEmail2); ?>"
                        aria-describedby="email2Help">
-                <div id="email2Help" class="form-text">Bitte zur Bestätigung wiederholen.</div>
-                <div class="invalid-feedback">Die E-Mail-Adressen muessen übereinstimmen.</div>
+                <div id="email2Help" class="form-text"><?php echo Security::escape($lang_repeatemailhelp ?? 'Please enter the email address again to confirm it.'); ?></div>
+                <div class="invalid-feedback"><?php echo Security::escape($lang_insertvalidemail ?? 'Please enter a valid email address.'); ?></div>
               </div>
             </div>
 
             <div class="row g-3 mt-1">
               <div class="col-md-6">
                 <label for="password1" class="form-label fw-semibold">
-                  <?php echo $lang_password ?? 'Password'; ?>
+                  <?php echo Security::escape($lang_password ?? 'Password'); ?>
                   <span class="text-danger" aria-hidden="true">*</span>
                 </label>
                 <input id="password1" name="password1" type="password" class="form-control"
                        minlength="8" maxlength="255" required autocomplete="new-password"
                        aria-describedby="password1Help">
-                <div id="password1Help" class="form-text">Mindestens 8 Zeichen.</div>
-                <div class="invalid-feedback">Mindestens 8 Zeichen erforderlich.</div>
+                <div id="password1Help" class="form-text"><?php echo Security::escape($lang_pwdminlength ?? 'At least 8 characters.'); ?></div>
+                <div class="invalid-feedback"><?php echo Security::escape($lang_pwdtooshort ?? 'The password must be at least 8 characters long.'); ?></div>
               </div>
               <div class="col-md-6">
                 <label for="password2" class="form-label fw-semibold">
-                  <?php echo $lang_password ?? 'Password'; ?>
-                  <small class="text-body-secondary">(<?php echo $lang_confirmation ?? 'Confirmation'; ?>)</small>
+                  <?php echo Security::escape($lang_password ?? 'Password'); ?>
+                  <small class="text-body-secondary">(<?php echo Security::escape($lang_confirmation ?? 'Confirmation'); ?>)</small>
                 </label>
                 <input id="password2" name="password2" type="password" class="form-control"
                        minlength="8" maxlength="255" required autocomplete="new-password">
-                <div class="invalid-feedback">Die Passwörter müssen übereinstimmen.</div>
+                <div class="invalid-feedback"><?php echo Security::escape($lang_repeatpwd ?? 'Please enter the password again.'); ?></div>
               </div>
             </div>
           </div>
@@ -306,14 +306,14 @@ if ($acception === 0) {
           <header class="card-header bg-secondary-subtle">
             <h2 class="h6 mb-0">
               <i class="bi bi-person-plus" aria-hidden="true"></i>
-              <?php echo $lang_optionalinfo ?? 'Optional Information'; ?>
+              <?php echo Security::escape($lang_optionalinfo ?? 'Optional Information'); ?>
             </h2>
           </header>
           <div class="card-body">
             <div class="row g-3">
               <div class="col-md-8">
                 <label for="homepage" class="form-label">
-                  <?php echo $lang_homepage ?? 'Homepage'; ?>
+                  <?php echo Security::escape($lang_homepage ?? 'Homepage'); ?>
                 </label>
                 <input id="homepage" name="homepage" type="text" inputmode="url" class="form-control"
                        maxlength="150" autocomplete="url" placeholder="https://example.org"
@@ -325,7 +325,7 @@ if ($acception === 0) {
               </div>
               <div class="col-md-4">
                 <label for="icq" class="form-label">
-                  <?php echo $lang_icq ?? 'ICQ'; ?>
+                  <?php echo Security::escape($lang_icq ?? 'ICQ'); ?>
                 </label>
                 <input id="icq" name="icq" type="number" class="form-control"
                        maxlength="10" min="0"
@@ -334,8 +334,8 @@ if ($acception === 0) {
             </div>
             <div class="mt-3">
               <label for="biography" class="form-label">
-                <?php echo $lang_biography ?? 'Biography'; ?>
-                <small class="text-body-secondary">(<?php echo $lang_writesomethingaboutyou ?? 'Tell us about yourself'; ?>)</small>
+                <?php echo Security::escape($lang_biography ?? 'Biography'); ?>
+                <small class="text-body-secondary">(<?php echo Security::escape($lang_writesomethingaboutyou ?? 'Tell us about yourself'); ?>)</small>
               </label>
               <textarea id="biography" name="biography" class="form-control" rows="4"
                         maxlength="<?php echo Validator::BIOGRAPHY_MAX; ?>"><?php echo Security::escape($oldBio); ?></textarea>
@@ -347,52 +347,50 @@ if ($acception === 0) {
           <header class="card-header bg-secondary-subtle">
             <h2 class="h6 mb-0">
               <i class="bi bi-gear" aria-hidden="true"></i>
-              <?php echo $lang_othersettings ?? 'Other Settings'; ?>
+              <?php echo Security::escape($lang_othersettings ?? 'Other Settings'); ?>
             </h2>
           </header>
           <div class="card-body">
             <div class="mb-3">
               <label for="signature" class="form-label">
-                <?php echo $lang_signature ?? 'Signature'; ?>
+                <?php echo Security::escape($lang_signature ?? 'Signature'); ?>
               </label>
               <textarea id="signature" name="signature" class="form-control" rows="3"
                         maxlength="<?php echo Validator::SIGNATURE_MAX; ?>"><?php echo Security::escape($oldSig); ?></textarea>
               <div class="form-text">
-                <?php echo $lang_htmlcodeis ?? 'HTML ist'; ?>
-                <strong><?php echo ppb_onoff_label($settings['htmlcode'] ?? 'OFF'); ?></strong>,
+                <?php echo Security::escape($lang_htmlcodeis ?? 'HTML ist'); ?>
+                <strong><?php echo Security::escape(ppb_onoff_label('OFF')); ?></strong>,
                 <a href="bbcode.php" target="_blank" rel="noopener">
-                  <?php echo $lang_bbcodeis ?? 'BBCode ist'; ?>
-                  <strong><?php echo ppb_onoff_label($settings['bbcode'] ?? 'ON'); ?></strong>
-                </a>,
+                  <?php echo Security::escape($lang_bbcodeis ?? 'BBCode ist'); ?>
+                  <strong><?php echo Security::escape(ppb_onoff_label($settings['bbcode'] ?? 'ON')); ?></strong></a>,
                 <a href="smilies.php" target="_blank" rel="noopener">
-                  <?php echo $lang_smiliesare ?? 'Smilies sind'; ?>
-                  <strong><?php echo ppb_onoff_label($settings['smilies'] ?? 'ON'); ?></strong>
-                </a>.
+                  <?php echo Security::escape($lang_smiliesare ?? 'Smilies sind'); ?>
+                  <strong><?php echo Security::escape(ppb_onoff_label($settings['smilies'] ?? 'ON')); ?></strong></a>.
               </div>
             </div>
 
             <fieldset class="mb-3">
-              <legend class="form-label fw-semibold mb-1 fs-6"><?php echo $lang_hideemail ?? 'Hide Email'; ?></legend>
+              <legend class="form-label fw-semibold mb-1 fs-6"><?php echo Security::escape($lang_hideemail ?? 'Hide Email'); ?></legend>
               <div class="form-check form-check-inline">
                 <input class="form-check-input" type="radio" name="hideemail" id="hideemailYes" value="YES" <?php echo $oldHide === 'YES' ? 'checked' : ''; ?>>
-                <label class="form-check-label" for="hideemailYes"><?php echo $lang_yes ?? 'ja'; ?></label>
+                <label class="form-check-label" for="hideemailYes"><?php echo Security::escape($lang_yes ?? 'ja'); ?></label>
               </div>
               <div class="form-check form-check-inline">
                 <input class="form-check-input" type="radio" name="hideemail" id="hideemailNo" value="NO" <?php echo $oldHide !== 'YES' ? 'checked' : ''; ?>>
-                <label class="form-check-label" for="hideemailNo"><?php echo $lang_no ?? 'nein'; ?></label>
+                <label class="form-check-label" for="hideemailNo"><?php echo Security::escape($lang_no ?? 'nein'); ?></label>
               </div>
-              <div class="form-text">Wenn aktiviert, ist deine E-Mail-Adresse für andere Nutzer nicht sichtbar.</div>
+              <div class="form-text"><?php echo Security::escape($lang_hideemailhelp ?? 'If enabled, other users cannot see your email address.'); ?></div>
             </fieldset>
 
             <fieldset class="mb-1">
-              <legend class="form-label fw-semibold mb-1 fs-6"><?php echo $lang_saveloginincookie ?? 'Remember Login'; ?></legend>
+              <legend class="form-label fw-semibold mb-1 fs-6"><?php echo Security::escape($lang_saveloginincookie ?? 'Remember Login'); ?></legend>
               <div class="form-check form-check-inline">
                 <input class="form-check-input" type="radio" name="logincookie" id="cookieYes" value="YES" <?php echo $oldCookie !== 'NO' ? 'checked' : ''; ?>>
-                <label class="form-check-label" for="cookieYes"><?php echo $lang_yes ?? 'ja'; ?></label>
+                <label class="form-check-label" for="cookieYes"><?php echo Security::escape($lang_yes ?? 'ja'); ?></label>
               </div>
               <div class="form-check form-check-inline">
                 <input class="form-check-input" type="radio" name="logincookie" id="cookieNo" value="NO" <?php echo $oldCookie === 'NO' ? 'checked' : ''; ?>>
-                <label class="form-check-label" for="cookieNo"><?php echo $lang_no ?? 'nein'; ?></label>
+                <label class="form-check-label" for="cookieNo"><?php echo Security::escape($lang_no ?? 'nein'); ?></label>
               </div>
             </fieldset>
           </div>
@@ -401,11 +399,11 @@ if ($acception === 0) {
         <div class="d-flex flex-wrap gap-2 mb-4">
           <button type="submit" class="btn btn-primary">
             <i class="bi bi-person-plus" aria-hidden="true"></i>
-            <?php echo $lang_send ?? 'Submit'; ?>
+            <?php echo Security::escape($lang_send ?? 'Submit'); ?>
           </button>
           <button type="reset" class="btn btn-outline-secondary">
             <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
-            <?php echo $lang_reset ?? 'Reset'; ?>
+            <?php echo Security::escape($lang_reset ?? 'Reset'); ?>
           </button>
         </div>
       </form>
