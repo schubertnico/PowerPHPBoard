@@ -137,11 +137,13 @@ if ($acception === 0) {
 
                             $subject = ($settings['boardtitle'] ?? 'PowerPHPBoard') . ' – ' . ($lang_registration ?? 'Registration');
                             $message = ppb_welcome_mail_text($settings, $username, $email1, false);
+                            // Absender: eingestellter Absender, sonst Admin-E-Mail; Antworten an die Admin-E-Mail
                             $registrationMailSent = Mailer::fromConfig($mail ?? [])->send(
                                 $email1,
                                 Mailer::senderAddress($settings, $mail ?? []),
                                 $subject,
-                                $message
+                                $message,
+                                Mailer::replyToAddress($settings, $mail ?? [])
                             );
                             if (!$registrationMailSent) {
                                 ErrorHandler::logConfigurationError('Registrierungsmail an Benutzer „' . $username . '“ konnte nicht versendet werden (SMTP-Einstellungen prüfen).');

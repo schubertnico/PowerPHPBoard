@@ -152,7 +152,7 @@ final class FormValidator
                 : 'Bitte wählen Sie eine Sprache aus der Liste.',
         ]);
 
-        [$mail, $mailErrors] = self::mail($input, $email, $previousMail);
+        [$mail, $mailErrors] = self::mail($input, $previousMail);
 
         return [
             'values' => [
@@ -232,14 +232,15 @@ final class FormValidator
 
     /**
      * SMTP ist optional: Ohne Host bleiben die Vorgaben bzw. Umgebungsvariablen aktiv.
-     * Ein leerer Port ergibt den üblichen Port der gewählten Verschlüsselung.
+     * Ein leerer Port ergibt den üblichen Port der gewählten Verschlüsselung,
+     * ein leerer Absender die E-Mail-Adresse des Forums (Mailer::senderAddress()).
      *
      * @param array<array-key, mixed> $input
      * @param MailConfig|null $previous
      *
      * @return array{0: MailConfig|null, 1: array<string, string>}
      */
-    private static function mail(#[SensitiveParameter] array $input, string $boardEmail, #[SensitiveParameter] ?array $previous): array
+    private static function mail(#[SensitiveParameter] array $input, #[SensitiveParameter] ?array $previous): array
     {
         $host = self::text($input, 'smtp_host');
         $user = self::text($input, 'smtp_user');
@@ -268,7 +269,7 @@ final class FormValidator
             [
                 'host' => $host,
                 'port' => $port,
-                'from' => $from !== '' ? $from : $boardEmail,
+                'from' => $from,
                 'user' => $user,
                 'password' => $password,
                 'encryption' => $encryption,

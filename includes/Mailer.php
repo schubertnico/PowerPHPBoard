@@ -37,6 +37,12 @@ final class Mailer
     public const string ENCRYPTION_SSL = 'ssl';
 
     /**
+     * Platzhalter-Absender aus den Vorgaben (LocalConfig::DEFAULT_MAIL) und
+     * aus config.inc.php bis 2.2.x; er gilt als „kein Absender eingestellt“.
+     */
+    public const string PLACEHOLDER_SENDER = 'noreply@powerphpboard.local';
+
+    /**
      * Erlaubte Verschlüsselungen und ihr üblicher Port.
      */
     public const array DEFAULT_PORTS = [
@@ -86,21 +92,59 @@ final class Mailer
     }
 
     /**
-     * Absenderadresse: Admin-E-Mail aus den Einstellungen, sonst die aus
-     * der Konfiguration
+     * In der Konfiguration eingestellter Absender ($mail['from'] bzw.
+     * PPB_MAIL_FROM oder das Installer-Feld „Absenderadresse“), sonst null.
+     * Leer, ungültig oder der Platzhalter aus den Vorgaben gilt als „nicht
+     * eingestellt“.
+     *
+     * @param array<string, mixed> $mailConfig $mail aus config.inc.php
+     */
+    public static function configuredSender(#[SensitiveParameter] array $mailConfig): ?string
+    {
+        $from = $mailConfig['from'] ?? '';
+        if (!is_string($from)) {
+            return null;
+        }
+        $from = trim($from);
+
+        return Security::isValidEmail($from) && strcasecmp($from, self::PLACEHOLDER_SENDER) !== 0 ? $from : null;
+    }
+
+    /**
+     * Absenderadresse (From) aller Mails des Forums.
+     *
+     * Viele Hoster verlangen – und SPF/DMARC prüfen –, dass der Absender zum
+     * angemeldeten SMTP-Postfach bzw. zur eigenen Domain passt. Deshalb:
+     * 1. der eingestellte Absender aus der Konfiguration (configuredSender()),
+     * 2. sonst die Admin-E-Mail aus den Einstellungen,
+     * 3. sonst der Platzhalter.
      *
      * @param array<string, mixed> $settings Zeile aus ppb_config
      * @param array<string, mixed> $mailConfig $mail aus config.inc.php
      */
     public static function senderAddress(array $settings, #[SensitiveParameter] array $mailConfig): string
     {
-        $admin = $settings['adminemail'] ?? '';
-        if (is_string($admin) && Security::isValidEmail($admin)) {
-            return $admin;
-        }
-        $from = $mailConfig['from'] ?? '';
+        return self::configuredSender($mailConfig) ?? self::adminAddress($settings) ?? self::PLACEHOLDER_SENDER;
+    }
 
-        return is_string($from) && Security::isValidEmail($from) ? $from : 'noreply@powerphpboard.local';
+    /**
+     * Antwortadresse (Reply-To) für Mails des Forums: die Admin-E-Mail, wenn
+     * ein anderer Absender eingestellt ist – Antworten erreichen so den
+     * Administrator statt des Versandpostfachs. Sonst null (kein Reply-To).
+     * Mails von Benutzer zu Benutzer setzen stattdessen die Adresse des
+     * schreibenden Mitglieds (sendmail.php).
+     *
+     * @param array<string, mixed> $settings Zeile aus ppb_config
+     * @param array<string, mixed> $mailConfig $mail aus config.inc.php
+     */
+    public static function replyToAddress(array $settings, #[SensitiveParameter] array $mailConfig): ?string
+    {
+        $admin = self::adminAddress($settings);
+        if ($admin === null || strcasecmp($admin, self::senderAddress($settings, $mailConfig)) === 0) {
+            return null;
+        }
+
+        return $admin;
     }
 
     /**
@@ -380,6 +424,18 @@ final class Mailer
             'Anmeldung: Der Server bietet nur ' . SmtpConnection::clean(implode(', ', $methods))
             . ' an, unterstützt werden PLAIN und LOGIN.'
         );
+    }
+
+    /**
+     * Admin-E-Mail aus den Einstellungen, wenn gültig
+     *
+     * @param array<string, mixed> $settings
+     */
+    private static function adminAddress(array $settings): ?string
+    {
+        $admin = $settings['adminemail'] ?? '';
+
+        return is_string($admin) && Security::isValidEmail($admin) ? $admin : null;
     }
 
     /**

@@ -72,7 +72,8 @@ if ($adduser === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     $email1,
                     Mailer::senderAddress($settings, $mail ?? []),
                     ($settings['boardtitle'] ?? 'PowerPHPBoard') . ' – ' . ($lang_registration ?? 'Registration'),
-                    ppb_welcome_mail_text($settings, $username, $email1, true)
+                    ppb_welcome_mail_text($settings, $username, $email1, true),
+                    Mailer::replyToAddress($settings, $mail ?? [])
                 );
                 if (!$mailSent) {
                     ErrorHandler::logConfigurationError('Benachrichtigung an neu angelegten Benutzer „' . $username . '“ konnte nicht versendet werden (SMTP-Einstellungen prüfen).');

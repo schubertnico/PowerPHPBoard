@@ -252,11 +252,14 @@ function installer_handle_smtp_test(Wizard $wizard): array
 
     // Ohne eigenen SMTP-Server gelten später die Umgebungsvariablen bzw. Vorgaben – genau die werden getestet
     $mail = $forum['mail'] ?? LocalConfig::mailFromEnvironment(static fn (string $name): string|false => getenv($name));
+    // Absender und Antwortadresse wie bei allen Mails des Forums
+    $forumSettings = ['adminemail' => $forum['adminemail']];
     $outcome = SmtpCheck::send(
         Mailer::fromConfig($mail),
         $mail,
         $forum['adminemail'],
-        Mailer::senderAddress(['adminemail' => $forum['adminemail']], $mail)
+        Mailer::senderAddress($forumSettings, $mail),
+        Mailer::replyToAddress($forumSettings, $mail)
     );
     ErrorHandler::logSecurityEvent('INSTALLER_SMTP_TEST', ['accepted' => $outcome['ok']]);
 

@@ -101,7 +101,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $send === 1) {
                 . ($lang_ifyoudidntrequestmail ?? 'If you did not request this, you can ignore this email.') . "\n";
 
             $mailer = Mailer::fromConfig($mail ?? []);
-            if (!$mailer->send($email, Mailer::senderAddress($settings, $mail ?? []), $subject, $message)) {
+            $sender = Mailer::senderAddress($settings, $mail ?? []);
+            if (!$mailer->send($email, $sender, $subject, $message, Mailer::replyToAddress($settings, $mail ?? []))) {
                 ErrorHandler::logConfigurationError(
                     'Passwort-Reset-Mail an Benutzer #' . (int) $user['id'] . ' konnte nicht versendet werden (SMTP-Einstellungen prüfen).'
                 );

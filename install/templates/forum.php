@@ -132,7 +132,7 @@ return static function (array $old, array $errors, string $message, bool $passwo
       <?php echo Html::input('smtp_from', 'Absenderadresse', $old['smtp_from'] ?? '', $errors, [
           'type' => 'email',
           'maxlength' => FormValidator::EMAIL_MAX,
-      ], 'Leer lassen, um die E-Mail-Adresse des Forums zu verwenden.', 'Bitte eine gültige E-Mail-Adresse angeben.'); ?>
+      ], 'Absender (From) aller Mails des Forums – bei vielen Hostern muss er zum Postfach bzw. zu Ihrer Domain passen. Antworten gehen an die E-Mail-Adresse des Forums. Leer lassen, um die E-Mail-Adresse des Forums als Absender zu verwenden.', 'Bitte eine gültige E-Mail-Adresse angeben.'); ?>
 
       <p class="small text-body-secondary mb-0" id="smtp-test-hint">
         <i class="bi bi-send" aria-hidden="true"></i>

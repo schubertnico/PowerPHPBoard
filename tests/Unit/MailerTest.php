@@ -7,6 +7,7 @@ namespace PowerPHPBoard\Tests\Unit;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use PowerPHPBoard\Installer\LocalConfig;
 use PowerPHPBoard\Mailer;
 use PowerPHPBoard\Tests\Helpers\MockSmtpServer;
 
@@ -97,12 +98,68 @@ final class MailerTest extends TestCase
         $this->assertStringContainsString("\r\n..\r\nRCPT TO:<victim@example.org>\r\n..Punkt", $stuffed);
     }
 
-    public function testFactoryAndSenderAddressUseConfiguration(): void
+    public function testFactoryCreatesMailer(): void
     {
         $this->assertInstanceOf(Mailer::class, Mailer::fromConfig(['host' => 'mailpit', 'port' => 1025]));
-        $this->assertSame('admin@example.org', Mailer::senderAddress(['adminemail' => 'admin@example.org'], ['from' => 'noreply@example.org']));
-        $this->assertSame('noreply@example.org', Mailer::senderAddress(['adminemail' => ''], ['from' => 'noreply@example.org']));
-        $this->assertSame('noreply@powerphpboard.local', Mailer::senderAddress([], []));
+    }
+
+    /**
+     * Regressionstest: Alle Mails gingen mit der Admin-E-Mail als From,
+     * auch wenn ein Absender eingestellt war. Hoster und SPF/DMARC verlangen
+     * oft, dass der Absender zum SMTP-Postfach bzw. zur Domain passt.
+     */
+    public function testConfiguredSenderIsFromAndAdminEmailIsReplyTo(): void
+    {
+        $settings = ['adminemail' => 'admin@example.org'];
+        $mail = ['from' => 'forum@example.org'];
+
+        $this->assertSame('forum@example.org', Mailer::senderAddress($settings, $mail));
+        $this->assertSame('admin@example.org', Mailer::replyToAddress($settings, $mail));
+    }
+
+    public function testWithoutConfiguredSenderTheAdminEmailIsFromWithoutReplyTo(): void
+    {
+        $settings = ['adminemail' => 'admin@example.org'];
+
+        foreach ([[], ['from' => ''], ['from' => '  '], ['from' => 'kaputt@'], ['from' => Mailer::PLACEHOLDER_SENDER], ['from' => 42]] as $mail) {
+            $this->assertNull(Mailer::configuredSender($mail));
+            $this->assertSame('admin@example.org', Mailer::senderAddress($settings, $mail));
+            $this->assertNull(Mailer::replyToAddress($settings, $mail), 'Kein Reply-To, wenn es der Absender selbst ist');
+        }
+        // Gleiche Adresse in anderer Schreibweise: kein doppelter Reply-To
+        $this->assertNull(Mailer::replyToAddress($settings, ['from' => 'Admin@Example.org']));
+    }
+
+    public function testSenderFallbacksWithoutAdminEmail(): void
+    {
+        $this->assertSame('forum@example.org', Mailer::senderAddress(['adminemail' => ''], ['from' => 'forum@example.org']));
+        $this->assertNull(Mailer::replyToAddress(['adminemail' => ''], ['from' => 'forum@example.org']));
+        $this->assertSame(Mailer::PLACEHOLDER_SENDER, Mailer::senderAddress([], []));
+        $this->assertSame('forum@example.org', Mailer::configuredSender(['from' => ' forum@example.org ']));
+    }
+
+    public function testPlaceholderMatchesTheConfigurationDefault(): void
+    {
+        $this->assertSame(LocalConfig::DEFAULT_MAIL['from'], Mailer::PLACEHOLDER_SENDER);
+    }
+
+    public function testConfiguredSenderAndReplyToGoOverTheWire(): void
+    {
+        $settings = ['adminemail' => 'admin@example.org'];
+        $mail = ['from' => 'forum@example.org'];
+
+        [$result, $transcript] = $this->converse('ok', static fn (int $port): bool => new Mailer('127.0.0.1', $port, 5)->send(
+            'anna@example.com',
+            Mailer::senderAddress($settings, $mail),
+            'Willkommen',
+            'Hallo',
+            Mailer::replyToAddress($settings, $mail)
+        ));
+
+        $this->assertTrue($result);
+        $this->assertContains('MAIL FROM:<forum@example.org>', $this->commands($transcript));
+        $this->assertStringContainsString("D: From: forum@example.org\n", $transcript);
+        $this->assertStringContainsString("D: Reply-To: admin@example.org\n", $transcript);
     }
 
     public function testSendReturnsFalseForInvalidReplyTo(): void

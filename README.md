@@ -296,7 +296,7 @@ return [
     'mail' => [            // optional
         'host' => 'smtp.example.com',
         'port' => 587,
-        'from' => 'forum@example.com',
+        'from' => 'forum@example.com',   // Absender (From); leer = Admin-E-Mail
         'user' => 'forum@example.com',   // leer = ohne Anmeldung
         'password' => 'PASSWORT_DES_POSTFACHS',
         'encryption' => 'starttls',      // none, starttls oder ssl
@@ -314,6 +314,12 @@ Zertifikat des Mailservers wird immer geprüft; ohne Verschlüsselung (`none`) m
 sich der Mailer nur an, wenn das ausdrücklich so eingestellt ist. Details, typische
 Werte und Fehlermeldungen: [INSTALLATION.md – E-Mail-Versand](INSTALLATION.md#e-mail-versand-smtp).
 
+**Absender:** Ist `from` (bzw. `PPB_MAIL_FROM` oder im Installer die „Absenderadresse“)
+gesetzt, steht diese Adresse im From aller Mails – passend zum SMTP-Postfach, wie es
+viele Hoster und SPF/DMARC verlangen. Die Admin-E-Mail aus den Einstellungen geht dann
+als `Reply-To` mit, bei Mails von Mitglied zu Mitglied die Adresse des schreibenden
+Mitglieds. Ohne eigenen Absender ist die Admin-E-Mail der Absender.
+
 ### Environment-Variablen
 
 | Variable         | Beschreibung           | Standard                      |
@@ -325,7 +331,7 @@ Werte und Fehlermeldungen: [INSTALLATION.md – E-Mail-Versand](INSTALLATION.md#
 | `PPB_DB_NAME`    | Datenbank-Name         | `PowerPHPBoard_v2`            |
 | `PPB_MAIL_HOST`  | SMTP-Host              | `mailpit`                     |
 | `PPB_MAIL_PORT`  | SMTP-Port              | `1025`                        |
-| `PPB_MAIL_FROM`  | Absender (Fallback)    | `noreply@powerphpboard.local` |
+| `PPB_MAIL_FROM`  | Absender (From) aller Mails; Antworten gehen an die Admin-E-Mail | (leer: Admin-E-Mail) |
 | `PPB_MAIL_USER`  | SMTP-Benutzer (leer = ohne Anmeldung) | (leer)         |
 | `PPB_MAIL_PASS`  | SMTP-Passwort          | (leer)                        |
 | `PPB_MAIL_ENCRYPTION` | Verschlüsselung: `none`, `starttls` oder `ssl` | `none` |

@@ -678,7 +678,9 @@ Nach der Installation im Admin-Panel unter "Allgemein" setzen:
 
 - **Boardtitel**: Name des Forums (Default: `PowerPHPBoard 2.2.1`)
 - **Board-URL**: Vollständige URL (für Links in E-Mails)
-- **Admin-E-Mail**: Absender-Adresse (Fallback: `$mail['from']`)
+- **Admin-E-Mail**: Kontaktadresse des Forums – Absender aller Mails, solange kein
+  eigener Absender (`from` bzw. `PPB_MAIL_FROM`) eingestellt ist; sonst geht sie als
+  Antwortadresse (`Reply-To`) mit
 - **Sprache**: `English`, `Deutsch-Sie` oder `Deutsch-Du` (Default ab 2.2.0: `Deutsch-Du`)
 - **HTML in Beiträgen**: `an` oder `aus` – seit 2.3.0 standardmäßig `aus`; `an`
   erlaubt HTML-Code in Beiträgen und damit Cross-Site-Scripting (nicht empfohlen)
@@ -747,10 +749,16 @@ PPB_MAIL_FROM       = forum@ihre-domain.de
 
 Hinweise:
 
-- **Absender:** Als Absender verwendet das Forum die Admin-E-Mail-Adresse aus den
-  Einstellungen (Adminbereich „Allgemein“), `from` nur ersatzweise. Viele Mailserver
-  nehmen nur Mails an, deren Absender zum angemeldeten Postfach gehört – dann beide
-  Adressen gleich wählen.
+- **Absender und Antwortadresse:** Ist ein Absender eingestellt (`from` in
+  `config.local.php`, `PPB_MAIL_FROM` oder im Installer die „Absenderadresse“), steht
+  er im From aller Mails und ist auch der Absender gegenüber dem SMTP-Server
+  (`MAIL FROM`). Die Admin-E-Mail-Adresse aus den Einstellungen (Adminbereich
+  „Allgemein“) geht dann als Antwortadresse (`Reply-To`) mit; bei Mails von Mitglied
+  zu Mitglied ist es die Adresse des schreibenden Mitglieds. Ohne eingestellten
+  Absender ist die Admin-E-Mail-Adresse der Absender. Viele Mailserver nehmen nur
+  Mails an, deren Absender zum angemeldeten Postfach gehört, und SPF/DMARC prüfen die
+  Domain des Absenders – tragen Sie deshalb die Adresse des Postfachs als Absender
+  ein. Die Test-Mail im Installer verwendet dieselben Adressen.
 - **App-Passwort:** Große Freemail-Anbieter lassen die Anmeldung per SMTP oft nur mit
   einem eigenen App-Passwort zu, sobald für das Konto die Zwei-Faktor-Anmeldung aktiv
   ist. Das normale Passwort wird dann mit `535` abgelehnt; das App-Passwort erzeugen

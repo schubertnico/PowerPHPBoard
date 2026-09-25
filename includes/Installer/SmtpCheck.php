@@ -48,27 +48,30 @@ final class SmtpCheck
     /**
      * @param MailConfig $mail
      */
-    public static function body(#[SensitiveParameter] array $mail, string $sender): string
+    public static function body(#[SensitiveParameter] array $mail, string $sender, ?string $replyTo = null): string
     {
         return "Hallo,\n\n"
             . "diese Nachricht hat der Installer von PowerPHPBoard verschickt, um den E-Mail-Versand zu prüfen.\n"
             . "Wenn sie angekommen ist, stimmen die SMTP-Einstellungen.\n\n"
             . 'Verbindung: ' . self::describe($mail) . "\n"
-            . 'Absender: ' . $sender . "\n\n"
-            . "Sie müssen nichts weiter tun.\n";
+            . 'Absender: ' . $sender . "\n"
+            . ($replyTo !== null ? 'Antworten an: ' . $replyTo . "\n" : '')
+            . "\nSie müssen nichts weiter tun.\n";
     }
 
     /**
-     * Schickt die Test-Mail an $recipient. Erfolg heißt: Der Mailserver hat
-     * sie angenommen – ob sie ankommt, zeigt erst das Postfach.
+     * Schickt die Test-Mail an $recipient – mit demselben Absender (From)
+     * und derselben Antwortadresse (Reply-To) wie alle Mails des Forums.
+     * Erfolg heißt: Der Mailserver hat sie angenommen – ob sie ankommt,
+     * zeigt erst das Postfach.
      *
      * @param MailConfig $mail
      *
      * @return array{ok: bool, message: string}
      */
-    public static function send(Mailer $mailer, #[SensitiveParameter] array $mail, string $recipient, string $sender): array
+    public static function send(Mailer $mailer, #[SensitiveParameter] array $mail, string $recipient, string $sender, ?string $replyTo = null): array
     {
-        if ($mailer->send($recipient, $sender, self::SUBJECT, self::body($mail, $sender))) {
+        if ($mailer->send($recipient, $sender, self::SUBJECT, self::body($mail, $sender, $replyTo), $replyTo)) {
             return [
                 'ok' => true,
                 'message' => 'Der Mailserver hat die Test-Mail an ' . $recipient . ' angenommen. Bitte sehen Sie im '

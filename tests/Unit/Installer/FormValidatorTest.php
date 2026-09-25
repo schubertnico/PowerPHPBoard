@@ -7,6 +7,7 @@ namespace PowerPHPBoard\Tests\Unit\Installer;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use PowerPHPBoard\Installer\FormValidator;
+use PowerPHPBoard\Mailer;
 
 final class FormValidatorTest extends TestCase
 {
@@ -160,14 +161,29 @@ final class FormValidatorTest extends TestCase
         $this->assertNull($result['values']['mail']);
     }
 
-    public function testEmptySenderFallsBackToBoardEmail(): void
+    public function testEmptySenderMeansTheForumAddress(): void
     {
         $result = FormValidator::forum($this->forum(['smtp_from' => '', 'smtp_port' => '']));
 
+        // Leer bleibt leer: Absender ist dann stets die aktuelle Admin-E-Mail
+        // aus den Einstellungen, auch wenn sie später geändert wird
         $this->assertSame(
-            ['host' => 'localhost', 'port' => 25, 'from' => 'admin@example.com', 'user' => '', 'password' => '', 'encryption' => 'none'],
+            ['host' => 'localhost', 'port' => 25, 'from' => '', 'user' => '', 'password' => '', 'encryption' => 'none'],
             $result['values']['mail']
         );
+        $mail = $result['values']['mail'];
+        $this->assertNotNull($mail);
+        $this->assertSame('admin@example.com', Mailer::senderAddress(['adminemail' => 'admin@example.com'], $mail));
+    }
+
+    public function testConfiguredSenderBecomesFromAddress(): void
+    {
+        $mail = FormValidator::forum($this->forum(['smtp_from' => 'forum@example.com']))['values']['mail'];
+
+        $this->assertNotNull($mail);
+        $this->assertSame('forum@example.com', $mail['from']);
+        $this->assertSame('forum@example.com', Mailer::senderAddress(['adminemail' => 'admin@example.com'], $mail));
+        $this->assertSame('admin@example.com', Mailer::replyToAddress(['adminemail' => 'admin@example.com'], $mail));
     }
 
     public function testSmtpLoginWithStarttls(): void

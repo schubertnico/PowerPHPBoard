@@ -67,6 +67,45 @@ final class SmtpCheckTest extends TestCase
         $this->assertStringContainsString('D: Subject: =?UTF-8?B?' . base64_encode(SmtpCheck::SUBJECT) . '?=', $transcript);
     }
 
+    /**
+     * Regressionstest: Das Installer-Feld „Absenderadresse“ (#smtp_from) war
+     * wirkungslos, auch bei der Test-Mail – die Admin-E-Mail stand immer im
+     * From. Die Test-Mail nutzt jetzt dieselbe Logik wie alle Mails.
+     */
+    public function testTestMailUsesConfiguredSenderAndReplyTo(): void
+    {
+        $mail = ['host' => '127.0.0.1', 'port' => 25, 'encryption' => 'none', 'user' => '', 'password' => '', 'from' => 'forum@example.com'];
+        $settings = ['adminemail' => 'admin@example.com'];
+        $sender = Mailer::senderAddress($settings, $mail);
+        $replyTo = Mailer::replyToAddress($settings, $mail);
+        $this->assertSame('forum@example.com', $sender);
+        $this->assertSame('admin@example.com', $replyTo);
+
+        [$outcome, $transcript] = $this->converse('ok', static fn (int $port): array => SmtpCheck::send(
+            new Mailer('127.0.0.1', $port, 5),
+            ['port' => $port] + $mail,
+            'admin@example.com',
+            $sender,
+            $replyTo
+        ));
+
+        $this->assertTrue($outcome['ok']);
+        $this->assertContains('MAIL FROM:<forum@example.com>', $this->commands($transcript));
+        $this->assertStringContainsString("D: From: forum@example.com\n", $transcript);
+        $this->assertStringContainsString("D: Reply-To: admin@example.com\n", $transcript);
+        $this->assertStringContainsString('D: Antworten an: admin@example.com', $transcript);
+    }
+
+    public function testEmptySenderFieldUsesTheForumAddressWithoutReplyTo(): void
+    {
+        $mail = ['host' => 'localhost', 'port' => 25, 'encryption' => 'none', 'user' => '', 'password' => '', 'from' => ''];
+        $settings = ['adminemail' => 'admin@example.com'];
+
+        $this->assertSame('admin@example.com', Mailer::senderAddress($settings, $mail));
+        $this->assertNull(Mailer::replyToAddress($settings, $mail));
+        $this->assertStringNotContainsString('Antworten an', SmtpCheck::body($mail, 'admin@example.com'));
+    }
+
     public function testFailureShowsTheReasonWithoutCredentials(): void
     {
         [$outcome] = $this->converse('auth-rejected', fn (int $port): array => SmtpCheck::send(

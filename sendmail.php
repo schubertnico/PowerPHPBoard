@@ -83,7 +83,8 @@ if ($userid === 0) {
             } elseif (!$mailLimiter->check('sendmail', $limitKey)) {
                 $errorText = $lang_toomanyattempts ?? 'Too many attempts. Please try again later.';
             } else {
-                // Absender ist das Forum; Antworten gehen per Reply-To an den Benutzer
+                // Absender ist das Forum (eingestellter Absender, sonst Admin-E-Mail);
+                // Antworten gehen per Reply-To an das schreibende Mitglied
                 $boardUrl = BoardUrl::base($settings);
                 $boardName = (string) ($settings['boardtitle'] ?? 'PowerPHPBoard')
                     . ($boardUrl !== null ? ' (' . $boardUrl . ')' : '');

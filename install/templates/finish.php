@@ -13,6 +13,7 @@ use PowerPHPBoard\Installer\FormValidator;
 use PowerPHPBoard\Installer\Html;
 use PowerPHPBoard\Installer\SmtpCheck;
 use PowerPHPBoard\Installer\Wizard;
+use PowerPHPBoard\Mailer;
 use PowerPHPBoard\Security;
 
 return static function (Wizard $wizard, bool $configWritable, string $message): void {
@@ -79,7 +80,14 @@ return static function (Wizard $wizard, bool $configWritable, string $message): 
           <?php if ($mail === null): ?>
             Standardwerte
           <?php else: ?>
-            <?php echo Security::escape(SmtpCheck::describe($mail) . ', Absender ' . $mail['from']); ?>
+            <?php
+            $forumSettings = ['adminemail' => $forum['adminemail']];
+              $replyTo = Mailer::replyToAddress($forumSettings, $mail);
+              echo Security::escape(
+                  SmtpCheck::describe($mail) . ', Absender ' . Mailer::senderAddress($forumSettings, $mail)
+                  . ($replyTo !== null ? ', Antworten an ' . $replyTo : '')
+              );
+              ?>
           <?php endif; ?>
         </dd>
       </dl>
